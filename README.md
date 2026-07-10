@@ -102,3 +102,5 @@ Controller → Service → Repository → Entity
 
 Frontend:
 Components → Services → API Layer
+# NewsGrid
+Full-stack news aggregation platform powered by Spring Boot, React, and PostgreSQL.
