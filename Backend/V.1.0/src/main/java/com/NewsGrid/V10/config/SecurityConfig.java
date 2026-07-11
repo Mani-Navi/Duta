@@ -18,7 +18,7 @@ public class SecurityConfig {
         // فقط دامنه‌های مجاز
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",      // dev
-                "https://newsgrid.vercel.app" // production — بعداً آپدیت کن
+                "https://news-grid-pi.vercel.app/" // production — بعداً آپدیت کن
         ));
 
         config.setAllowedMethods(List.of("GET"));  // فقط GET مجازه
