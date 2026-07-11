@@ -16,9 +16,10 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         // فقط دامنه‌های مجاز
-        config.setAllowedOrigins(List.of(
-                "http://localhost:5173",      // dev
-                "https://news-grid-pi.vercel.app/" // production — بعداً آپدیت کن
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:5173",
+                "https://news-grid-pi.vercel.app",
+                "https://*.vercel.app"
         ));
 
         config.setAllowedMethods(List.of("GET"));  // فقط GET مجازه
