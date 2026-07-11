@@ -581,3 +581,46 @@ a {
         grid-template-columns: 1fr;
     }
 }
+
+.theme-toggle-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.toggle-track {
+    width: 48px;
+    height: 26px;
+    border-radius: 13px;
+    background: #E5E5EA;
+    position: relative;
+    transition: background 0.3s;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+}
+
+.toggle-track.dark {
+    background: #1C1C1E;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+.toggle-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s;
+    color: #FF9500;
+}
+
+.toggle-track.dark .toggle-thumb {
+    transform: translateX(22px);
+    background: #2C2C2E;
+    color: #FFD60A;
+}
