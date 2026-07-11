@@ -1,7 +1,7 @@
 import strings from '../strings/strings';
 
-function Navbar({ lang, dark, view, onToggleLang, onToggleTheme, onNavigate }) {
-    const t = strings[lang];
+function Navbar({  dark, view, onToggleLang, onToggleTheme, onNavigate }) {
+    const t = strings['fa'];
 
     return (
         <nav className="navbar">
@@ -11,7 +11,6 @@ function Navbar({ lang, dark, view, onToggleLang, onToggleTheme, onNavigate }) {
                 </div>
 
                 <div className="nav-right">
-
                     {view !== 'detail' && (
                         <div className="nav-links">
                             <a onClick={() => onNavigate('features')}>{t.features}</a>
@@ -21,20 +20,16 @@ function Navbar({ lang, dark, view, onToggleLang, onToggleTheme, onNavigate }) {
 
                     {view === 'detail' && (
                         <button className="back-btn" onClick={() => onNavigate('home')}>
-                            <i className={`ti ${lang === 'fa' ? 'ti-chevron-right' : 'ti-chevron-left'}`} />
+                            <i className="ti ti-chevron-right" />
                             {t.backLabel}
                         </button>
                     )}
 
                     <div className="nav-tools">
-                        <button className="tool-btn lang-toggle" onClick={onToggleLang}>
-                            {lang === 'fa' ? 'EN' : 'FA'}
-                        </button>
                         <button className="tool-btn theme-toggle" onClick={onToggleTheme}>
                             <i className={`ti ${dark ? 'ti-sun' : 'ti-moon'}`} />
                         </button>
                     </div>
-
                 </div>
             </div>
         </nav>

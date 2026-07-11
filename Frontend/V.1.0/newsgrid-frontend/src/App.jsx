@@ -9,7 +9,7 @@ import './App.css';
 function App() {
     const [view, setView] = useState('home');
     const [selectedArticle, setSelectedArticle] = useState(null);
-    const [lang, setLang] = useState('fa');
+    const lang = 'fa';
     const [dark, setDark] = useState(false);
 
     const openArticle = (article) => {
@@ -20,7 +20,7 @@ function App() {
 
     useEffect(() => {
         document.documentElement.setAttribute('dir', 'rtl');
-        document.documentElement.setAttribute('lang', lang);
+        document.documentElement.setAttribute('lang', 'fa');
     }, [lang]);
 
     useEffect(() => {
