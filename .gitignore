@@ -1,6 +1,7 @@
 # Environment
 .env
 *.env
+.env.production
 application-prod.properties
 
 # Backend
