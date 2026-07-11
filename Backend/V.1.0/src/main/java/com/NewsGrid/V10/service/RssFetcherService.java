@@ -25,7 +25,7 @@ public class RssFetcherService {
     private final ArticleRepository articleRepository;
 
     // هر ۱۵ دقیقه یکبار اجرا میشه — UCS-005 گام ۱
-    @Scheduled(fixedRate = 900000)
+    @Scheduled(fixedRate = 300000)
     public void fetchAllSources() {
 
         ZonedDateTime cutoff = ZonedDateTime.now().minusDays(7);
