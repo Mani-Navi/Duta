@@ -1,5 +1,6 @@
 package com.NewsGrid.V10.controller;
 
+import com.NewsGrid.V10.service.RssFetcherService;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.service.ArticleService;
@@ -13,6 +14,13 @@ import org.springframework.web.bind.annotation.*;
 public class ArticleController {
 
     private final ArticleService articleService;
+    private final RssFetcherService rssFetcherService;
+
+    @GetMapping("/fetch-now")
+    public String fetchNow() {
+        rssFetcherService.fetchAllSources();
+        return "done";
+    }
 
     // همه اخبار با pagination
     @GetMapping
