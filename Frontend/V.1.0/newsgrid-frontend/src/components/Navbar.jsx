@@ -26,12 +26,12 @@ function Navbar({  dark, view, onToggleLang, onToggleTheme, onNavigate }) {
                     )}
 
                     <div className="nav-tools">
-                        <button className="theme-toggle-btn" onClick={onToggleTheme}>
-                            <div className={`toggle-track ${dark ? 'dark' : ''}`}>
-                                <div className="toggle-thumb">
-                                    {dark ? '🌙' : '☀️'}
-                                </div>
-                            </div>
+                        <button
+                            className={`toggle-btn ${dark ? 'is-dark' : 'is-light'}`}
+                            onClick={onToggleTheme}
+                            aria-label="تغییر تم"
+                        >
+                            {dark ? '🌙' : '☀️'}
                         </button>
                     </div>
                 </div>

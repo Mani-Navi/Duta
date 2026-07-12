@@ -624,3 +624,25 @@ a {
     background: #2C2C2E;
     color: #FFD60A;
 }
+
+.toggle-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.toggle-btn.is-light {
+    background: #E5E5EA;
+}
+
+.toggle-btn.is-dark {
+    background: #2C2C2E;
+}

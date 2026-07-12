@@ -10,7 +10,8 @@ function App() {
     const [view, setView] = useState('home');
     const [selectedArticle, setSelectedArticle] = useState(null);
     const lang = 'fa';
-    const [dark, setDark] = useState(false);
+    const [dark, setDark] = useState(window.matchMedia("(prefers-color-scheme: dark)").matches);
+
 
     const openArticle = (article) => {
         setSelectedArticle(article);
