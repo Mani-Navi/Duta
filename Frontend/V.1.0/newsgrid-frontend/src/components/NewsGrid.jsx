@@ -3,7 +3,7 @@ import NewsCard from './NewsCard';
 import api from '../api/axiosConfig';
 import strings from '../strings/strings';
 
-function NewsGrid({ lang, activeCategory, onOpenArticle }) {
+function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
     const [articles, setArticles] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -17,12 +17,12 @@ function NewsGrid({ lang, activeCategory, onOpenArticle }) {
         setArticles([]);
         setPage(0);
         setHasMore(true);
-    }, [activeCategory]);
+    }, [activeCategory, searchKeyword]);
 
     // هر بار page تغییر کرد، اخبار جدید بگیر
     useEffect(() => {
         fetchArticles();
-    }, [page, activeCategory]);
+    }, [page, activeCategory, searchKeyword]);
 
     const fetchArticles = async () => {
         if (loading || !hasMore) return;
@@ -32,7 +32,14 @@ function NewsGrid({ lang, activeCategory, onOpenArticle }) {
             setError(null);
 
             let response;
-            if (activeCategory === 0) {
+
+            const keyword = encodeURIComponent(searchKeyword);
+
+            if (searchKeyword) {
+                response = await api.get(
+                    `/articles/search?keyword=${keyword}&page=${page}&size=20`
+                );
+            }else if (activeCategory === 0) {
                 response = await api.get(`/articles?page=${page}&size=20`);
             } else {
                 response = await api.get(

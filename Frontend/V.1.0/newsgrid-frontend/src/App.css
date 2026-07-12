@@ -646,3 +646,26 @@ a {
 .toggle-btn.is-dark {
     background: #2C2C2E;
 }
+
+.search-bar {
+    padding: 8px 20px 12px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 16px;
+    border-radius: 12px;
+    border: none;
+    background: var(--chip-bg);
+    color: var(--label);
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    direction: rtl;
+}
+
+.search-input::placeholder {
+    color: var(--label-3);
+}

@@ -10,8 +10,14 @@ function App() {
     const [view, setView] = useState('home');
     const [selectedArticle, setSelectedArticle] = useState(null);
     const lang = 'fa';
-    const [dark, setDark] = useState(window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const [dark, setDark] = useState(() =>
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const [searchKeyword, setSearchKeyword] = useState('')
 
+    const handleSearch = (keyword) => {
+        setSearchKeyword(keyword);
+        if (keyword) setView('home');
+    };
 
     const openArticle = (article) => {
         setSelectedArticle(article);
@@ -34,14 +40,16 @@ function App() {
                 dark={dark}
                 view={view}
                 onToggleLang={() => setLang(lang === 'fa' ? 'en' : 'fa')}
-                onToggleTheme={() => setDark(!dark)}
+                onToggleTheme={() => setDark(prev => !prev)}
                 onNavigate={setView}
+                onSearch={handleSearch}
             />
 
             {view === 'home' && (
                 <Home
                     lang={lang}
                     onOpenArticle={openArticle}
+                    searchKeyword={searchKeyword}
                 />
             )}
 
