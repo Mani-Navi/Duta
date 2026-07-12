@@ -50,4 +50,13 @@ public class ArticleController {
     public Source getArticleSource(@PathVariable Long id) {
         return articleService.getArticleSource(id);
     }
+
+    // GET /api/articles/search?keyword=ایران&page=0&size=20
+    @GetMapping("/search")
+    public Page<Article> search(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return articleService.searchArticles(keyword, page, size);
+    }
 }

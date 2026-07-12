@@ -51,4 +51,12 @@ public class ArticleService {
         Article article = getArticleById(articleId);
         return article.getSource();
     }
+
+    public Page<Article> searchArticles(String keyword, int page, int size) {
+        return articleRepository.searchByKeyword(
+                keyword,
+                PageRequest.of(page, size,
+                        Sort.by(Sort.Direction.DESC, "publishedAt"))
+        );
+    }
 }
