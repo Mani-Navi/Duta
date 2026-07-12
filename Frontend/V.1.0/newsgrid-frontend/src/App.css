@@ -6,18 +6,18 @@
 }
 
 body {
-        --bg: #F2F2F7;
-        --card: #FFFFFF;
-        --label: #1C1C1E;
-        --label-2: rgba(60,60,67,0.6);
-        --label-3: rgba(60,60,67,0.32);
-        --separator: rgba(60,60,67,0.16);
-        --blue: #007AFF;
-        --green: #34C759;
-        --orange: #FF9500;
-        --red: #FF3B30;
-        --chip-bg: #E5E5EA;
-        --navbar-bg: rgba(242,242,247,0.78);
+    --bg: #F2F2F7;
+    --card: #FFFFFF;
+    --label: #1C1C1E;
+    --label-2: rgba(60,60,67,0.6);
+    --label-3: rgba(60,60,67,0.32);
+    --separator: rgba(60,60,67,0.16);
+    --blue: #007AFF;
+    --green: #34C759;
+    --orange: #FF9500;
+    --red: #FF3B30;
+    --chip-bg: #E5E5EA;
+    --navbar-bg: rgba(242,242,247,0.78);
 
     background: var(--bg);
     font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, sans-serif;
