@@ -13,33 +13,30 @@ public class PriceService {
 
     private Map<String, Object> cachedPrices = null;
     private Instant lastFetch = Instant.EPOCH;
-    private static final long CACHE_SECONDS = 300; // 5 دقیقه
+    private static final long CACHE_SECONDS = 300;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     public Map<String, Object> getPrices() {
         long secondsSince = Instant.now().getEpochSecond() - lastFetch.getEpochSecond();
-
         if (cachedPrices != null && secondsSince < CACHE_SECONDS) {
             return cachedPrices;
         }
 
-        Map<String, Object> result = new HashMap<>();
-
         try {
+            // مرحله ۱: HTML بگیر و param رو استخراج کن
             String html = fetchHtml("https://bonbast.com");
-            String token = extractToken(html);
+            String param = extractParam(html);
 
-            if (token != null) {
-                result = fetchPrices(token);
+            if (param != null) {
+                // مرحله ۲: با param به /json پست کن
+                Map<String, Object> result = fetchPrices(param);
+                if (!result.isEmpty()) {
+                    cachedPrices = result;
+                    lastFetch = Instant.now();
+                    return cachedPrices;
+                }
             }
-
-            if (!result.isEmpty()) {
-                cachedPrices = result;
-                lastFetch = Instant.now();
-                return cachedPrices;
-            }
-
         } catch (Exception e) {
             System.err.println("PriceService error: " + e.getMessage());
         }
@@ -52,38 +49,37 @@ public class PriceService {
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
         headers.set("Accept", "text/html,application/xhtml+xml");
-        headers.set("Accept-Language", "fa,en;q=0.9");
-
         HttpEntity<Void> entity = new HttpEntity<>(headers);
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
         return response.getBody();
     }
 
-    private String extractToken(String html) {
-        // bonbast توی HTML یه value داره به اسم pp که token هست
-        String marker = "\"pp\":\"";
+    private String extractParam(String html) {
+        // دنبال: $.post('/json', {param: "VALUE"}
+        String marker = "param: \"";
         int idx = html.indexOf(marker);
         if (idx == -1) {
-            marker = "pp: '";
+            marker = "param:\"";
             idx = html.indexOf(marker);
-            if (idx == -1) return null;
         }
+        if (idx == -1) return null;
+
         int start = idx + marker.length();
         int end = html.indexOf("\"", start);
-        if (end == -1) end = html.indexOf("'", start);
         if (end == -1) return null;
+
         return html.substring(start, end);
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, Object> fetchPrices(String token) {
+    private Map<String, Object> fetchPrices(String param) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.set("User-Agent", "Mozilla/5.0");
         headers.set("Referer", "https://bonbast.com/");
         headers.set("X-Requested-With", "XMLHttpRequest");
 
-        String body = "pp=" + token;
+        String body = "param=" + param;
         HttpEntity<String> entity = new HttpEntity<>(body, headers);
 
         ResponseEntity<Map> response = restTemplate.exchange(
@@ -94,7 +90,7 @@ public class PriceService {
         );
 
         Map<String, Object> raw = response.getBody();
-        if (raw == null) return new HashMap<>();
+        if (raw == null || raw.containsKey("reset")) return new HashMap<>();
 
         return parseResponse(raw);
     }
@@ -103,17 +99,17 @@ public class PriceService {
     private Map<String, Object> parseResponse(Map<String, Object> raw) {
         Map<String, Object> result = new HashMap<>();
 
-        addCurrency(result, raw, "usd",    "دلار",        "usd1");
-        addCurrency(result, raw, "tether", "تتر",         "tether1");
-        addCurrency(result, raw, "gold",   "طلا (۱۸ عیار)", "gol18");
-        addCurrency(result, raw, "silver", "نقره",        "silver");
+        addItem(result, raw, "usd",    "دلار",          "usd1");
+        addItem(result, raw, "tether", "تتر",           "tether1");
+        addItem(result, raw, "gold",   "طلا (۱۸ عیار)", "gol18");
+        addItem(result, raw, "silver", "نقره",          "silver");
 
         result.put("updatedAt", Instant.now().toString());
         return result;
     }
 
-    private void addCurrency(Map<String, Object> result, Map<String, Object> raw,
-                             String key, String label, String rawKey) {
+    private void addItem(Map<String, Object> result, Map<String, Object> raw,
+                         String key, String label, String rawKey) {
         Object val = raw.get(rawKey);
         if (val != null) {
             Map<String, String> entry = new HashMap<>();
