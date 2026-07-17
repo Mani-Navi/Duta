@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import Navbar from './components/Navbar';
+import PriceTicker from './components/PriceTicker';
 import Home from './pages/Home';
 import ArticleDetail from './pages/ArticleDetail';
 import Features from './pages/Features';
@@ -35,6 +36,9 @@ function App() {
     }, [dark]);
     return (
         <div>
+            {/* Ticker فقط وقتی روی صفحه اصلی هستیم نشون داده میشه */}
+            {view === 'home' && <PriceTicker />}
+
             <Navbar
                 lang={lang}
                 dark={dark}

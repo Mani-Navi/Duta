@@ -669,3 +669,77 @@ a {
 .search-input::placeholder {
     color: var(--label-3);
 }
+/* ─── Price Ticker ─────────────────────────────────────── */
+
+.price-ticker {
+    width: 100%;
+    background: var(--navbar-bg);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 0.5px solid var(--separator);
+    height: 36px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.ticker-inner {
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    width: 100%;
+    justify-content: space-around;
+}
+
+.ticker-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 16px;
+    border-left: 0.5px solid var(--separator);
+    white-space: nowrap;
+}
+
+.ticker-item:last-child {
+    border-left: none;
+}
+
+.ticker-symbol {
+    font-size: 13px;
+    line-height: 1;
+}
+
+.ticker-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--label-2);
+}
+
+.ticker-price {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--label);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.2px;
+}
+
+.ticker-unit {
+    font-size: 10px;
+    color: var(--label-3);
+    font-weight: 400;
+}
+
+@media (max-width: 480px) {
+    .ticker-label {
+        display: none;
+    }
+
+    .ticker-item {
+        padding: 0 10px;
+        gap: 4px;
+    }
+
+    .ticker-price {
+        font-size: 11px;
+    }
+}
