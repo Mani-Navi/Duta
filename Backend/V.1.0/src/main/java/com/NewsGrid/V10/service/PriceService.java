@@ -3,9 +3,15 @@ package com.NewsGrid.V10.service;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.HttpCookie;
+import java.net.URI;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -15,8 +21,6 @@ public class PriceService {
     private Instant lastFetch = Instant.EPOCH;
     private static final long CACHE_SECONDS = 300;
 
-    private final RestTemplate restTemplate = new RestTemplate();
-
     public Map<String, Object> getPrices() {
         long secondsSince = Instant.now().getEpochSecond() - lastFetch.getEpochSecond();
         if (cachedPrices != null && secondsSince < CACHE_SECONDS) {
@@ -24,18 +28,11 @@ public class PriceService {
         }
 
         try {
-            // مرحله ۱: HTML بگیر و param رو استخراج کن
-            String html = fetchHtml("https://bonbast.com");
-            String param = extractParam(html);
-
-            if (param != null) {
-                // مرحله ۲: با param به /json پست کن
-                Map<String, Object> result = fetchPrices(param);
-                if (!result.isEmpty()) {
-                    cachedPrices = result;
-                    lastFetch = Instant.now();
-                    return cachedPrices;
-                }
+            Map<String, Object> result = fetchFromBonbast();
+            if (!result.isEmpty()) {
+                cachedPrices = result;
+                lastFetch = Instant.now();
+                return cachedPrices;
             }
         } catch (Exception e) {
             System.err.println("PriceService error: " + e.getMessage());
@@ -45,77 +42,104 @@ public class PriceService {
         return Map.of("error", "داده‌ای در دسترس نیست");
     }
 
-    private String fetchHtml(String url) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-        headers.set("Accept", "text/html,application/xhtml+xml");
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
-        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
-        return response.getBody();
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> fetchFromBonbast() throws Exception {
+        RestTemplate rt = new RestTemplate();
+
+        // ── مرحله ۱: صفحه اصلی + گرفتن کوکی‌ها ──
+        HttpHeaders h1 = new HttpHeaders();
+        h1.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+        h1.set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        h1.set("Accept-Language", "fa,en-US;q=0.7,en;q=0.3");
+
+        ResponseEntity<String> mainResp = rt.exchange(
+                "https://bonbast.com", HttpMethod.GET, new HttpEntity<>(h1), String.class);
+
+        String html = mainResp.getBody();
+
+        // کوکی‌ها رو جمع کن
+        List<String> setCookies = mainResp.getHeaders().get("Set-Cookie");
+        StringBuilder cookieHeader = new StringBuilder();
+        if (setCookies != null) {
+            for (String c : setCookies) {
+                if (cookieHeader.length() > 0) cookieHeader.append("; ");
+                cookieHeader.append(c.split(";")[0]);
+            }
+        }
+
+        // ── مرحله ۲: param رو از HTML استخراج کن ──
+        String param = extractParam(html);
+        if (param == null) {
+            System.err.println("PriceService: param not found in HTML");
+            return new HashMap<>();
+        }
+        System.out.println("PriceService: param=" + param);
+
+        // ── مرحله ۳: بلافاصله به /json پست کن (با همون کوکی) ──
+        HttpHeaders h2 = new HttpHeaders();
+        h2.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        h2.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+        h2.set("Referer", "https://bonbast.com/");
+        h2.set("X-Requested-With", "XMLHttpRequest");
+        h2.set("Accept", "application/json, text/javascript, */*; q=0.01");
+        if (cookieHeader.length() > 0) {
+            h2.set("Cookie", cookieHeader.toString());
+        }
+
+        HttpEntity<String> postEntity = new HttpEntity<>("param=" + param, h2);
+        ResponseEntity<Map> jsonResp = rt.exchange(
+                "https://bonbast.com/json", HttpMethod.POST, postEntity, Map.class);
+
+        Map<String, Object> raw = jsonResp.getBody();
+        System.out.println("PriceService: raw keys=" + (raw != null ? raw.keySet() : "null"));
+
+        if (raw == null || raw.containsKey("reset") || raw.containsKey("rest")) {
+            return new HashMap<>();
+        }
+
+        return parseResponse(raw);
     }
 
     private String extractParam(String html) {
-        // دنبال: $.post('/json', {param: "VALUE"}
-        String marker = "param: \"";
-        int idx = html.indexOf(marker);
-        if (idx == -1) {
-            marker = "param:\"";
-            idx = html.indexOf(marker);
+        // $.post('/json', {param: "VALUE"}
+        String[] markers = {"param: \"", "param:\"", "param: '", "param:'"};
+        for (String marker : markers) {
+            int idx = html.indexOf(marker);
+            if (idx != -1) {
+                int start = idx + marker.length();
+                char quote = marker.endsWith("\"") ? '"' : '\'';
+                int end = html.indexOf(quote, start);
+                if (end != -1) return html.substring(start, end);
+            }
         }
-        if (idx == -1) return null;
-
-        int start = idx + marker.length();
-        int end = html.indexOf("\"", start);
-        if (end == -1) return null;
-
-        return html.substring(start, end);
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> fetchPrices(String param) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        headers.set("User-Agent", "Mozilla/5.0");
-        headers.set("Referer", "https://bonbast.com/");
-        headers.set("X-Requested-With", "XMLHttpRequest");
-
-        String body = "param=" + param;
-        HttpEntity<String> entity = new HttpEntity<>(body, headers);
-
-        ResponseEntity<Map> response = restTemplate.exchange(
-                "https://bonbast.com/json",
-                HttpMethod.POST,
-                entity,
-                Map.class
-        );
-
-        Map<String, Object> raw = response.getBody();
-        if (raw == null || raw.containsKey("reset")) return new HashMap<>();
-
-        return parseResponse(raw);
+        return null;
     }
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseResponse(Map<String, Object> raw) {
         Map<String, Object> result = new HashMap<>();
 
-        addItem(result, raw, "usd",    "دلار",          "usd1");
-        addItem(result, raw, "tether", "تتر",           "tether1");
-        addItem(result, raw, "gold",   "طلا (۱۸ عیار)", "gol18");
-        addItem(result, raw, "silver", "نقره",          "silver");
+        // key های احتمالی bonbast برای هر ارز
+        addItem(result, raw, "usd",    "دلار",           new String[]{"usd1", "usd"});
+        addItem(result, raw, "tether", "تتر",            new String[]{"tether1", "tether", "usdt1", "usdt"});
+        addItem(result, raw, "gold",   "طلا (۱۸ عیار)", new String[]{"gol18", "gold18", "gold"});
+        addItem(result, raw, "silver", "نقره",           new String[]{"silver", "silver1"});
 
         result.put("updatedAt", Instant.now().toString());
         return result;
     }
 
     private void addItem(Map<String, Object> result, Map<String, Object> raw,
-                         String key, String label, String rawKey) {
-        Object val = raw.get(rawKey);
-        if (val != null) {
-            Map<String, String> entry = new HashMap<>();
-            entry.put("price", formatPrice(val.toString()));
-            entry.put("label", label);
-            result.put(key, entry);
+                         String key, String label, String[] candidates) {
+        for (String candidate : candidates) {
+            Object val = raw.get(candidate);
+            if (val != null) {
+                Map<String, String> entry = new HashMap<>();
+                entry.put("price", formatPrice(val.toString()));
+                entry.put("label", label);
+                result.put(key, entry);
+                return;
+            }
         }
     }
 
