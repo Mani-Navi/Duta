@@ -20,6 +20,38 @@ public class PriceController {
         return priceService.getPrices();
     }
 
+    @GetMapping("/raw")
+    public String raw() {
+        try {
+            String html = new RestTemplate().exchange(
+                    "https://bonbast.com", HttpMethod.GET,
+                    new HttpEntity<>(new HttpHeaders()), String.class).getBody();
+
+            // param رو پیدا کن
+            String marker = "param: \"";
+            int idx = html.indexOf(marker);
+            if (idx == -1) return "param not found";
+            String param = html.substring(idx + marker.length(), html.indexOf("\"", idx + marker.length()));
+
+            // به /json پست کن
+            HttpHeaders h = new HttpHeaders();
+            h.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            h.set("User-Agent", "Mozilla/5.0");
+            h.set("Referer", "https://bonbast.com/");
+            h.set("X-Requested-With", "XMLHttpRequest");
+
+            ResponseEntity<String> r = new RestTemplate().exchange(
+                    "https://bonbast.com/json", HttpMethod.POST,
+                    new HttpEntity<>("param=" + param, h), String.class);
+
+            // raw JSON رو برگردون
+            return r.getBody();
+
+        } catch (Exception e) {
+            return "Error: " + e.getMessage();
+        }
+    }
+
     // endpoint دیباگ — بعد از رفع مشکل حذفش کن
     @GetMapping("/debug")
     public String debug() {
