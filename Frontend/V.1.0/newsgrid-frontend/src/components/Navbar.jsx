@@ -32,25 +32,19 @@ function Navbar({  dark, view, onToggleTheme, onNavigate, onSearch }) {
                 </div>
 
                 <div className="nav-right">
-                    {view !== 'detail' && !searchOpen && (
+                    {/* nav-links همیشه نشون داده میشه */}
+                    {!searchOpen && (
                         <div className="nav-links">
                             <a onClick={() => onNavigate('features')}>{t.features}</a>
                             <a onClick={() => onNavigate('credibility')}>{t.credibility}</a>
                         </div>
                     )}
 
-                    {view === 'detail' && (
-                        <button className="back-btn" onClick={() => onNavigate('home')}>
-                            <i className="ti ti-chevron-right" />
-                            {t.backLabel}
-                        </button>
-                    )}
-
                     <div className="nav-tools">
                         {view !== 'detail' && (
-                        <button className="tool-btn theme-toggle" onClick={toggleSearch}>
-                            {searchOpen ? '✕' : '🔍'}
-                        </button>
+                            <button className="tool-btn theme-toggle" onClick={toggleSearch}>
+                                {searchOpen ? '✕' : '🔍'}
+                            </button>
                         )}
                         <button
                             className={`toggle-btn ${dark ? 'is-dark' : 'is-light'}`}
@@ -63,7 +57,6 @@ function Navbar({  dark, view, onToggleTheme, onNavigate, onSearch }) {
                 </div>
             </div>
 
-            {/* Search Bar */}
             {searchOpen && (
                 <div className="search-bar">
                     <input

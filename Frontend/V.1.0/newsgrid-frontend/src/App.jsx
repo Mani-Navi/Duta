@@ -36,18 +36,27 @@ function App() {
     }, [dark]);
     return (
         <div>
-            {/* Ticker فقط وقتی روی صفحه اصلی هستیم نشون داده میشه */}
-            {view === 'home' && <PriceTicker />}
+            {/* Ticker همیشه نشون داده میشه */}
+            <PriceTicker />
 
             <Navbar
                 lang={lang}
                 dark={dark}
                 view={view}
-                onToggleLang={() => setLang(lang === 'fa' ? 'en' : 'fa')}
                 onToggleTheme={() => setDark(prev => !prev)}
                 onNavigate={setView}
                 onSearch={handleSearch}
             />
+
+            {/* دکمه بک — فقط توی صفحه detail، زیر navbar */}
+            {view === 'detail' && (
+                <div className="back-bar">
+                    <button className="back-btn" onClick={() => setView('home')}>
+                        <i className="ti ti-chevron-right" />
+                        اخبار
+                    </button>
+                </div>
+            )}
 
             {view === 'home' && (
                 <Home
