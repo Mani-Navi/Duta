@@ -1,5 +1,6 @@
-import {useEffect, useState} from 'react';
+import { useEffect, useState } from 'react';
 import Navbar from './components/Navbar';
+import BottomNav from './components/BottomNav';
 import PriceTicker from './components/PriceTicker';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -14,7 +15,7 @@ function App() {
     const lang = 'fa';
     const [dark, setDark] = useState(() =>
         window.matchMedia("(prefers-color-scheme: dark)").matches);
-    const [searchKeyword, setSearchKeyword] = useState('')
+    const [searchKeyword, setSearchKeyword] = useState('');
 
     const handleSearch = (keyword) => {
         setSearchKeyword(keyword);
@@ -35,21 +36,23 @@ function App() {
     useEffect(() => {
         document.body.classList.toggle('dark', dark);
     }, [dark]);
+
     return (
         <div>
-            {/* Ticker همیشه نشون داده میشه */}
             <PriceTicker />
 
-            <Navbar
-                lang={lang}
-                dark={dark}
-                view={view}
-                onToggleTheme={() => setDark(prev => !prev)}
-                onNavigate={setView}
-                onSearch={handleSearch}
-            />
+            {/* دسکتاپ — با CSS مخفی میشه روی موبایل */}
+            <div className="desktop-only">
+                <Navbar
+                    lang={lang}
+                    dark={dark}
+                    view={view}
+                    onToggleTheme={() => setDark(prev => !prev)}
+                    onNavigate={setView}
+                    onSearch={handleSearch}
+                />
+            </div>
 
-            {/* دکمه بک — فقط توی صفحه detail، زیر navbar */}
             {view === 'detail' && (
                 <div className="back-bar">
                     <button className="back-btn" onClick={() => setView('home')}>
@@ -66,23 +69,23 @@ function App() {
                     searchKeyword={searchKeyword}
                 />
             )}
-
             {view === 'detail' && selectedArticle && (
-                <ArticleDetail
-                    lang={lang}
-                    article={selectedArticle}
-                />
+                <ArticleDetail lang={lang} article={selectedArticle} />
             )}
-
-            {view === 'features' && (
-                <Features lang={lang} />
-            )}
-
-            {view === 'credibility' && (
-                <Credibility lang={lang} />
-            )}
-
+            {view === 'features' && <Features lang={lang} />}
+            {view === 'credibility' && <Credibility lang={lang} />}
             {view === 'about' && <About lang={lang} />}
+
+            {/* موبایل — با CSS مخفی میشه روی دسکتاپ */}
+            <div className="mobile-only">
+                <BottomNav
+                    view={view}
+                    dark={dark}
+                    onNavigate={setView}
+                    onSearch={handleSearch}
+                    onToggleTheme={() => setDark(prev => !prev)}
+                />
+            </div>
         </div>
     );
 }

@@ -927,3 +927,12 @@ a {
         padding-bottom: 90px;
     }
 }
+
+/* ─── Responsive Visibility ────────────────────────── */
+.mobile-only  { display: none; }
+.desktop-only { display: block; }
+
+@media (max-width: 768px) {
+    .mobile-only  { display: block; }
+    .desktop-only { display: none;  }
+}
