@@ -37,10 +37,7 @@ public interface ArticleRepository
         Page<Article> findBySource_Category(Category category, Pageable pageable);
 
         @Query("SELECT a FROM Article a WHERE " +
-                "LOWER(a.title) LIKE LOWER(CONCAT('% ', :keyword, ' %')) OR " +
-                "LOWER(a.title) LIKE LOWER(CONCAT(:keyword, ' %')) OR " +
-                "LOWER(a.title) LIKE LOWER(CONCAT('% ', :keyword)) OR " +
-                "LOWER(a.title) = LOWER(:keyword) OR " +
+                "LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                 "LOWER(a.source.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
         Page<Article> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 }
