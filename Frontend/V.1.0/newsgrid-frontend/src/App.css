@@ -696,7 +696,6 @@ a {
     align-items: center;
     gap: 5px;
     padding: 0 16px;
-    border-left: 0.5px solid var(--separator);
     white-space: nowrap;
 }
 
