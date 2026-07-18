@@ -117,6 +117,7 @@ public class PriceService {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseResponse(Map<String, Object> raw) {
+        System.out.println("PriceService ALL KEYS: " + raw.keySet()); // ← این رو اضافه کن
         Map<String, Object> result = new HashMap<>();
 
         // key های احتمالی bonbast برای هر ارز
