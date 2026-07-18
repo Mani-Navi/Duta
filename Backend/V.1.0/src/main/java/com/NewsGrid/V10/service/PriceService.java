@@ -3,12 +3,7 @@ package com.NewsGrid.V10.service;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
-import java.net.CookieManager;
-import java.net.CookiePolicy;
-import java.net.HttpCookie;
-import java.net.URI;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -73,7 +68,6 @@ public class PriceService {
             System.err.println("PriceService: param not found in HTML");
             return new HashMap<>();
         }
-        System.out.println("PriceService: param=" + param);
 
         // ── مرحله ۳: بلافاصله به /json پست کن (با همون کوکی) ──
         HttpHeaders h2 = new HttpHeaders();
@@ -91,7 +85,6 @@ public class PriceService {
                 "https://bonbast.com/json", HttpMethod.POST, postEntity, Map.class);
 
         Map<String, Object> raw = jsonResp.getBody();
-        System.out.println("PriceService: raw keys=" + (raw != null ? raw.keySet() : "null"));
 
         if (raw == null || raw.containsKey("reset") || raw.containsKey("rest")) {
             return new HashMap<>();
@@ -117,14 +110,12 @@ public class PriceService {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseResponse(Map<String, Object> raw) {
-        System.out.println("PriceService ALL KEYS: " + raw.keySet()); // ← این رو اضافه کن
         Map<String, Object> result = new HashMap<>();
+
 
         // key های احتمالی bonbast برای هر ارز
         addItem(result, raw, "usd",    "دلار",           new String[]{"usd1", "usd"});
-        addItem(result, raw, "tether", "تتر",            new String[]{"tether1", "tether", "usdt1", "usdt"});
         addItem(result, raw, "gold",   "طلا (۱۸ عیار)", new String[]{"gol18", "gold18", "gold"});
-        addItem(result, raw, "silver", "نقره",           new String[]{"silver", "silver1"});
 
         result.put("updatedAt", Instant.now().toString());
         return result;
