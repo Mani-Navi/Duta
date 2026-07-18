@@ -27,27 +27,36 @@ function NewsCard({ article, lang, onOpen }) {
     const badgeLabel = getBadgeLabel(credibility, lang);
 
     return (
-        <div
+        <article
             className="card"
             dir={lang === 'fa' ? 'rtl' : 'ltr'}
             onClick={() => onOpen(article)}
+            role="button"
+            tabIndex={0}
+            aria-label={`${article.title} - ${badgeLabel}`}
+            onKeyDown={(e) => e.key === 'Enter' && onOpen(article)}
         >
             <div className="card-top">
-        <span className="source-label">
-          {article.source?.name || ''}
-        </span>
-                <span className={`badge ${badgeClass}`}>
-          {credibility}%
-        </span>
+                <span className="source-label">
+                    {article.source?.name || ''}
+                </span>
+                <span
+                    className={`badge ${badgeClass}`}
+                    aria-label={`امتیاز اعتبار: ${credibility} - ${badgeLabel}`}
+                >
+                    {credibility}%
+                </span>
             </div>
 
             <div className="card-title">{article.title}</div>
 
             <div className="card-bottom">
-                <span className="time">{formatTime(article.publishedAt)}</span>
+                <span className="time" aria-label={`زمان انتشار: ${formatTime(article.publishedAt)}`}>
+                    {formatTime(article.publishedAt)}
+                </span>
                 <i className="ti ti-external-link ext" aria-hidden="true" />
             </div>
-        </div>
+        </article>
     );
 }
 
