@@ -4,10 +4,26 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/newsgrid.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   <title>NewsGrid</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"></head>
+
+  <!-- Google Fonts با integrity -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+          href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+          crossorigin="anonymous"
+  >
+
+  <!-- Tabler Icons با integrity -->
+  <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/tabler-icons.min.css"
+          integrity="sha384-r3OtLRSJFONFn0zZCjJVDVXFqNIZHi6lSBTEf7AQXVTK2qNWhiNwMATXeHPyZiJ"
+          crossorigin="anonymous"
+  >
+</head>
 <body>
 <div id="root"></div>
 <script type="module" src="/src/main.jsx"></script>
