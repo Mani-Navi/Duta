@@ -37,6 +37,7 @@ function Navbar({  dark, view, onToggleTheme, onNavigate, onSearch }) {
                         <div className="nav-links">
                             <a onClick={() => onNavigate('features')}>{t.features}</a>
                             <a onClick={() => onNavigate('credibility')}>{t.credibility}</a>
+                            <a onClick={() => onNavigate('about')}>{t.about}</a>
                         </div>
                     )}
 

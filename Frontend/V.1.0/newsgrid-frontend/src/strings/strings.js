@@ -32,7 +32,32 @@ const strings = {
             { title: "جمع‌آوری", desc: "خبر از ده‌ها منبع معتبر به‌طور هم‌زمان جمع‌آوری می‌شود." },
             { title: "تحلیل", desc: "میزان هم‌پوشانی منابع و سابقه‌ی اعتبار هرکدام بررسی می‌شود." },
             { title: "نمایش", desc: "یک امتیاز ساده و رنگی به شما نشان می‌دهد چقدر می‌توانید اعتماد کنید." }
-        ]
+        ],
+        about: "درباره ما",
+        aboutTitle: "درباره NewsGrid",
+        aboutDesc: "یک پروژه متن‌باز برای نمایش شفاف اخبار فارسی با امتیاز اعتبار.",
+        aboutBlocks: [
+            {
+                icon: "ti-target",
+                title: "هدف",
+                desc: "NewsGrid ساخته شده تا کاربران فارسی‌زبان بتوانند در کمترین زمان ممکن، اخبار معتبر را از شایعه تشخیص دهند."
+            },
+            {
+                icon: "ti-code",
+                title: "تکنولوژی",
+                desc: "بک‌اند با Java و Spring Boot، فرانت‌اند با React، دیتابیس PostgreSQL. کد پروژه روی GitHub در دسترس است."
+            },
+            {
+                icon: "ti-refresh",
+                title: "به‌روزرسانی خودکار",
+                desc: "اخبار هر ۵ دقیقه از منابع RSS معتبر جمع‌آوری می‌شوند و اخبار قدیمی‌تر از ۳۰ روز به‌صورت خودکار حذف می‌شوند."
+            }
+        ],
+        aboutContactTitle: "تماس با ما",
+        aboutContactDesc: "باگ پیدا کردی؟ پیشنهادی داری؟ می‌خوای منبع جدیدی اضافه بشه؟ خوشحال می‌شیم بشنویم.",
+        aboutEmail: "newsgrid.feedback@gmail.com",
+        aboutEmailSubject: "بازخورد NewsGrid",
+        aboutTopics: ["گزارش باگ 🐛", "پیشنهاد ویژگی ✨", "افزودن منبع 📰", "همکاری 🤝"]
     },
 
     en: {
@@ -68,7 +93,32 @@ const strings = {
             { title: "Collect", desc: "The story is gathered from dozens of credible sources simultaneously." },
             { title: "Analyze", desc: "We check source overlap and each outlet's track record." },
             { title: "Display", desc: "A simple, color-coded score shows how much you can trust this story." }
-        ]
+        ],
+        about: "About",
+        aboutTitle: "About NewsGrid",
+        aboutDesc: "An open-source project for transparent Persian news aggregation with credibility scoring.",
+        aboutBlocks: [
+            {
+                icon: "ti-target",
+                title: "Mission",
+                desc: "NewsGrid is built to help Persian-speaking users distinguish credible news from rumors in the shortest time possible."
+            },
+            {
+                icon: "ti-code",
+                title: "Tech Stack",
+                desc: "Backend built with Java and Spring Boot, frontend with React, PostgreSQL database. Source code available on GitHub."
+            },
+            {
+                icon: "ti-refresh",
+                title: "Auto Updates",
+                desc: "News is collected every 5 minutes from trusted RSS sources. Articles older than 30 days are automatically removed."
+            }
+        ],
+        aboutContactTitle: "Get in Touch",
+        aboutContactDesc: "Found a bug? Have a suggestion? Want to add a new source? We'd love to hear from you.",
+        aboutEmail: "newsgrid.feedback@gmail.com",
+        aboutEmailSubject: "NewsGrid Feedback",
+        aboutTopics: ["Report a bug 🐛", "Suggest a feature ✨", "Add a source 📰", "Collaborate 🤝"],
     }
 };
 

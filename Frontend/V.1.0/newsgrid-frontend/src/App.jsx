@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react';
 import Navbar from './components/Navbar';
 import PriceTicker from './components/PriceTicker';
 import Home from './pages/Home';
+import About from './pages/About';
 import ArticleDetail from './pages/ArticleDetail';
 import Features from './pages/Features';
 import Credibility from './pages/Credibility';
@@ -80,6 +81,8 @@ function App() {
             {view === 'credibility' && (
                 <Credibility lang={lang} />
             )}
+
+            {view === 'about' && <About lang={lang} />}
         </div>
     );
 }
