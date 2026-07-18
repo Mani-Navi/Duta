@@ -45,7 +45,7 @@ const strings = {
             {
                 icon: "ti-refresh",
                 title: "به‌روزرسانی خودکار",
-                desc: "اخبار هر ۵ دقیقه از منابع RSS معتبر جمع‌آوری می‌شوند و اخبار قدیمی‌تر از ۳۰ روز به‌صورت خودکار حذف می‌شوند."
+                desc: "اخبار هر ۵ دقیقه از منابع معتبر جمع‌آوری می‌شوند و اخبار قدیمی‌تر از ۷ روز به‌صورت خودکار حذف می‌شوند."
             }
         ],
         aboutContactTitle: "تماس با ما",
@@ -101,7 +101,7 @@ const strings = {
             {
                 icon: "ti-refresh",
                 title: "Auto Updates",
-                desc: "News is collected every 5 minutes from trusted RSS sources. Articles older than 30 days are automatically removed."
+                desc: "News is collected every 5 minutes from trusted sources. Articles older than 7 days are automatically removed."
             }
         ],
         aboutContactTitle: "Get in Touch",
