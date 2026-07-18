@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from "../api/axiosConfig.js";
 
 const ICONS = {
     usd:  { emoji: '💵' },
@@ -14,7 +14,7 @@ function PriceTicker() {
 
     const fetchPrices = async () => {
         try {
-            const res = await axios.get('/api/prices');
+            const res = await api.get('/prices');
             if (res.data && !res.data.error) {
                 setPrices(res.data);
                 setError(false);
