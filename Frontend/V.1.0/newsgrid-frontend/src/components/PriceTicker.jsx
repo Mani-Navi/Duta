@@ -1,14 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const ICONS = {
-    usd:    { symbol: '$', emoji: '💵' },
-    gold:   { symbol: 'Au', emoji: '🥇' },
-    silver: { symbol: 'Ag', emoji: '🥈' },
-    tether: { symbol: '₮', emoji: '₮'  },
+    usd:  { emoji: '💵' },
+    gold: { emoji: '🥇' },
 };
 
-const ORDER = ['usd', 'tether', 'gold', 'silver'];
+const ORDER = ['usd', 'gold'];
 
 function PriceTicker() {
     const [prices, setPrices] = useState(null);
@@ -30,7 +28,7 @@ function PriceTicker() {
 
     useEffect(() => {
         fetchPrices();
-        const interval = setInterval(fetchPrices, 5 * 60 * 1000); // هر ۵ دقیقه
+        const interval = setInterval(fetchPrices, 5 * 60 * 1000);
         return () => clearInterval(interval);
     }, []);
 
@@ -42,10 +40,9 @@ function PriceTicker() {
                 {ORDER.map(key => {
                     const item = prices[key];
                     if (!item) return null;
-                    const icon = ICONS[key];
                     return (
                         <div className="ticker-item" key={key}>
-                            <span className="ticker-symbol">{icon.emoji}</span>
+                            <span className="ticker-symbol">{ICONS[key].emoji}</span>
                             <span className="ticker-label">{item.label}</span>
                             <span className="ticker-price">{item.price}</span>
                             <span className="ticker-unit">تومان</span>
