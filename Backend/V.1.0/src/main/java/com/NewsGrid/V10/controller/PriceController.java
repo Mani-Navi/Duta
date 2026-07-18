@@ -23,28 +23,45 @@ public class PriceController {
     @GetMapping("/raw")
     public String raw() {
         try {
-            String html = new RestTemplate().exchange(
-                    "https://bonbast.com", HttpMethod.GET,
-                    new HttpEntity<>(new HttpHeaders()), String.class).getBody();
+            RestTemplate rt = new RestTemplate();
 
-            // param رو پیدا کن
+            // مرحله ۱: صفحه اصلی + کوکی
+            HttpHeaders h1 = new HttpHeaders();
+            h1.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            h1.set("Accept", "text/html,application/xhtml+xml");
+            ResponseEntity<String> mainResp = rt.exchange(
+                    "https://bonbast.com", HttpMethod.GET, new HttpEntity<>(h1), String.class);
+
+            String html = mainResp.getBody();
+
+            // کوکی جمع کن
+            StringBuilder cookieHeader = new StringBuilder();
+            var setCookies = mainResp.getHeaders().get("Set-Cookie");
+            if (setCookies != null) {
+                for (String c : setCookies) {
+                    if (cookieHeader.length() > 0) cookieHeader.append("; ");
+                    cookieHeader.append(c.split(";")[0]);
+                }
+            }
+
+            // param پیدا کن
             String marker = "param: \"";
             int idx = html.indexOf(marker);
             if (idx == -1) return "param not found";
             String param = html.substring(idx + marker.length(), html.indexOf("\"", idx + marker.length()));
 
-            // به /json پست کن
-            HttpHeaders h = new HttpHeaders();
-            h.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            h.set("User-Agent", "Mozilla/5.0");
-            h.set("Referer", "https://bonbast.com/");
-            h.set("X-Requested-With", "XMLHttpRequest");
+            // مرحله ۲: بلافاصله POST
+            HttpHeaders h2 = new HttpHeaders();
+            h2.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            h2.set("User-Agent", "Mozilla/5.0");
+            h2.set("Referer", "https://bonbast.com/");
+            h2.set("X-Requested-With", "XMLHttpRequest");
+            h2.set("Cookie", cookieHeader.toString());
 
-            ResponseEntity<String> r = new RestTemplate().exchange(
+            ResponseEntity<String> r = rt.exchange(
                     "https://bonbast.com/json", HttpMethod.POST,
-                    new HttpEntity<>("param=" + param, h), String.class);
+                    new HttpEntity<>("param=" + param, h2), String.class);
 
-            // raw JSON رو برگردون
             return r.getBody();
 
         } catch (Exception e) {
