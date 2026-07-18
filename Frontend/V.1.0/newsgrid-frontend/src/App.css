@@ -767,8 +767,8 @@ a {
 /* ─── About Page ─────────────────────────────────────── */
 
 .about-section {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    justify-content: center;
+    display: flex;
     gap: 16px;
     margin-bottom: 32px;
 }
