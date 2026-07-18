@@ -35,17 +35,12 @@ const strings = {
         ],
         about: "درباره ما",
         aboutTitle: "درباره NewsGrid",
-        aboutDesc: "یک پروژه متن‌باز برای نمایش شفاف اخبار فارسی با امتیاز اعتبار.",
+        aboutDesc: "پلتفرم تجمیع اخبار فارسی با امتیاز اعتبار.",
         aboutBlocks: [
             {
                 icon: "ti-target",
                 title: "هدف",
                 desc: "NewsGrid ساخته شده تا کاربران فارسی‌زبان بتوانند در کمترین زمان ممکن، اخبار معتبر را از شایعه تشخیص دهند."
-            },
-            {
-                icon: "ti-code",
-                title: "تکنولوژی",
-                desc: "بک‌اند با Java و Spring Boot، فرانت‌اند با React، دیتابیس PostgreSQL. کد پروژه روی GitHub در دسترس است."
             },
             {
                 icon: "ti-refresh",
@@ -57,7 +52,7 @@ const strings = {
         aboutContactDesc: "باگ پیدا کردی؟ پیشنهادی داری؟ می‌خوای منبع جدیدی اضافه بشه؟ خوشحال می‌شیم بشنویم.",
         aboutEmail: "newsgrid.feedback@gmail.com",
         aboutEmailSubject: "بازخورد NewsGrid",
-        aboutTopics: ["گزارش باگ 🐛", "پیشنهاد ویژگی ✨", "افزودن منبع 📰", "همکاری 🤝"]
+        aboutTopics: ["گزارش باگ 🐛", "پیشنهاد ویژگی ✨", "افزودن منبع 📰", "همکاری 🤝"],
     },
 
     en: {
@@ -96,17 +91,12 @@ const strings = {
         ],
         about: "About",
         aboutTitle: "About NewsGrid",
-        aboutDesc: "An open-source project for transparent Persian news aggregation with credibility scoring.",
+        aboutDesc: "A Persian news aggregation platform with credibility scoring.",
         aboutBlocks: [
             {
                 icon: "ti-target",
                 title: "Mission",
                 desc: "NewsGrid is built to help Persian-speaking users distinguish credible news from rumors in the shortest time possible."
-            },
-            {
-                icon: "ti-code",
-                title: "Tech Stack",
-                desc: "Backend built with Java and Spring Boot, frontend with React, PostgreSQL database. Source code available on GitHub."
             },
             {
                 icon: "ti-refresh",
@@ -119,6 +109,7 @@ const strings = {
         aboutEmail: "newsgrid.feedback@gmail.com",
         aboutEmailSubject: "NewsGrid Feedback",
         aboutTopics: ["Report a bug 🐛", "Suggest a feature ✨", "Add a source 📰", "Collaborate 🤝"],
+
     }
 };
 

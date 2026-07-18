@@ -36,15 +36,6 @@ function About({ lang }) {
                         <i className="ti ti-mail" />
                         {t.aboutEmail}
                     </a>
-                    <a
-                        className="contact-btn contact-btn-secondary"
-                        href="https://github.com/Mani-Navi/NewsGrid"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        <i className="ti ti-brand-github" />
-                        GitHub
-                    </a>
                 </div>
 
                 <div className="about-topics">
