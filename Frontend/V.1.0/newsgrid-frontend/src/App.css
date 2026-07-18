@@ -936,3 +936,8 @@ a {
     .mobile-only  { display: block; }
     .desktop-only { display: none;  }
 }
+
+@font-face {
+    font-family: 'Vazirmatn';
+    font-display: swap;
+}
