@@ -941,3 +941,71 @@ a {
     font-family: 'Vazirmatn';
     font-display: swap;
 }
+
+/* ─── Source Badge ──────────────────────────────────── */
+.src-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.src-badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+    letter-spacing: 0.2px;
+}
+
+/* ─── Breaking News ─────────────────────────────────── */
+.cat-breaking {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #E11D48 !important;
+    color: #fff !important;
+    border-radius: 8px !important;
+}
+
+.pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    flex-shrink: 0;
+    animation: pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.35; transform: scale(0.65); }
+}
+
+.card.breaking {
+    border: 1.5px solid rgba(225, 29, 72, 0.4);
+    background: rgba(225, 29, 72, 0.06);
+}
+
+.dark .card.breaking {
+    background: rgba(225, 29, 72, 0.1);
+}
+
+.breaking-strip {
+    background: #E11D48;
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    padding: 6px 14px;
+    border-radius: 12.5px 12.5px 0 0;
+    margin: -16px -16px 12px -16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}

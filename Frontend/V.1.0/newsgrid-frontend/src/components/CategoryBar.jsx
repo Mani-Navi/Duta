@@ -4,12 +4,27 @@ function CategoryBar({ lang, activeCategory, onSelectCategory }) {
     const t = strings[lang];
 
     return (
-        <div className="categories">
+        <div className="categories" role="tablist" aria-label="دسته‌بندی اخبار">
+            {/* دکمه خبر فوری */}
+            <button
+                className={`cat cat-breaking ${activeCategory === 'breaking' ? 'active-breaking' : ''}`}
+                onClick={() => onSelectCategory('breaking')}
+                role="tab"
+                aria-selected={activeCategory === 'breaking'}
+                aria-label="خبر فوری"
+            >
+                <span className="pulse-dot" aria-hidden="true" />
+                خبر فوری
+            </button>
+
+            {/* دسته‌بندی‌های معمولی */}
             {t.categories.map((cat, i) => (
                 <button
                     key={i}
                     className={`cat ${activeCategory === i ? 'active' : ''}`}
                     onClick={() => onSelectCategory(i)}
+                    role="tab"
+                    aria-selected={activeCategory === i}
                 >
                     {cat}
                 </button>
