@@ -16,6 +16,7 @@ import java.net.URL;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +24,20 @@ public class RssFetcherService {
 
     private final SourceRepository sourceRepository;
     private final ArticleRepository articleRepository;
+
+    // کلمات کلیدی خبر فوری — فارسی و انگلیسی
+    private static final Set<String> BREAKING_KEYWORDS = Set.of(
+            // فارسی
+            "زلزله", "سیل", "آتش‌سوزی", "آتش سوزی", "انفجار", "حمله",
+            "جنگ", "بمب", "موشک", "کشته", "شهید", "سقوط", "تصادف",
+            "اورژانس", "بحران", "فوری", "خبر فوری", "ترور", "اشغال",
+            "طوفان", "سونامی", "آتشفشان", "رانش", "گروگان",
+            // انگلیسی
+            "earthquake", "flood", "fire", "explosion", "attack",
+            "war", "bomb", "missile", "killed", "dead", "crash",
+            "emergency", "crisis", "breaking", "urgent", "terror",
+            "storm", "tsunami", "volcano"
+    );
 
     // هر ۱۵ دقیقه یکبار اجرا میشه — UCS-005 گام ۱
     @Scheduled(fixedRate = 300000)
@@ -65,6 +80,8 @@ public class RssFetcherService {
                         }
 
                         article.setSource(source);
+                        // تشخیص خبر فوری
+                        article.setBreaking(isBreaking(entry.getTitle()));
                         articleRepository.save(article);
                     }
                 }
@@ -79,5 +96,11 @@ public class RssFetcherService {
                         + source.getName() + " — " + e.getMessage());
             }
         }
+    }
+
+    private boolean isBreaking(String title) {
+        if (title == null) return false;
+        String lower = title.toLowerCase();
+        return BREAKING_KEYWORDS.stream().anyMatch(lower::contains);
     }
 }

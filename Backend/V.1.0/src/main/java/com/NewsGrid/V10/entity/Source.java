@@ -1,6 +1,5 @@
 package com.NewsGrid.V10.entity;
 
-import com.NewsGrid.V10.entity.Category;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -27,6 +26,14 @@ public class Source {
 
     @Column(nullable = false)
     private Short credibility;
+
+    // رنگ badge منبع — مثل #E11D48
+    @Column(length = 7)
+    private String color;
+
+    // حروف اختصاری منبع — مثل BBC، IR، IS
+    @Column(length = 5)
+    private String initials;
 
     @ManyToOne
     @JoinColumn(name = "category_id")

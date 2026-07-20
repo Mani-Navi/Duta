@@ -26,6 +26,10 @@ public class Article {
 
     private ZonedDateTime publishedAt;
 
+    // آیا این خبر فوری است؟
+    @Column(nullable = false)
+    private boolean breaking = false;
+
     @ManyToOne
     @JoinColumn(name = "source_id")
     private Source source;
