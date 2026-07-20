@@ -6,6 +6,7 @@ import '@fontsource/vazirmatn/400.css';
 import '@fontsource/vazirmatn/600.css';
 import '@fontsource/vazirmatn/700.css';
 import '@fontsource/vazirmatn/800.css';
+import '@tabler/icons-webfont/tabler-icons.min.css';
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
