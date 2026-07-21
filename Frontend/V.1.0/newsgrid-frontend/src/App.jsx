@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import PriceTicker from './components/PriceTicker';
@@ -17,15 +17,28 @@ function App() {
         window.matchMedia("(prefers-color-scheme: dark)").matches);
     const [searchKeyword, setSearchKeyword] = useState('');
 
+    // ذخیره scroll position
+    const scrollPositionRef = useRef(0);
+
     const handleSearch = (keyword) => {
         setSearchKeyword(keyword);
         if (keyword) setView('home');
     };
 
     const openArticle = (article) => {
+        // scroll position فعلی رو ذخیره کن
+        scrollPositionRef.current = window.scrollY;
         setSelectedArticle(article);
         setView('detail');
         window.scrollTo(0, 0);
+    };
+
+    const goHome = () => {
+        setView('home');
+        // بعد از render، به position قبلی برگرد
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollPositionRef.current);
+        });
     };
 
     useEffect(() => {
@@ -41,34 +54,35 @@ function App() {
         <div>
             <PriceTicker />
 
-            {/* دسکتاپ — با CSS مخفی میشه روی موبایل */}
             <div className="desktop-only">
                 <Navbar
                     lang={lang}
                     dark={dark}
                     view={view}
                     onToggleTheme={() => setDark(prev => !prev)}
-                    onNavigate={setView}
+                    onNavigate={(v) => v === 'home' ? goHome() : setView(v)}
                     onSearch={handleSearch}
                 />
             </div>
 
             {view === 'detail' && (
                 <div className="back-bar">
-                    <button className="back-btn" onClick={() => setView('home')}>
+                    <button className="back-btn" onClick={goHome}>
                         <i className="ti ti-chevron-right" />
                         اخبار
                     </button>
                 </div>
             )}
 
-            {view === 'home' && (
+            {/* Home رو همیشه render کن — فقط مخفی کن */}
+            <div style={{ display: view === 'home' ? 'block' : 'none' }}>
                 <Home
                     lang={lang}
                     onOpenArticle={openArticle}
                     searchKeyword={searchKeyword}
                 />
-            )}
+            </div>
+
             {view === 'detail' && selectedArticle && (
                 <ArticleDetail lang={lang} article={selectedArticle} />
             )}
@@ -76,12 +90,11 @@ function App() {
             {view === 'credibility' && <Credibility lang={lang} />}
             {view === 'about' && <About lang={lang} />}
 
-            {/* موبایل — با CSS مخفی میشه روی دسکتاپ */}
             <div className="mobile-only">
                 <BottomNav
                     view={view}
                     dark={dark}
-                    onNavigate={setView}
+                    onNavigate={(v) => v === 'home' ? goHome() : setView(v)}
                     onSearch={handleSearch}
                     onToggleTheme={() => setDark(prev => !prev)}
                 />

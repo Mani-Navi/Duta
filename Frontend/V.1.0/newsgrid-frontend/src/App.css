@@ -1046,3 +1046,30 @@ a {
     align-items: center;
     gap: 7px;
 }
+
+/* ─── New Articles Bar ──────────────────────────────── */
+.new-articles-bar {
+    position: sticky;
+    top: 80px;
+    z-index: 15;
+    margin: 0 auto 12px;
+    max-width: 280px;
+    background: var(--blue);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 20px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 122, 255, 0.35);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
