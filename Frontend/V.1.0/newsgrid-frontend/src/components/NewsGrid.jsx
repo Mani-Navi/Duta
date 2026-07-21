@@ -3,7 +3,6 @@ import NewsCard from './NewsCard';
 import api from '../api/axiosConfig';
 import strings from '../strings/strings';
 
-// هر ۵ دقیقه auto-refresh
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
 function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
@@ -13,10 +12,12 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
     const [error, setError] = useState(null);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
+    const [refreshKey, setRefreshKey] = useState(0);
     const observer = useRef(null);
     const latestIdRef = useRef(null);
     const t = strings[lang];
 
+    // وقتی کتگوری یا سرچ عوض شد
     useEffect(() => {
         setArticles([]);
         setPage(0);
@@ -25,38 +26,32 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
         latestIdRef.current = null;
     }, [activeCategory, searchKeyword]);
 
+    // fetch — به page، کتگوری، سرچ و refreshKey گوش میده
     useEffect(() => {
         fetchArticles();
-    }, [page, activeCategory, searchKeyword]);
+    }, [page, activeCategory, searchKeyword, refreshKey]);
 
-    // auto-refresh — هر ۵ دقیقه چک کن اخبار جدید داریم
+    // auto-refresh
     useEffect(() => {
         const interval = setInterval(async () => {
             if (!latestIdRef.current) return;
             try {
                 const res = await fetchUrl(0);
-                const newArticles = res.data.content;
-                const latestId = latestIdRef.current;
-                const fresh = newArticles.filter(a => a.id > latestId);
-                if (fresh.length > 0) {
-                    setNewCount(fresh.length);
-                }
+                const fresh = res.data.content.filter(a => a.id > latestIdRef.current);
+                if (fresh.length > 0) setNewCount(fresh.length);
             } catch {}
         }, AUTO_REFRESH_MS);
-
         return () => clearInterval(interval);
     }, [activeCategory, searchKeyword]);
 
     const fetchUrl = (p) => {
-        if (searchKeyword) {
+        if (searchKeyword)
             return api.get(`/articles/search?keyword=${encodeURIComponent(searchKeyword)}&page=${p}&size=20`);
-        } else if (activeCategory === 'breaking') {
+        if (activeCategory === 'breaking')
             return api.get(`/articles/breaking?page=${p}&size=20`);
-        } else if (activeCategory === 0) {
+        if (activeCategory === 0)
             return api.get(`/articles?page=${p}&size=20`);
-        } else {
-            return api.get(`/articles/category/${activeCategory}?page=${p}&size=20`);
-        }
+        return api.get(`/articles/category/${activeCategory}?page=${p}&size=20`);
     };
 
     const fetchArticles = async () => {
@@ -66,16 +61,12 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
             setError(null);
             const response = await fetchUrl(page);
             const data = response.data;
-
             setArticles(prev => {
                 const next = page === 0 ? data.content : [...prev, ...data.content];
-                // بالاترین ID رو ذخیره کن
-                if (next.length > 0) {
+                if (next.length > 0)
                     latestIdRef.current = Math.max(...next.map(a => a.id));
-                }
                 return next;
             });
-
             setHasMore(!data.last);
         } catch {
             setError(t.error);
@@ -84,23 +75,27 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
         }
     };
 
-    // کاربر روی دکمه «اخبار جدید» زد
     const loadNewArticles = () => {
         setArticles([]);
-        setPage(0);
         setHasMore(true);
         setNewCount(0);
         latestIdRef.current = null;
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        if (page === 0) {
+            // page قبلاً 0 بوده — refreshKey رو عوض کن تا force fetch بشه
+            setRefreshKey(k => k + 1);
+        } else {
+            setPage(0);
+        }
     };
 
     const lastCardRef = useCallback(node => {
         if (loading) return;
         if (observer.current) observer.current.disconnect();
         observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && hasMore) {
+            if (entries[0].isIntersecting && hasMore)
                 setPage(prev => prev + 1);
-            }
         });
         if (node) observer.current.observe(node);
     }, [loading, hasMore]);
@@ -121,7 +116,6 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
 
     return (
         <>
-            {/* دکمه اخبار جدید */}
             {newCount > 0 && (
                 <div className="new-articles-bar" onClick={loadNewArticles}>
                     <i className="ti ti-arrow-up" />
@@ -134,11 +128,7 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
                     const isLast = index === articles.length - 1;
                     return (
                         <div key={article.id} ref={isLast ? lastCardRef : null}>
-                            <NewsCard
-                                article={article}
-                                lang={lang}
-                                onOpen={onOpenArticle}
-                            />
+                            <NewsCard article={article} lang={lang} onOpen={onOpenArticle} />
                         </div>
                     );
                 })}
