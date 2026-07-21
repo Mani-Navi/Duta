@@ -23,20 +23,81 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
         @Modifying
         @Transactional
-        void deleteByPublishedAtBefore(ZonedDateTime cutoff0);
+        void deleteByPublishedAtBefore(ZonedDateTime cutoff);
 
         List<Article> findBySource(Source source);
-
         List<Article> findByCluster(ArticleCluster cluster);
-
-        Page<Article> findAll(Pageable pageable);
-
-        Page<Article> findBySource_Category(Category category, Pageable pageable);
 
         Page<Article> findByBreakingTrue(Pageable pageable);
 
-        @Query("SELECT a FROM Article a WHERE " +
-                "LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-                "LOWER(a.source.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+        // فقط یه article به ازای هر cluster (معتبرترین منبع)
+        // + articleهایی که اصلاً cluster ندارن
+        @Query("""
+        SELECT a FROM Article a
+        WHERE a.cluster IS NULL
+        OR a.id = (
+            SELECT a2.id FROM Article a2
+            WHERE a2.cluster = a.cluster
+            ORDER BY a2.source.credibility DESC, a2.publishedAt DESC
+            LIMIT 1
+        )
+        ORDER BY a.publishedAt DESC
+        """)
+        Page<Article> findRepresentativeArticles(Pageable pageable);
+
+        // همین ولی با فیلتر کتگوری
+        @Query("""
+        SELECT a FROM Article a
+        WHERE a.source.category = :category
+        AND (
+            a.cluster IS NULL
+            OR a.id = (
+                SELECT a2.id FROM Article a2
+                WHERE a2.cluster = a.cluster
+                AND a2.source.category = :category
+                ORDER BY a2.source.credibility DESC, a2.publishedAt DESC
+                LIMIT 1
+            )
+        )
+        ORDER BY a.publishedAt DESC
+        """)
+        Page<Article> findRepresentativeByCategory(@Param("category") com.NewsGrid.V10.entity.Category category, Pageable pageable);
+
+        // breaking با cluster dedup
+        @Query("""
+        SELECT a FROM Article a
+        WHERE a.breaking = true
+        AND (
+            a.cluster IS NULL
+            OR a.id = (
+                SELECT a2.id FROM Article a2
+                WHERE a2.cluster = a.cluster
+                AND a2.breaking = true
+                ORDER BY a2.source.credibility DESC, a2.publishedAt DESC
+                LIMIT 1
+            )
+        )
+        ORDER BY a.publishedAt DESC
+        """)
+        Page<Article> findRepresentativeBreaking(Pageable pageable);
+
+        // جستجو با cluster dedup
+        @Query("""
+        SELECT a FROM Article a
+        WHERE (
+            LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(a.source.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        )
+        AND (
+            a.cluster IS NULL
+            OR a.id = (
+                SELECT a2.id FROM Article a2
+                WHERE a2.cluster = a.cluster
+                ORDER BY a2.source.credibility DESC, a2.publishedAt DESC
+                LIMIT 1
+            )
+        )
+        ORDER BY a.publishedAt DESC
+        """)
         Page<Article> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 }
