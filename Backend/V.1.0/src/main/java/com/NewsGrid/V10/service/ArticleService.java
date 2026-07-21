@@ -20,23 +20,23 @@ public class ArticleService {
 
     public Page<Article> getAllArticles(int page, int size) {
         return articleRepository.findRepresentativeArticles(
-                PageRequest.of(page, size)
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"))
         );
     }
 
     public Page<Article> getArticlesByCategory(Long categoryId, int page, int size) {
-        Category category = categoryRepository
-                .findById(categoryId)
+        // وجود کتگوری رو چک کن
+        categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("کتگوری یافت نشد"));
         return articleRepository.findRepresentativeByCategory(
-                category,
-                PageRequest.of(page, size)
+                categoryId,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"))
         );
     }
 
     public Page<Article> getBreakingArticles(int page, int size) {
         return articleRepository.findRepresentativeBreaking(
-                PageRequest.of(page, size)
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"))
         );
     }
 
@@ -53,7 +53,7 @@ public class ArticleService {
     public Page<Article> searchArticles(String keyword, int page, int size) {
         return articleRepository.searchByKeyword(
                 keyword,
-                PageRequest.of(page, size)
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt"))
         );
     }
 }

@@ -28,76 +28,114 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         List<Article> findBySource(Source source);
         List<Article> findByCluster(ArticleCluster cluster);
 
-        Page<Article> findByBreakingTrue(Pageable pageable);
-
-        // فقط یه article به ازای هر cluster (معتبرترین منبع)
-        // + articleهایی که اصلاً cluster ندارن
-        @Query("""
-        SELECT a FROM Article a
-        WHERE a.cluster IS NULL
+        // همه اخبار — یه کارت به ازای هر cluster
+        @Query(value = """
+        SELECT a.* FROM articles a
+        LEFT JOIN sources s ON a.source_id = s.id
+        WHERE a.cluster_id IS NULL
         OR a.id = (
-            SELECT a2.id FROM Article a2
-            WHERE a2.cluster = a.cluster
-            ORDER BY a2.source.credibility DESC, a2.publishedAt DESC
+            SELECT a2.id FROM articles a2
+            LEFT JOIN sources s2 ON a2.source_id = s2.id
+            WHERE a2.cluster_id = a.cluster_id
+            ORDER BY s2.credibility DESC, a2.published_at DESC
             LIMIT 1
         )
-        ORDER BY a.publishedAt DESC
-        """)
+        ORDER BY a.published_at DESC
+        """,
+                countQuery = """
+        SELECT COUNT(*) FROM (
+            SELECT DISTINCT COALESCE(a.cluster_id, a.id)
+            FROM articles a
+        ) t
+        """,
+                nativeQuery = true)
         Page<Article> findRepresentativeArticles(Pageable pageable);
 
-        // همین ولی با فیلتر کتگوری
-        @Query("""
-        SELECT a FROM Article a
-        WHERE a.source.category = :category
+        // فیلتر کتگوری
+        @Query(value = """
+        SELECT a.* FROM articles a
+        LEFT JOIN sources s ON a.source_id = s.id
+        LEFT JOIN categories c ON s.category_id = c.id
+        WHERE c.id = :categoryId
         AND (
-            a.cluster IS NULL
+            a.cluster_id IS NULL
             OR a.id = (
-                SELECT a2.id FROM Article a2
-                WHERE a2.cluster = a.cluster
-                AND a2.source.category = :category
-                ORDER BY a2.source.credibility DESC, a2.publishedAt DESC
+                SELECT a2.id FROM articles a2
+                LEFT JOIN sources s2 ON a2.source_id = s2.id
+                WHERE a2.cluster_id = a.cluster_id
+                ORDER BY s2.credibility DESC, a2.published_at DESC
                 LIMIT 1
             )
         )
-        ORDER BY a.publishedAt DESC
-        """)
-        Page<Article> findRepresentativeByCategory(@Param("category") com.NewsGrid.V10.entity.Category category, Pageable pageable);
+        ORDER BY a.published_at DESC
+        """,
+                countQuery = """
+        SELECT COUNT(*) FROM (
+            SELECT DISTINCT COALESCE(a.cluster_id, a.id)
+            FROM articles a
+            LEFT JOIN sources s ON a.source_id = s.id
+            LEFT JOIN categories c ON s.category_id = c.id
+            WHERE c.id = :categoryId
+        ) t
+        """,
+                nativeQuery = true)
+        Page<Article> findRepresentativeByCategory(@Param("categoryId") Long categoryId, Pageable pageable);
 
-        // breaking با cluster dedup
-        @Query("""
-        SELECT a FROM Article a
+        // breaking
+        @Query(value = """
+        SELECT a.* FROM articles a
+        LEFT JOIN sources s ON a.source_id = s.id
         WHERE a.breaking = true
         AND (
-            a.cluster IS NULL
+            a.cluster_id IS NULL
             OR a.id = (
-                SELECT a2.id FROM Article a2
-                WHERE a2.cluster = a.cluster
-                AND a2.breaking = true
-                ORDER BY a2.source.credibility DESC, a2.publishedAt DESC
+                SELECT a2.id FROM articles a2
+                LEFT JOIN sources s2 ON a2.source_id = s2.id
+                WHERE a2.cluster_id = a.cluster_id
+                ORDER BY s2.credibility DESC, a2.published_at DESC
                 LIMIT 1
             )
         )
-        ORDER BY a.publishedAt DESC
-        """)
+        ORDER BY a.published_at DESC
+        """,
+                countQuery = """
+        SELECT COUNT(*) FROM (
+            SELECT DISTINCT COALESCE(a.cluster_id, a.id)
+            FROM articles a WHERE a.breaking = true
+        ) t
+        """,
+                nativeQuery = true)
         Page<Article> findRepresentativeBreaking(Pageable pageable);
 
-        // جستجو با cluster dedup
-        @Query("""
-        SELECT a FROM Article a
+        // جستجو
+        @Query(value = """
+        SELECT a.* FROM articles a
+        LEFT JOIN sources s ON a.source_id = s.id
         WHERE (
             LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-            OR LOWER(a.source.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
         )
         AND (
-            a.cluster IS NULL
+            a.cluster_id IS NULL
             OR a.id = (
-                SELECT a2.id FROM Article a2
-                WHERE a2.cluster = a.cluster
-                ORDER BY a2.source.credibility DESC, a2.publishedAt DESC
+                SELECT a2.id FROM articles a2
+                LEFT JOIN sources s2 ON a2.source_id = s2.id
+                WHERE a2.cluster_id = a.cluster_id
+                ORDER BY s2.credibility DESC, a2.published_at DESC
                 LIMIT 1
             )
         )
-        ORDER BY a.publishedAt DESC
-        """)
+        ORDER BY a.published_at DESC
+        """,
+                countQuery = """
+        SELECT COUNT(*) FROM (
+            SELECT DISTINCT COALESCE(a.cluster_id, a.id)
+            FROM articles a
+            LEFT JOIN sources s ON a.source_id = s.id
+            WHERE LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        ) t
+        """,
+                nativeQuery = true)
         Page<Article> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 }
