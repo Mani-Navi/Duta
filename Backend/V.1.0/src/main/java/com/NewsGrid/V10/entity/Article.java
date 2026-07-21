@@ -1,5 +1,6 @@
 package com.NewsGrid.V10.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -33,4 +34,10 @@ public class Article {
     @ManyToOne
     @JoinColumn(name = "source_id")
     private Source source;
+
+    // cluster این خبر
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cluster_id")
+    @JsonIgnoreProperties({"articles", "hibernateLazyInitializer"})
+    private ArticleCluster cluster;
 }
