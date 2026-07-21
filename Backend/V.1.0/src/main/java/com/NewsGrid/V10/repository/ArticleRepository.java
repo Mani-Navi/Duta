@@ -36,6 +36,9 @@ public interface ArticleRepository
         Page<Article> findAll(Pageable pageable);
         Page<Article> findBySource_Category(Category category, Pageable pageable);
 
+        // خبرهای فوری
+        Page<Article> findByBreakingTrue(Pageable pageable);
+
         @Query("SELECT a FROM Article a WHERE " +
                 "LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
                 "LOWER(a.source.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")

@@ -40,6 +40,10 @@ public class ArticleService {
         );
     }
 
+    public Page<Article> getBreakingArticles(int page, int size) {
+        return articleRepository.findByBreakingTrue(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "publishedAt")));
+    }
+
     public Article getArticleById(Long id) {
         return articleRepository
                 .findById(id)

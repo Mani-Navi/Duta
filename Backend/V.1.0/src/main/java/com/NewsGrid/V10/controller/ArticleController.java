@@ -39,6 +39,13 @@ public class ArticleController {
         return articleService.getArticlesByCategory(categoryId, page, size);
     }
 
+    @GetMapping("/breaking")
+    public Page<Article> getBreaking(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size){
+        return articleService.getBreakingArticles(page, size);
+    }
+
     // جزئیات یه خبر
     @GetMapping("/{id}")
     public Article getArticleById(@PathVariable Long id) {
