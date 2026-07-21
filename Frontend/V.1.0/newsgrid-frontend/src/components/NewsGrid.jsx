@@ -33,19 +33,20 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
 
             let response;
 
-            const keyword = encodeURIComponent(searchKeyword);
-
             if (searchKeyword) {
-                response = await api.get(
-                    `/articles/search?keyword=${keyword}&page=${page}&size=20`
-                );
-            }else if (activeCategory === 0) {
+                // جستجو
+                response = await api.get(`/articles/search?keyword=${encodeURIComponent(searchKeyword)}&page=${page}&size=20`);
+            } else if (activeCategory === 'breaking') {
+                // خبر فوری — از endpoint جدید
+                response = await api.get(`/articles/breaking?page=${page}&size=20`);
+            } else if (activeCategory === 0) {
+                // همه اخبار
                 response = await api.get(`/articles?page=${page}&size=20`);
             } else {
-                response = await api.get(
-                    `/articles/category/${activeCategory}?page=${page}&size=20`
-                );
+                // فیلتر کتگوری
+                response = await api.get(`/articles/category/${activeCategory}?page=${page}&size=20`);
             }
+
 
             const data = response.data;
 
