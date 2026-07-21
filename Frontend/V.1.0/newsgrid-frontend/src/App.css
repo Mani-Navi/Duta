@@ -1009,3 +1009,40 @@ a {
     align-items: center;
     gap: 6px;
 }
+
+/* ─── Multi Source Badge ────────────────────────────── */
+.card-top-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.multi-source-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--blue);
+    background: rgba(0, 122, 255, 0.1);
+    padding: 3px 8px;
+    border-radius: 20px;
+}
+
+.multi-source-badge i {
+    font-size: 11px;
+}
+
+/* ─── Detail Breaking Strip ─────────────────────────── */
+.detail-breaking {
+    background: #E11D48;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}

@@ -1,8 +1,8 @@
 function NewsCard({ article, lang, onOpen }) {
 
-    const getBadgeClass = (credibility) => {
-        if (credibility >= 80) return 'green';
-        if (credibility >= 50) return 'yellow';
+    const getBadgeClass = (score) => {
+        if (score >= 80) return 'green';
+        if (score >= 50) return 'yellow';
         return 'red';
     };
 
@@ -16,8 +16,10 @@ function NewsCard({ article, lang, onOpen }) {
         return lang === 'fa' ? `${days} روز پیش` : `${days} days ago`;
     };
 
-    const credibility = article.source?.credibility || 0;
-    const badgeClass = getBadgeClass(credibility);
+    // امتیاز از cluster اگه وجود داشت، وگرنه از منبع
+    const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
+    const sourceCount = article.cluster?.sourceCount ?? 1;
+    const badgeClass = getBadgeClass(score);
     const isBreaking = article.breaking;
     const srcColor = article.source?.color || '#8E8E93';
     const srcInitials = article.source?.initials || article.source?.name?.substring(0, 2) || '?';
@@ -32,7 +34,6 @@ function NewsCard({ article, lang, onOpen }) {
             aria-label={article.title}
             onKeyDown={(e) => e.key === 'Enter' && onOpen(article)}
         >
-            {/* نوار خبر فوری */}
             {isBreaking && (
                 <div className="breaking-strip">
                     <span className="pulse-dot" />
@@ -41,7 +42,6 @@ function NewsCard({ article, lang, onOpen }) {
             )}
 
             <div className="card-top">
-                {/* badge رنگی منبع + نام */}
                 <span className="src-group">
                     <span
                         className="src-badge"
@@ -55,12 +55,18 @@ function NewsCard({ article, lang, onOpen }) {
                     </span>
                 </span>
 
-                <span
-                    className={`badge ${badgeClass}`}
-                    aria-label={`امتیاز اعتبار ${credibility}`}
-                >
-                    {credibility}%
-                </span>
+                <div className="card-top-right">
+                    {/* نشان چند منبع */}
+                    {sourceCount > 1 && (
+                        <span className="multi-source-badge">
+                            <i className="ti ti-layers-intersect" aria-hidden="true" />
+                            {sourceCount} منبع
+                        </span>
+                    )}
+                    <span className={`badge ${badgeClass}`} aria-label={`امتیاز ${score}`}>
+                        {score}%
+                    </span>
+                </div>
             </div>
 
             <div className="card-title">{article.title}</div>

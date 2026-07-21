@@ -1,25 +1,41 @@
+import { useState, useEffect } from 'react';
 import strings from '../strings/strings';
+import api from '../api/axiosConfig';
 
 function ArticleDetail({ lang, article }) {
     const t = strings[lang];
+    const [clusterArticles, setClusterArticles] = useState([]);
 
-    const getBadgeClass = (credibility) => {
-        if (credibility >= 80) return 'green';
-        if (credibility >= 50) return 'yellow';
+    // اگه cluster داره، بقیه مقالات cluster رو بگیر
+    useEffect(() => {
+        if (article.cluster?.id) {
+            api.get(`/clusters/${article.cluster.id}/articles`)
+                .then(res => {
+                    // خود این مقاله رو حذف کن
+                    setClusterArticles(res.data.filter(a => a.id !== article.id));
+                })
+                .catch(() => {});
+        }
+    }, [article.id]);
+
+    const getBadgeClass = (score) => {
+        if (score >= 80) return 'green';
+        if (score >= 50) return 'yellow';
         return 'red';
     };
 
-    const getScoreLabel = (credibility) => {
-        if (credibility >= 80) return lang === 'fa' ? 'تأیید شده' : 'Verified';
-        if (credibility >= 50) return lang === 'fa' ? 'در حال بررسی' : 'Developing';
+    const getScoreLabel = (score) => {
+        if (score >= 80) return lang === 'fa' ? 'تأیید شده' : 'Verified';
+        if (score >= 50) return lang === 'fa' ? 'در حال بررسی' : 'Developing';
         return lang === 'fa' ? 'نامعتبر' : 'Unverified';
     };
 
-    const getScoreDesc = (credibility) => {
-        if (credibility >= 80) return lang === 'fa'
-            ? 'این خبر توسط منابع معتبر پوشش داده شده است.'
-            : 'This story has been covered by credible sources.';
-        if (credibility >= 50) return lang === 'fa'
+    const getScoreDesc = (score) => {
+        const count = article.cluster?.sourceCount ?? 1;
+        if (score >= 80) return lang === 'fa'
+            ? `این خبر توسط ${count} منبع معتبر پوشش داده شده است.`
+            : `This story has been covered by ${count} credible sources.`;
+        if (score >= 50) return lang === 'fa'
             ? 'این خبر هنوز توسط منابع بیشتری تأیید نشده است.'
             : 'This story has not yet been confirmed by more sources.';
         return lang === 'fa'
@@ -27,9 +43,9 @@ function ArticleDetail({ lang, article }) {
             : 'No credible source has confirmed this story.';
     };
 
-    const getScoreColor = (credibility) => {
-        if (credibility >= 80) return '#34C759';
-        if (credibility >= 50) return '#FF9500';
+    const getScoreColor = (score) => {
+        if (score >= 80) return '#34C759';
+        if (score >= 50) return '#FF9500';
         return '#FF3B30';
     };
 
@@ -60,24 +76,37 @@ function ArticleDetail({ lang, article }) {
         );
     };
 
-    const credibility = article.source?.credibility || 0;
-    const badgeClass = getBadgeClass(credibility);
-    const scoreColor = getScoreColor(credibility);
+    // امتیاز از cluster اگه وجود داشت
+    const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
+    const sourceCount = article.cluster?.sourceCount ?? 1;
+    const badgeClass = getBadgeClass(score);
+    const scoreColor = getScoreColor(score);
     const category = article.source?.category;
+    const srcColor = article.source?.color || '#8E8E93';
+    const srcInitials = article.source?.initials || article.source?.name?.substring(0, 2) || '?';
+
+    // همه منابع = این خبر + بقیه cluster
+    const allSources = [article, ...clusterArticles];
 
     return (
         <div className="detail-content">
+
+            {/* breaking strip */}
+            {article.breaking && (
+                <div className="detail-breaking">
+                    <span className="pulse-dot" />
+                    خبر فوری
+                </div>
+            )}
 
             {/* Meta */}
             <div className="detail-meta">
                 {category && (
                     <span className="detail-category">
-            {lang === 'fa' ? category.nameFa : category.nameEn}
-          </span>
+                        {lang === 'fa' ? category.nameFa : category.nameEn}
+                    </span>
                 )}
-                <span className="detail-time">
-          {formatTime(article.publishedAt)}
-        </span>
+                <span className="detail-time">{formatTime(article.publishedAt)}</span>
             </div>
 
             {/* تیتر */}
@@ -87,53 +116,63 @@ function ArticleDetail({ lang, article }) {
             <div className="group-card">
                 <div className="cred-row">
                     <div className="cred-ring-wrap">
-                        {buildRing(credibility, scoreColor)}
+                        {buildRing(score, scoreColor)}
                         <div className="cred-num" style={{ color: scoreColor }}>
-                            {credibility}
+                            {score}
                         </div>
                     </div>
                     <div>
-            <span className="cred-status" style={{ color: scoreColor }}>
-              {getScoreLabel(credibility)}
-            </span>
-                        <div className="cred-desc">
-                            {getScoreDesc(credibility)}
-                        </div>
+                        <span className="cred-status" style={{ color: scoreColor }}>
+                            {getScoreLabel(score)}
+                        </span>
+                        <div className="cred-desc">{getScoreDesc(score)}</div>
                     </div>
                 </div>
             </div>
 
-            {/* منبع */}
+            {/* منابع */}
             <div className="sources-title">
-                {t.sourcesCoveredBy(1)}
+                {t.sourcesCoveredBy(sourceCount)}
             </div>
 
             <div className="source-list">
-                <div
-                    className="source-item"
-                    onClick={() => window.open(article.url, '_blank')}
-                >
-                    <div className="source-info">
-                        <div className="source-icon">
-                            {article.source?.name?.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                            <div className="source-name">{article.source?.name}</div>
-                            <div className="source-time-label">
-                                {formatTime(article.publishedAt)}
+                {allSources.map((src, i) => {
+                    const srcBadgeClass = getBadgeClass(src.source?.credibility ?? 0);
+                    const color = src.source?.color || '#8E8E93';
+                    const initials = src.source?.initials || src.source?.name?.substring(0, 2) || '?';
+                    return (
+                        <div
+                            key={src.id ?? i}
+                            className="source-item"
+                            onClick={() => window.open(src.url, '_blank')}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => e.key === 'Enter' && window.open(src.url, '_blank')}
+                        >
+                            <div className="source-info">
+                                {/* badge رنگی منبع */}
+                                <div
+                                    className="source-icon"
+                                    style={{ background: color, color: '#fff' }}
+                                >
+                                    {initials}
+                                </div>
+                                <div>
+                                    <div className="source-name">{src.source?.name}</div>
+                                    <div className="source-time-label">
+                                        {formatTime(src.publishedAt)}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="source-right">
+                                <span className={`source-badge ${srcBadgeClass}`}>
+                                    {getScoreLabel(src.source?.credibility ?? 0)}
+                                </span>
+                                <i className="ti ti-chevron-left arrow-icon" />
                             </div>
                         </div>
-                    </div>
-                    <div className="source-right">
-            <span className={`source-badge ${badgeClass}`}>
-              {getScoreLabel(credibility)}
-            </span>
-                        <i className={`ti ${lang === 'fa'
-                            ? 'ti-chevron-left'
-                            : 'ti-chevron-right'} arrow-icon`}
-                        />
-                    </div>
-                </div>
+                    );
+                })}
             </div>
 
             <div className="footer-note">{t.clickToRead}</div>
