@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../api/axiosConfig';
 
 export function useAuth() {
@@ -29,5 +29,5 @@ export function useAuth() {
         setUser(null);
     };
 
-    return { user, login, register, logout };
+    return { user, setUser, login, register, logout };
 }

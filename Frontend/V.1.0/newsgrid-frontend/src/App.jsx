@@ -2,12 +2,12 @@ import { useEffect, useState, useRef } from 'react';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import PriceTicker from './components/PriceTicker';
-import AuthModal from './components/AuthModal';
 import Home from './pages/Home';
 import About from './pages/About';
 import ArticleDetail from './pages/ArticleDetail';
 import Features from './pages/Features';
 import Credibility from './pages/Credibility';
+import AuthPage from './pages/AuthPage';
 import { useAuth } from './hooks/useAuth';
 import './App.css';
 
@@ -18,10 +18,10 @@ function App() {
     const [dark, setDark] = useState(() =>
         window.matchMedia("(prefers-color-scheme: dark)").matches);
     const [searchKeyword, setSearchKeyword] = useState('');
-    const [showAuth, setShowAuth] = useState(false);
     const scrollPositionRef = useRef(0);
 
-    const { user, logout } = useAuth();
+    // user state مرکزی اینجاست
+    const { user, login, register, logout } = useAuth();
 
     const handleSearch = (keyword) => {
         setSearchKeyword(keyword);
@@ -42,6 +42,19 @@ function App() {
         });
     };
 
+    const goAuth = () => {
+        scrollPositionRef.current = window.scrollY;
+        setView('auth');
+        window.scrollTo(0, 0);
+    };
+
+    const backFromAuth = () => {
+        setView('home');
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollPositionRef.current);
+        });
+    };
+
     useEffect(() => {
         document.documentElement.setAttribute('dir', 'rtl');
         document.documentElement.setAttribute('lang', 'fa');
@@ -50,6 +63,20 @@ function App() {
     useEffect(() => {
         document.body.classList.toggle('dark', dark);
     }, [dark]);
+
+    // صفحه auth کاملاً جدا
+    if (view === 'auth') {
+        return (
+            <div>
+                <PriceTicker />
+                <AuthPage
+                    onBack={backFromAuth}
+                    onLogin={login}
+                    onRegister={register}
+                />
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -64,7 +91,7 @@ function App() {
                     onToggleTheme={() => setDark(prev => !prev)}
                     onNavigate={(v) => v === 'home' ? goHome() : setView(v)}
                     onSearch={handleSearch}
-                    onAuthClick={() => setShowAuth(true)}
+                    onAuthClick={goAuth}
                     onLogout={logout}
                 />
             </div>
@@ -92,7 +119,7 @@ function App() {
                     lang={lang}
                     article={selectedArticle}
                     user={user}
-                    onAuthClick={() => setShowAuth(true)}
+                    onAuthClick={goAuth}
                 />
             )}
             {view === 'features' && <Features lang={lang} />}
@@ -107,12 +134,10 @@ function App() {
                     onNavigate={(v) => v === 'home' ? goHome() : setView(v)}
                     onSearch={handleSearch}
                     onToggleTheme={() => setDark(prev => !prev)}
-                    onAuthClick={() => setShowAuth(true)}
+                    onAuthClick={goAuth}
                     onLogout={logout}
                 />
             </div>
-
-            {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
         </div>
     );
 }
