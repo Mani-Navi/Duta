@@ -2,11 +2,13 @@ import { useEffect, useState, useRef } from 'react';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import PriceTicker from './components/PriceTicker';
+import AuthModal from './components/AuthModal';
 import Home from './pages/Home';
 import About from './pages/About';
 import ArticleDetail from './pages/ArticleDetail';
 import Features from './pages/Features';
 import Credibility from './pages/Credibility';
+import { useAuth } from './hooks/useAuth';
 import './App.css';
 
 function App() {
@@ -16,9 +18,10 @@ function App() {
     const [dark, setDark] = useState(() =>
         window.matchMedia("(prefers-color-scheme: dark)").matches);
     const [searchKeyword, setSearchKeyword] = useState('');
-
-    // ذخیره scroll position
+    const [showAuth, setShowAuth] = useState(false);
     const scrollPositionRef = useRef(0);
+
+    const { user, logout } = useAuth();
 
     const handleSearch = (keyword) => {
         setSearchKeyword(keyword);
@@ -26,7 +29,6 @@ function App() {
     };
 
     const openArticle = (article) => {
-        // scroll position فعلی رو ذخیره کن
         scrollPositionRef.current = window.scrollY;
         setSelectedArticle(article);
         setView('detail');
@@ -35,7 +37,6 @@ function App() {
 
     const goHome = () => {
         setView('home');
-        // بعد از render، به position قبلی برگرد
         requestAnimationFrame(() => {
             window.scrollTo(0, scrollPositionRef.current);
         });
@@ -59,9 +60,12 @@ function App() {
                     lang={lang}
                     dark={dark}
                     view={view}
+                    user={user}
                     onToggleTheme={() => setDark(prev => !prev)}
                     onNavigate={(v) => v === 'home' ? goHome() : setView(v)}
                     onSearch={handleSearch}
+                    onAuthClick={() => setShowAuth(true)}
+                    onLogout={logout}
                 />
             </div>
 
@@ -74,17 +78,22 @@ function App() {
                 </div>
             )}
 
-            {/* Home رو همیشه render کن — فقط مخفی کن */}
             <div style={{ display: view === 'home' ? 'block' : 'none' }}>
                 <Home
                     lang={lang}
                     onOpenArticle={openArticle}
                     searchKeyword={searchKeyword}
+                    user={user}
                 />
             </div>
 
             {view === 'detail' && selectedArticle && (
-                <ArticleDetail lang={lang} article={selectedArticle} />
+                <ArticleDetail
+                    lang={lang}
+                    article={selectedArticle}
+                    user={user}
+                    onAuthClick={() => setShowAuth(true)}
+                />
             )}
             {view === 'features' && <Features lang={lang} />}
             {view === 'credibility' && <Credibility lang={lang} />}
@@ -94,11 +103,16 @@ function App() {
                 <BottomNav
                     view={view}
                     dark={dark}
+                    user={user}
                     onNavigate={(v) => v === 'home' ? goHome() : setView(v)}
                     onSearch={handleSearch}
                     onToggleTheme={() => setDark(prev => !prev)}
+                    onAuthClick={() => setShowAuth(true)}
+                    onLogout={logout}
                 />
             </div>
+
+            {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
         </div>
     );
 }
