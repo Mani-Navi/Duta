@@ -1,19 +1,41 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
-function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
+function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme, user, onAuthClick, onLogout }) {
     const [searchOpen, setSearchOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
+    const debounceRef = useRef(null);
 
+    // تست ۷: دکمه Back گوشی جستجو رو میبنده
+    useEffect(() => {
+        if (!searchOpen) return;
+        const handlePopState = () => closeSearch();
+        window.history.pushState(null, '', window.location.href);
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [searchOpen]);
+
+    const closeSearch = () => {
+        setSearchOpen(false);
+        setKeyword('');
+        onSearch('');
+    };
+
+    // تست ۱۶: debounce | تست ۱۷: trim
     const handleSearch = (e) => {
         const val = e.target.value;
         setKeyword(val);
-        if (val.length > 1) onSearch(val);
-        else if (val.length === 0) onSearch('');
+
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            const trimmed = val.trim();
+            if (trimmed.length >= 2) onSearch(trimmed);
+            else if (trimmed.length === 0) onSearch('');
+        }, 300);
     };
 
     const toggleSearch = () => {
-        setSearchOpen(prev => !prev);
-        if (searchOpen) { setKeyword(''); onSearch(''); }
+        if (searchOpen) closeSearch();
+        else setSearchOpen(true);
     };
 
     const activeView = searchOpen ? 'search' : view;
@@ -22,64 +44,46 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
         <>
             {searchOpen && (
                 <div className="bottom-search" role="search">
-                    <input
-                        autoFocus
-                        type="search"
-                        value={keyword}
-                        onChange={handleSearch}
-                        placeholder="جستجو در اخبار و منابع..."
-                        className="search-input"
-                        aria-label="جستجو در اخبار"
-                    />
+                    <input autoFocus type="search" value={keyword}
+                           onChange={handleSearch}
+                           placeholder="جستجو در اخبار و منابع..."
+                           className="search-input"
+                           aria-label="جستجو در اخبار" />
                 </div>
             )}
 
             <nav className="bottom-nav" aria-label="منوی پایین">
-                <button
-                    className={`bottom-nav-item ${activeView === 'home' ? 'active' : ''}`}
-                    onClick={() => { setSearchOpen(false); onNavigate('home'); }}
-                    aria-label="خانه"
-                    aria-current={activeView === 'home' ? 'page' : undefined}
-                >
+                <button className={`bottom-nav-item ${activeView === 'home' ? 'active' : ''}`}
+                        onClick={() => { closeSearch(); onNavigate('home'); }}
+                        aria-label="خانه" aria-current={activeView === 'home' ? 'page' : undefined}>
                     <i className="ti ti-home" aria-hidden="true" />
                     <span>خانه</span>
                 </button>
 
-                <button
-                    className={`bottom-nav-item ${activeView === 'search' ? 'active' : ''}`}
-                    onClick={toggleSearch}
-                    aria-label={searchOpen ? 'بستن جستجو' : 'جستجو'}
-                    aria-expanded={searchOpen}
-                >
+                <button className={`bottom-nav-item ${activeView === 'search' ? 'active' : ''}`}
+                        onClick={toggleSearch}
+                        aria-label={searchOpen ? 'بستن جستجو' : 'جستجو'}
+                        aria-expanded={searchOpen}>
                     <i className={`ti ${searchOpen ? 'ti-x' : 'ti-search'}`} aria-hidden="true" />
                     <span>جستجو</span>
                 </button>
 
-                <button
-                    className={`bottom-nav-item ${activeView === 'features' ? 'active' : ''}`}
-                    onClick={() => { setSearchOpen(false); onNavigate('features'); }}
-                    aria-label="ویژگی‌ها"
-                    aria-current={activeView === 'features' ? 'page' : undefined}
-                >
+                <button className={`bottom-nav-item ${activeView === 'features' ? 'active' : ''}`}
+                        onClick={() => { closeSearch(); onNavigate('features'); }}
+                        aria-label="ویژگی‌ها" aria-current={activeView === 'features' ? 'page' : undefined}>
                     <i className="ti ti-layout-grid" aria-hidden="true" />
                     <span>ویژگی‌ها</span>
                 </button>
 
-                <button
-                    className={`bottom-nav-item ${activeView === 'about' ? 'active' : ''}`}
-                    onClick={() => { setSearchOpen(false); onNavigate('about'); }}
-                    aria-label="درباره"
-                    aria-current={activeView === 'about' ? 'page' : undefined}
-                >
+                <button className={`bottom-nav-item ${activeView === 'about' ? 'active' : ''}`}
+                        onClick={() => { closeSearch(); onNavigate('about'); }}
+                        aria-label="درباره" aria-current={activeView === 'about' ? 'page' : undefined}>
                     <i className="ti ti-info-circle" aria-hidden="true" />
                     <span>درباره</span>
                 </button>
 
-                <button
-                    className="bottom-nav-item"
-                    onClick={onToggleTheme}
-                    aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}
-                >
+                <button className="bottom-nav-item" onClick={onToggleTheme}
+                        aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}>
                     <i className={`ti ${dark ? 'ti-moon' : 'ti-sun'}`} aria-hidden="true" />
                     <span>{dark ? 'تاریک' : 'روشن'}</span>
                 </button>

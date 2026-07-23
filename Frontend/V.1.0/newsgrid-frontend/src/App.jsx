@@ -7,6 +7,8 @@ import About from './pages/About';
 import ArticleDetail from './pages/ArticleDetail';
 import Features from './pages/Features';
 import Credibility from './pages/Credibility';
+import AuthPage from './pages/AuthPage';
+import { useAuth } from './hooks/useAuth';
 import './App.css';
 
 function App() {
@@ -16,9 +18,8 @@ function App() {
     const [dark, setDark] = useState(() =>
         window.matchMedia("(prefers-color-scheme: dark)").matches);
     const [searchKeyword, setSearchKeyword] = useState('');
-
-    // ذخیره scroll position
     const scrollPositionRef = useRef(0);
+    const { user, login, register, logout } = useAuth();
 
     const handleSearch = (keyword) => {
         setSearchKeyword(keyword);
@@ -26,16 +27,29 @@ function App() {
     };
 
     const openArticle = (article) => {
-        // scroll position فعلی رو ذخیره کن
         scrollPositionRef.current = window.scrollY;
         setSelectedArticle(article);
         setView('detail');
+        // تست ۱۴: جستجو رو ریست کن وقتی روی خبر کلیک میشه
+        setSearchKeyword('');
         window.scrollTo(0, 0);
     };
 
     const goHome = () => {
         setView('home');
-        // بعد از render، به position قبلی برگرد
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollPositionRef.current);
+        });
+    };
+
+    const goAuth = () => {
+        scrollPositionRef.current = window.scrollY;
+        setView('auth');
+        window.scrollTo(0, 0);
+    };
+
+    const backFromAuth = () => {
+        setView('home');
         requestAnimationFrame(() => {
             window.scrollTo(0, scrollPositionRef.current);
         });
@@ -50,18 +64,27 @@ function App() {
         document.body.classList.toggle('dark', dark);
     }, [dark]);
 
+    if (view === 'auth') {
+        return (
+            <div>
+                <PriceTicker />
+                <AuthPage onBack={backFromAuth} onLogin={login} onRegister={register} />
+            </div>
+        );
+    }
+
     return (
         <div>
             <PriceTicker />
 
             <div className="desktop-only">
                 <Navbar
-                    lang={lang}
-                    dark={dark}
-                    view={view}
+                    lang={lang} dark={dark} view={view} user={user}
                     onToggleTheme={() => setDark(prev => !prev)}
                     onNavigate={(v) => v === 'home' ? goHome() : setView(v)}
                     onSearch={handleSearch}
+                    onAuthClick={goAuth}
+                    onLogout={logout}
                 />
             </div>
 
@@ -74,17 +97,14 @@ function App() {
                 </div>
             )}
 
-            {/* Home رو همیشه render کن — فقط مخفی کن */}
             <div style={{ display: view === 'home' ? 'block' : 'none' }}>
-                <Home
-                    lang={lang}
-                    onOpenArticle={openArticle}
-                    searchKeyword={searchKeyword}
-                />
+                <Home lang={lang} onOpenArticle={openArticle}
+                      searchKeyword={searchKeyword} user={user} />
             </div>
 
             {view === 'detail' && selectedArticle && (
-                <ArticleDetail lang={lang} article={selectedArticle} />
+                <ArticleDetail lang={lang} article={selectedArticle}
+                               user={user} onAuthClick={goAuth} />
             )}
             {view === 'features' && <Features lang={lang} />}
             {view === 'credibility' && <Credibility lang={lang} />}
@@ -92,11 +112,12 @@ function App() {
 
             <div className="mobile-only">
                 <BottomNav
-                    view={view}
-                    dark={dark}
+                    view={view} dark={dark} user={user}
                     onNavigate={(v) => v === 'home' ? goHome() : setView(v)}
                     onSearch={handleSearch}
                     onToggleTheme={() => setDark(prev => !prev)}
+                    onAuthClick={goAuth}
+                    onLogout={logout}
                 />
             </div>
         </div>
