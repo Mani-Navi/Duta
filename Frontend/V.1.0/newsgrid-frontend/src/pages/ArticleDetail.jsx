@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import strings from '../strings/strings';
 import api from '../api/axiosConfig';
-import ShareBanner from './ShareBanner';
+import ShareBanner from '../components/ShareBanner';
 
 function ArticleDetail({ lang, article }) {
     const t = strings[lang];
