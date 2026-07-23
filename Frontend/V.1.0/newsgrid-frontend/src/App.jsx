@@ -7,8 +7,6 @@ import About from './pages/About';
 import ArticleDetail from './pages/ArticleDetail';
 import Features from './pages/Features';
 import Credibility from './pages/Credibility';
-import AuthPage from './pages/AuthPage';
-import { useAuth } from './hooks/useAuth';
 import './App.css';
 
 function App() {
@@ -19,7 +17,6 @@ function App() {
         window.matchMedia("(prefers-color-scheme: dark)").matches);
     const [searchKeyword, setSearchKeyword] = useState('');
     const scrollPositionRef = useRef(0);
-    const { user, login, register, logout } = useAuth();
 
     const handleSearch = (keyword) => {
         setSearchKeyword(keyword);
@@ -30,25 +27,11 @@ function App() {
         scrollPositionRef.current = window.scrollY;
         setSelectedArticle(article);
         setView('detail');
-        // تست ۱۴: جستجو رو ریست کن وقتی روی خبر کلیک میشه
         setSearchKeyword('');
         window.scrollTo(0, 0);
     };
 
     const goHome = () => {
-        setView('home');
-        requestAnimationFrame(() => {
-            window.scrollTo(0, scrollPositionRef.current);
-        });
-    };
-
-    const goAuth = () => {
-        scrollPositionRef.current = window.scrollY;
-        setView('auth');
-        window.scrollTo(0, 0);
-    };
-
-    const backFromAuth = () => {
         setView('home');
         requestAnimationFrame(() => {
             window.scrollTo(0, scrollPositionRef.current);
@@ -64,27 +47,16 @@ function App() {
         document.body.classList.toggle('dark', dark);
     }, [dark]);
 
-    if (view === 'auth') {
-        return (
-            <div>
-                <PriceTicker />
-                <AuthPage onBack={backFromAuth} onLogin={login} onRegister={register} />
-            </div>
-        );
-    }
-
     return (
         <div>
             <PriceTicker />
 
             <div className="desktop-only">
                 <Navbar
-                    lang={lang} dark={dark} view={view} user={user}
+                    lang={lang} dark={dark} view={view}
                     onToggleTheme={() => setDark(prev => !prev)}
                     onNavigate={(v) => v === 'home' ? goHome() : setView(v)}
                     onSearch={handleSearch}
-                    onAuthClick={goAuth}
-                    onLogout={logout}
                 />
             </div>
 
@@ -98,13 +70,11 @@ function App() {
             )}
 
             <div style={{ display: view === 'home' ? 'block' : 'none' }}>
-                <Home lang={lang} onOpenArticle={openArticle}
-                      searchKeyword={searchKeyword} user={user} />
+                <Home lang={lang} onOpenArticle={openArticle} searchKeyword={searchKeyword} />
             </div>
 
             {view === 'detail' && selectedArticle && (
-                <ArticleDetail lang={lang} article={selectedArticle}
-                               user={user} onAuthClick={goAuth} />
+                <ArticleDetail lang={lang} article={selectedArticle} />
             )}
             {view === 'features' && <Features lang={lang} />}
             {view === 'credibility' && <Credibility lang={lang} />}
@@ -112,12 +82,10 @@ function App() {
 
             <div className="mobile-only">
                 <BottomNav
-                    view={view} dark={dark} user={user}
+                    view={view} dark={dark}
                     onNavigate={(v) => v === 'home' ? goHome() : setView(v)}
                     onSearch={handleSearch}
                     onToggleTheme={() => setDark(prev => !prev)}
-                    onAuthClick={goAuth}
-                    onLogout={logout}
                 />
             </div>
         </div>

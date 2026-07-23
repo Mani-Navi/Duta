@@ -1,16 +1,13 @@
 import strings from '../strings/strings';
 import { useState, useEffect, useRef } from 'react';
 
-function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch, user, onAuthClick, onLogout }) {
+function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     const t = strings['fa'];
     const [searchOpen, setSearchOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
-    const [showUserMenu, setShowUserMenu] = useState(false);
-    const searchRef = useRef(null);
     const navRef = useRef(null);
     const debounceRef = useRef(null);
 
-    // تست ۳: ESC بسته کردن جستجو
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === 'Escape' && searchOpen) closeSearch();
@@ -19,20 +16,15 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch, user, onAuthC
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [searchOpen]);
 
-    // تست ۴: کلیک خارج از navbar جستجو رو میبنده
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (searchOpen && navRef.current && !navRef.current.contains(e.target)) {
                 closeSearch();
             }
-            // بستن user menu
-            if (showUserMenu && !e.target.closest('.user-menu-wrap')) {
-                setShowUserMenu(false);
-            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [searchOpen, showUserMenu]);
+    }, [searchOpen]);
 
     const closeSearch = () => {
         setSearchOpen(false);
@@ -40,14 +32,10 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch, user, onAuthC
         onSearch('');
     };
 
-    // تست ۱۶: debounce — فقط بعد از ۳۰۰ms request بزن
-    // تست ۱۷: space رو trim کن
     const handleSearch = (e) => {
         const val = e.target.value;
         setKeyword(val);
-
         if (debounceRef.current) clearTimeout(debounceRef.current);
-
         debounceRef.current = setTimeout(() => {
             const trimmed = val.trim();
             if (trimmed.length >= 2) onSearch(trimmed);
@@ -56,11 +44,8 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch, user, onAuthC
     };
 
     const toggleSearch = () => {
-        if (searchOpen) {
-            closeSearch();
-        } else {
-            setSearchOpen(true);
-        }
+        if (searchOpen) closeSearch();
+        else setSearchOpen(true);
     };
 
     return (
@@ -88,35 +73,6 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch, user, onAuthC
                                 {searchOpen ? '✕' : '🔍'}
                             </button>
                         )}
-
-                        {user ? (
-                            <div className="user-menu-wrap" style={{ position: 'relative' }}>
-                                <button className="auth-btn logged-in"
-                                        onClick={() => setShowUserMenu(p => !p)}
-                                        aria-label="منوی کاربر">
-                                    <div className="user-avatar">
-                                        {user.name?.charAt(0)?.toUpperCase()}
-                                    </div>
-                                    {user.name?.split(' ')[0]}
-                                </button>
-                                {showUserMenu && (
-                                    <div className="user-menu">
-                                        <div className="user-menu-email">{user.email}</div>
-                                        <button className="user-menu-item"
-                                                onClick={() => { onLogout(); setShowUserMenu(false); }}>
-                                            <i className="ti ti-logout" />
-                                            خروج
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <button className="auth-btn" onClick={onAuthClick} aria-label="ورود">
-                                <i className="ti ti-user" />
-                                ورود
-                            </button>
-                        )}
-
                         <button className={`toggle-btn ${dark ? 'is-dark' : 'is-light'}`}
                                 onClick={onToggleTheme}
                                 aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}>
@@ -128,7 +84,7 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch, user, onAuthC
 
             {searchOpen && (
                 <div className="search-bar" role="search">
-                    <input ref={searchRef} autoFocus type="search" value={keyword}
+                    <input autoFocus type="search" value={keyword}
                            onChange={handleSearch}
                            placeholder="جستجو در اخبار و منابع..."
                            className="search-input"

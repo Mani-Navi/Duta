@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 
-function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme, user, onAuthClick, onLogout }) {
+function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
     const [searchOpen, setSearchOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
     const debounceRef = useRef(null);
 
-    // تست ۷: دکمه Back گوشی جستجو رو میبنده
     useEffect(() => {
         if (!searchOpen) return;
         const handlePopState = () => closeSearch();
@@ -20,11 +19,9 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme, user, onAu
         onSearch('');
     };
 
-    // تست ۱۶: debounce | تست ۱۷: trim
     const handleSearch = (e) => {
         const val = e.target.value;
         setKeyword(val);
-
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             const trimmed = val.trim();
