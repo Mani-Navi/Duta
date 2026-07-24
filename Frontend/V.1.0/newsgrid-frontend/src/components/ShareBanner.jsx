@@ -5,10 +5,11 @@ function ShareBanner({ article, onClose }) {
     const [copied, setCopied] = useState(false);
     const [downloading, setDownloading] = useState(false);
 
-    const srcColor = article.source?.color || '#378ADD';
+    const srcColor = article.source?.color || '#007AFF';
     const srcInitials = article.source?.initials || article.source?.name?.substring(0, 3) || '?';
     const credibility = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
     const isBreaking = article.breaking;
+    const sourceCount = article.cluster?.sourceCount ?? 1;
 
     const formatTime = (dateStr) => {
         if (!dateStr) return '';
@@ -25,123 +26,31 @@ function ShareBanner({ article, onClose }) {
         return '#FF3B30';
     };
 
-    useEffect(() => {
-        drawBanner();
-    }, [article]);
+    const getScoreLabel = (s) => {
+        if (s >= 80) return 'تأیید شده';
+        if (s >= 50) return 'در حال بررسی';
+        return 'نامعتبر';
+    };
 
-    const drawBanner = async () => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        const W = 1200, H = 630;
-        canvas.width = W;
-        canvas.height = H;
-
-        // ── پس‌زمینه gradient ──
-        const bg = ctx.createLinearGradient(0, 0, W, H);
-        bg.addColorStop(0, '#0D0D1A');
-        bg.addColorStop(0.5, '#111128');
-        bg.addColorStop(1, '#0A0A18');
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, W, H);
-
-        // ── حباب‌های رنگی پس‌زمینه (blur effect) ──
-        const blobs = [
-            { x: 200, y: 150, r: 280, color: srcColor + '22' },
-            { x: 900, y: 450, r: 320, color: '#378ADD22' },
-            { x: 1100, y: 100, r: 200, color: '#8B5CF622' },
-        ];
-        blobs.forEach(b => {
-            const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
-            grad.addColorStop(0, b.color);
-            grad.addColorStop(1, 'transparent');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, W, H);
-        });
-
-        // ── کارت glass اصلی ──
-        const pad = 60;
-        const cardX = pad, cardY = pad, cardW = W - pad * 2, cardH = H - pad * 2;
-        ctx.save();
-        roundRect(ctx, cardX, cardY, cardW, cardH, 32);
-        ctx.fillStyle = 'rgba(255,255,255,0.04)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.restore();
-
-        // ── نوار رنگی منبع بالا ──
-        ctx.save();
-        roundRect(ctx, cardX, cardY, cardW, 5, { tl: 32, tr: 32, bl: 0, br: 0 });
-        const topBar = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
-        topBar.addColorStop(0, srcColor);
-        topBar.addColorStop(1, srcColor + 'AA');
-        ctx.fillStyle = topBar;
-        ctx.fill();
-        ctx.restore();
-
-        // ── لوگو NewsGrid ──
-        ctx.font = 'bold 28px -apple-system, Arial';
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillText('News', cardX + 48, cardY + 70);
-        ctx.fillStyle = '#378ADD';
-        ctx.fillText('Grid', cardX + 48 + ctx.measureText('News').width + 2, cardY + 70);
-
-        // ── badge امتیاز اعتبار ──
-        const scoreColor = getScoreColor(credibility);
-        const scorePillX = cardX + cardW - 140, scorePillY = cardY + 44;
-        ctx.save();
-        roundRect(ctx, scorePillX, scorePillY, 120, 36, 18);
-        ctx.fillStyle = scoreColor + '22';
-        ctx.fill();
-        ctx.strokeStyle = scoreColor + '55';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.restore();
-        ctx.font = 'bold 16px -apple-system, Arial';
-        ctx.fillStyle = scoreColor;
-        ctx.textAlign = 'center';
-        ctx.fillText(`● ${credibility}`, scorePillX + 60, scorePillY + 24);
-        ctx.textAlign = 'start';
-
-        // ── badge خبر فوری ──
-        if (isBreaking) {
-            const bpX = cardX + cardW - 280, bpY = cardY + 44;
-            ctx.save();
-            roundRect(ctx, bpX, bpY, 120, 36, 18);
-            ctx.fillStyle = '#E11D4833';
-            ctx.fill();
-            ctx.strokeStyle = '#E11D4866';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            ctx.restore();
-            ctx.font = 'bold 14px -apple-system, Arial';
-            ctx.fillStyle = '#E11D48';
-            ctx.textAlign = 'center';
-            ctx.fillText('● خبر فوری', bpX + 60, bpY + 24);
-            ctx.textAlign = 'start';
-        }
-
-        // ── خط جداکننده ──
-        ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-        ctx.lineWidth = 1;
+    const roundRect = (ctx, x, y, w, h, r) => {
         ctx.beginPath();
-        ctx.moveTo(cardX + 48, cardY + 96);
-        ctx.lineTo(cardX + cardW - 48, cardY + 96);
-        ctx.stroke();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.arcTo(x + w, y, x + w, y + r, r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+        ctx.lineTo(x + r, y + h);
+        ctx.arcTo(x, y + h, x, y + h - r, r);
+        ctx.lineTo(x, y + r);
+        ctx.arcTo(x, y, x + r, y, r);
+        ctx.closePath();
+    };
 
-        // ── تیتر خبر (فارسی RTL) ──
-        ctx.save();
-        ctx.font = 'bold 38px Vazirmatn, -apple-system, Arial';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.textAlign = 'right';
-        ctx.direction = 'rtl';
-        const title = article.title || '';
-        const maxWidth = cardW - 96;
-        const words = title.split(' ');
-        let line = '', lines = [];
-        for (let word of words) {
+    const wrapText = (ctx, text, maxWidth) => {
+        const words = text.split(' ');
+        const lines = [];
+        let line = '';
+        for (const word of words) {
             const test = line ? word + ' ' + line : word;
             if (ctx.measureText(test).width > maxWidth && line) {
                 lines.push(line);
@@ -151,90 +60,136 @@ function ShareBanner({ article, onClose }) {
             }
         }
         lines.push(line);
-        lines = lines.slice(0, 3);
-        const titleY = cardY + 160;
-        lines.forEach((l, i) => {
-            ctx.fillText(l, cardX + cardW - 48, titleY + i * 56);
-        });
-        ctx.restore();
+        return lines;
+    };
 
-        // ── تعداد منابع ──
-        const sourceCount = article.cluster?.sourceCount ?? 1;
-        ctx.font = '18px Vazirmatn, -apple-system, Arial';
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = 1200, H = 630;
+        canvas.width = W;
+        canvas.height = H;
+
+        const scoreColor = getScoreColor(credibility);
+
+        // ── پس‌زمینه سفید تمیز ──
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, W, H);
+
+        // ── نوار رنگی سمت چپ (accent) ──
+        ctx.fillStyle = srcColor;
+        ctx.fillRect(0, 0, 8, H);
+
+        // ── بالای صفحه: لوگو + badge ──
+        // لوگو
+        ctx.font = 'bold 26px -apple-system, Arial, sans-serif';
+        ctx.fillStyle = '#1C1C1E';
+        ctx.textAlign = 'left';
+        ctx.fillText('News', 52, 60);
+        const newsW = ctx.measureText('News').width;
+        ctx.fillStyle = '#007AFF';
+        ctx.fillText('Grid', 52 + newsW + 2, 60);
+
+        // badge امتیاز — بالا راست
+        const scoreLabel = getScoreLabel(credibility);
+        roundRect(ctx, W - 180, 30, 140, 38, 19);
+        ctx.fillStyle = scoreColor + '18';
+        ctx.fill();
+        ctx.strokeStyle = scoreColor + '60';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.font = 'bold 15px -apple-system, Arial';
+        ctx.fillStyle = scoreColor;
         ctx.textAlign = 'right';
-        ctx.fillText(`پوشش داده شده توسط ${sourceCount} منبع`, cardX + cardW - 48, cardY + 160 + lines.length * 56 + 20);
-        ctx.textAlign = 'start';
+        ctx.fillText(`${credibility}  ${scoreLabel}`, W - 32, 54);
 
-        // ── خط جداکننده پایین ──
-        const divY = H - pad - 110;
-        ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+        // ── خط جداکننده افقی ──
+        ctx.strokeStyle = '#F2F2F7';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(cardX + 48, divY);
-        ctx.lineTo(cardX + cardW - 48, divY);
+        ctx.moveTo(52, 82);
+        ctx.lineTo(W - 52, 82);
         ctx.stroke();
 
-        // ── badge منبع (glass pill) ──
-        const pillX = cardX + 48, pillY = divY + 20;
-        ctx.save();
-        roundRect(ctx, pillX, pillY, 220, 56, 28);
-        ctx.fillStyle = 'rgba(255,255,255,0.06)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        // ── badge خبر فوری ──
+        if (isBreaking) {
+            roundRect(ctx, 52, 100, 120, 32, 16);
+            ctx.fillStyle = '#E11D4815';
+            ctx.fill();
+            ctx.strokeStyle = '#E11D4840';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.font = 'bold 13px -apple-system, Arial';
+            ctx.fillStyle = '#E11D48';
+            ctx.textAlign = 'left';
+            ctx.fillText('● خبر فوری', 68, 121);
+        }
+
+        // ── تیتر خبر ──
+        ctx.font = 'bold 44px Vazirmatn, -apple-system, Arial';
+        ctx.fillStyle = '#1C1C1E';
+        ctx.textAlign = 'right';
+        ctx.direction = 'rtl';
+        const titleY = isBreaking ? 190 : 160;
+        const lines = wrapText(ctx, article.title || '', W - 104);
+        lines.slice(0, 3).forEach((line, i) => {
+            ctx.fillText(line, W - 52, titleY + i * 60);
+        });
+
+        // ── تعداد منابع ──
+        ctx.font = '18px -apple-system, Arial';
+        ctx.fillStyle = '#8E8E93';
+        ctx.textAlign = 'right';
+        const afterTitle = titleY + Math.min(lines.length, 3) * 60 + 16;
+        ctx.fillText(`پوشش توسط ${sourceCount} منبع`, W - 52, afterTitle);
+
+        // ── خط جداکننده پایین ──
+        ctx.strokeStyle = '#F2F2F7';
         ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(52, H - 110);
+        ctx.lineTo(W - 52, H - 110);
         ctx.stroke();
-        ctx.restore();
 
-        // مربع رنگی منبع
+        // ── badge منبع ──
+        // مربع رنگی
         ctx.save();
-        roundRect(ctx, pillX + 10, pillY + 10, 36, 36, 10);
+        roundRect(ctx, 52, H - 92, 52, 52, 12);
         ctx.fillStyle = srcColor;
         ctx.fill();
         ctx.restore();
-        ctx.font = 'bold 12px -apple-system, Arial';
+
+        ctx.font = 'bold 14px -apple-system, Arial';
         ctx.fillStyle = '#FFFFFF';
         ctx.textAlign = 'center';
-        ctx.fillText(srcInitials, pillX + 28, pillY + 33);
-        ctx.textAlign = 'start';
+        ctx.direction = 'ltr';
+        ctx.fillText(srcInitials, 78, H - 60);
 
-        ctx.font = 'bold 15px Vazirmatn, -apple-system, Arial';
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillText(article.source?.name || '', pillX + 56, pillY + 28);
-        ctx.font = '13px Vazirmatn, -apple-system, Arial';
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.fillText(formatTime(article.publishedAt), pillX + 56, pillY + 46);
+        // نام منبع
+        ctx.font = 'bold 17px Vazirmatn, -apple-system, Arial';
+        ctx.fillStyle = '#1C1C1E';
+        ctx.textAlign = 'left';
+        ctx.fillText(article.source?.name || '', 116, H - 72);
 
-        // ── لینک سایت ──
         ctx.font = '14px -apple-system, Arial';
-        ctx.fillStyle = 'rgba(255,255,255,0.25)';
-        ctx.textAlign = 'right';
-        ctx.fillText('news-grid-pi.vercel.app', cardX + cardW - 48, divY + 76);
-        ctx.textAlign = 'start';
-    };
+        ctx.fillStyle = '#8E8E93';
+        ctx.fillText(formatTime(article.publishedAt), 116, H - 50);
 
-    // helper — rounded rect
-    const roundRect = (ctx, x, y, w, h, r) => {
-        if (typeof r === 'number') r = { tl: r, tr: r, bl: r, br: r };
-        ctx.beginPath();
-        ctx.moveTo(x + r.tl, y);
-        ctx.lineTo(x + w - r.tr, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + r.tr);
-        ctx.lineTo(x + w, y + h - r.br);
-        ctx.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
-        ctx.lineTo(x + r.bl, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - r.bl);
-        ctx.lineTo(x, y + r.tl);
-        ctx.quadraticCurveTo(x, y, x + r.tl, y);
-        ctx.closePath();
-    };
+        // ── لینک سایت — پایین راست ──
+        ctx.font = '13px -apple-system, Arial';
+        ctx.fillStyle = '#C7C7CC';
+        ctx.textAlign = 'right';
+        ctx.fillText('news-grid-pi.vercel.app', W - 52, H - 50);
+
+    }, [article]);
 
     const downloadBanner = () => {
         setDownloading(true);
-        const canvas = canvasRef.current;
         const link = document.createElement('a');
         link.download = 'newsgrid-share.png';
-        link.href = canvas.toDataURL('image/png');
+        link.href = canvasRef.current.toDataURL('image/png');
         link.click();
         setTimeout(() => setDownloading(false), 1000);
     };
@@ -245,28 +200,20 @@ function ShareBanner({ article, onClose }) {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const shareToTelegram = () => {
+    const shareToTelegram = () =>
         window.open(`https://t.me/share/url?url=${encodeURIComponent(article.url)}&text=${encodeURIComponent(article.title)}`, '_blank');
-    };
 
-    const shareToWhatsApp = () => {
+    const shareToWhatsApp = () =>
         window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + article.url)}`, '_blank');
-    };
 
-    const shareToTwitter = () => {
+    const shareToTwitter = () =>
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(article.url)}`, '_blank');
-    };
 
-    const shareNative = async () => {
-        const canvas = canvasRef.current;
-        canvas.toBlob(async (blob) => {
+    const shareNative = () => {
+        canvasRef.current.toBlob(async (blob) => {
             const file = new File([blob], 'newsgrid-share.png', { type: 'image/png' });
-            if (navigator.share && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: article.title,
-                    url: article.url,
-                    files: [file]
-                });
+            if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                await navigator.share({ title: article.title, url: article.url, files: [file] });
             } else {
                 downloadBanner();
             }
@@ -276,20 +223,17 @@ function ShareBanner({ article, onClose }) {
     return (
         <div className="share-overlay" onClick={onClose}>
             <div className="share-sheet" onClick={e => e.stopPropagation()}>
-
                 <div className="share-header">
                     <span className="share-title">اشتراک‌گذاری</span>
-                    <button className="share-close" onClick={onClose}>
+                    <button className="share-close" onClick={onClose} aria-label="بستن">
                         <i className="ti ti-x" />
                     </button>
                 </div>
 
-                {/* پیش‌نمایش بنر */}
                 <div className="share-preview">
-                    <canvas ref={canvasRef} style={{ width: '100%', borderRadius: '12px' }} />
+                    <canvas ref={canvasRef} style={{ width: '100%', borderRadius: '10px', display: 'block' }} />
                 </div>
 
-                {/* دکمه‌های شبکه اجتماعی */}
                 <div className="share-apps">
                     <button className="share-app-btn" onClick={shareToTelegram}>
                         <div className="share-app-icon" style={{ background: '#2AABEE' }}>
@@ -297,21 +241,18 @@ function ShareBanner({ article, onClose }) {
                         </div>
                         <span>تلگرام</span>
                     </button>
-
                     <button className="share-app-btn" onClick={shareToWhatsApp}>
                         <div className="share-app-icon" style={{ background: '#25D366' }}>
                             <i className="ti ti-brand-whatsapp" />
                         </div>
                         <span>واتساپ</span>
                     </button>
-
                     <button className="share-app-btn" onClick={shareToTwitter}>
-                        <div className="share-app-icon" style={{ background: '#000000' }}>
+                        <div className="share-app-icon" style={{ background: '#000' }}>
                             <i className="ti ti-brand-x" />
                         </div>
                         <span>توییتر</span>
                     </button>
-
                     <button className="share-app-btn" onClick={shareNative}>
                         <div className="share-app-icon" style={{ background: 'var(--blue)' }}>
                             <i className="ti ti-share" />
