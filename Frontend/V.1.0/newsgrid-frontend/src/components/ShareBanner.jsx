@@ -1,22 +1,30 @@
 import { useState } from 'react';
-import api from '../api/axiosConfig';
 
 const OG_IMAGE_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
 
 function ShareBanner({ article, onClose }) {
     const [copied, setCopied] = useState(false);
+    const [tooltip, setTooltip] = useState('');
     const [downloading, setDownloading] = useState(false);
 
     const ogImageUrl = `${OG_IMAGE_BASE}/api/articles/${article.id}/og-image`;
+    const shareUrl = article.url;
+
+    const showTooltip = (label) => {
+        setTooltip(label);
+        setTimeout(() => setTooltip(''), 1500);
+    };
 
     const copyLink = async () => {
-        await navigator.clipboard.writeText(article.url);
+        await navigator.clipboard.writeText(shareUrl);
         setCopied(true);
+        showTooltip('کپی شد!');
         setTimeout(() => setCopied(false), 2000);
     };
 
     const downloadBanner = async () => {
         setDownloading(true);
+        showTooltip('دانلود...');
         try {
             const res = await fetch(ogImageUrl);
             const blob = await res.blob();
@@ -34,83 +42,99 @@ function ShareBanner({ article, onClose }) {
             const blob = await res.blob();
             const file = new File([blob], 'newsgrid-share.png', { type: 'image/png' });
             if (navigator.share && navigator.canShare?.({ files: [file] })) {
-                await navigator.share({ title: article.title, url: article.url, files: [file] });
-            } else {
-                downloadBanner();
+                await navigator.share({ title: article.title, url: shareUrl, files: [file] });
+                return;
             }
-        } catch {
-            downloadBanner();
-        }
+        } catch {}
+        downloadBanner();
     };
 
-    const shareToTelegram = () =>
-        window.open(`https://t.me/share/url?url=${encodeURIComponent(article.url)}&text=${encodeURIComponent(article.title)}`, '_blank');
+    const buttons = [
+        {
+            label: 'کپی لینک',
+            icon: copied ? 'ti-check' : 'ti-link',
+            bg: '#F2F2F7',
+            color: '#1C1C1E',
+            onClick: copyLink,
+        },
+        {
+            label: 'دانلود',
+            icon: 'ti-download',
+            bg: '#F2F2F7',
+            color: '#1C1C1E',
+            onClick: downloadBanner,
+        },
+        {
+            label: 'تلگرام',
+            icon: 'ti-brand-telegram',
+            bg: '#2AABEE',
+            color: '#fff',
+            onClick: () => window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(article.title)}`, '_blank'),
+        },
+        {
+            label: 'واتساپ',
+            icon: 'ti-brand-whatsapp',
+            bg: '#25D366',
+            color: '#fff',
+            onClick: () => window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + shareUrl)}`, '_blank'),
+        },
+        {
+            label: 'توییتر',
+            icon: 'ti-brand-x',
+            bg: '#000',
+            color: '#fff',
+            onClick: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(shareUrl)}`, '_blank'),
+        },
+        {
+            label: 'بیشتر',
+            icon: 'ti-dots',
+            bg: '#F2F2F7',
+            color: '#1C1C1E',
+            onClick: shareNative,
+        },
+    ];
 
-    const shareToWhatsApp = () =>
-        window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + article.url)}`, '_blank');
-
-    const shareToTwitter = () =>
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(article.url)}`, '_blank');
+    const [activeTooltip, setActiveTooltip] = useState(null);
 
     return (
         <div className="share-overlay" onClick={onClose}>
-            <div className="share-sheet" onClick={e => e.stopPropagation()}>
+            <div className="share-sheet-minimal" onClick={e => e.stopPropagation()}>
 
-                <div className="share-header">
-                    <span className="share-title">اشتراک‌گذاری</span>
-                    <button className="share-close" onClick={onClose} aria-label="بستن">
-                        <i className="ti ti-x" />
-                    </button>
-                </div>
-
-                {/* پیش‌نمایش — مستقیم از Backend */}
-                <div className="share-preview">
+                {/* پیش‌نمایش بنر */}
+                <div className="share-preview-minimal">
                     <img
                         src={ogImageUrl}
-                        alt="پیش‌نمایش خبر"
-                        style={{ width: '100%', borderRadius: '10px', display: 'block' }}
+                        alt="پیش‌نمایش"
+                        style={{ width: '100%', borderRadius: '12px', display: 'block' }}
+                        onError={e => e.target.style.display = 'none'}
                     />
                 </div>
 
-                {/* دکمه‌های شبکه اجتماعی */}
-                <div className="share-apps">
-                    <button className="share-app-btn" onClick={shareToTelegram}>
-                        <div className="share-app-icon" style={{ background: '#2AABEE' }}>
-                            <i className="ti ti-brand-telegram" />
+                {/* pill افقی دکمه‌ها */}
+                <div className="share-pill">
+                    {buttons.map((btn, i) => (
+                        <div key={i} className="share-pill-item">
+                            {activeTooltip === i && (
+                                <div className="share-tooltip">{btn.label}</div>
+                            )}
+                            <button
+                                className="share-pill-btn"
+                                style={{ background: btn.bg, color: btn.color }}
+                                onClick={btn.onClick}
+                                onMouseEnter={() => setActiveTooltip(i)}
+                                onMouseLeave={() => setActiveTooltip(null)}
+                                aria-label={btn.label}
+                            >
+                                <i className={`ti ${btn.icon}`} />
+                            </button>
                         </div>
-                        <span>تلگرام</span>
-                    </button>
+                    ))}
 
-                    <button className="share-app-btn" onClick={shareToWhatsApp}>
-                        <div className="share-app-icon" style={{ background: '#25D366' }}>
-                            <i className="ti ti-brand-whatsapp" />
-                        </div>
-                        <span>واتساپ</span>
-                    </button>
+                    <div className="share-pill-divider" />
 
-                    <button className="share-app-btn" onClick={shareToTwitter}>
-                        <div className="share-app-icon" style={{ background: '#000' }}>
-                            <i className="ti ti-brand-x" />
-                        </div>
-                        <span>توییتر</span>
-                    </button>
-
-                    <button className="share-app-btn" onClick={shareNative}>
-                        <div className="share-app-icon" style={{ background: 'var(--blue)' }}>
-                            <i className="ti ti-share" />
-                        </div>
-                        <span>بیشتر</span>
-                    </button>
-                </div>
-
-                <div className="share-actions">
-                    <button className="share-action-btn" onClick={downloadBanner}>
-                        <i className="ti ti-download" />
-                        {downloading ? 'در حال دانلود...' : 'دانلود بنر'}
-                    </button>
-                    <button className="share-action-btn" onClick={copyLink}>
-                        <i className={`ti ${copied ? 'ti-check' : 'ti-link'}`} />
-                        {copied ? 'کپی شد!' : 'کپی لینک'}
+                    <button className="share-pill-close" onClick={onClose} aria-label="بستن">
+                        <i className="ti ti-x" />
+                        بستن
                     </button>
                 </div>
             </div>
