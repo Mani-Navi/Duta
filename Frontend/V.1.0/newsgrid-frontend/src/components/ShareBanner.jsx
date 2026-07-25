@@ -1,17 +1,26 @@
 import { useState } from 'react';
-import api from '../api/axiosConfig';
 
-const OG_IMAGE_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
+const BACKEND = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
 
 function ShareBanner({ article, onClose }) {
     const [copied, setCopied] = useState(false);
     const [downloading, setDownloading] = useState(false);
+    const [tooltip, setTooltip] = useState('');
 
-    const ogImageUrl = `${OG_IMAGE_BASE}/api/articles/${article.id}/og-image`;
+    // لینک به OG image — تلگرام/واتساپ این رو preview میکنن
+    const ogImageUrl = `${BACKEND}/api/articles/${article.id}/og-image`;
+    // لینک share — خود سایت ما با article id
+    const shareUrl = `${BACKEND}/api/articles/${article.id}/og-image`;
+
+    const showTooltip = (label) => {
+        setTooltip(label);
+        setTimeout(() => setTooltip(''), 1500);
+    };
 
     const copyLink = async () => {
-        await navigator.clipboard.writeText(article.url);
+        await navigator.clipboard.writeText(ogImageUrl);
         setCopied(true);
+        showTooltip('کپی شد!');
         setTimeout(() => setCopied(false), 2000);
     };
 
@@ -34,85 +43,65 @@ function ShareBanner({ article, onClose }) {
             const blob = await res.blob();
             const file = new File([blob], 'newsgrid-share.png', { type: 'image/png' });
             if (navigator.share && navigator.canShare?.({ files: [file] })) {
-                await navigator.share({ title: article.title, url: article.url, files: [file] });
+                await navigator.share({ title: article.title, files: [file] });
             } else {
                 downloadBanner();
             }
-        } catch {
-            downloadBanner();
-        }
+        } catch { downloadBanner(); }
     };
 
-    const shareToTelegram = () =>
-        window.open(`https://t.me/share/url?url=${encodeURIComponent(article.url)}&text=${encodeURIComponent(article.title)}`, '_blank');
+    const shareToTelegram = () => {
+        showTooltip('تلگرام');
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(ogImageUrl)}&text=${encodeURIComponent(article.title)}`, '_blank');
+    };
 
-    const shareToWhatsApp = () =>
-        window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + article.url)}`, '_blank');
+    const shareToWhatsApp = () => {
+        showTooltip('واتساپ');
+        window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + ogImageUrl)}`, '_blank');
+    };
 
-    const shareToTwitter = () =>
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(article.url)}`, '_blank');
+    const shareToTwitter = () => {
+        showTooltip('توییتر');
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(ogImageUrl)}`, '_blank');
+    };
+
+    const buttons = [
+        { icon: 'ti-link', label: 'کپی لینک', action: copyLink, bg: '#F2F2F7', color: '#1C1C1E' },
+        { icon: 'ti-download', label: 'دانلود', action: downloadBanner, bg: '#F2F2F7', color: '#1C1C1E' },
+        { icon: 'ti-brand-telegram', label: 'تلگرام', action: shareToTelegram, bg: '#2AABEE', color: '#fff' },
+        { icon: 'ti-brand-whatsapp', label: 'واتساپ', action: shareToWhatsApp, bg: '#25D366', color: '#fff' },
+        { icon: 'ti-brand-x', label: 'توییتر', action: shareToTwitter, bg: '#000', color: '#fff' },
+        { icon: 'ti-share', label: 'بیشتر', action: shareNative, bg: '#007AFF', color: '#fff' },
+    ];
 
     return (
         <div className="share-overlay" onClick={onClose}>
-            <div className="share-sheet" onClick={e => e.stopPropagation()}>
+            <div className="share-sheet-v2" onClick={e => e.stopPropagation()}>
 
-                <div className="share-header">
-                    <span className="share-title">اشتراک‌گذاری</span>
-                    <button className="share-close" onClick={onClose} aria-label="بستن">
-                        <i className="ti ti-x" />
-                    </button>
+                {/* پیش‌نمایش بنر */}
+                <div className="share-preview-v2">
+                    <img src={ogImageUrl} alt="پیش‌نمایش"
+                         style={{ width: '100%', borderRadius: '14px', display: 'block' }} />
                 </div>
 
-                {/* پیش‌نمایش — مستقیم از Backend */}
-                <div className="share-preview">
-                    <img
-                        src={ogImageUrl}
-                        alt="پیش‌نمایش خبر"
-                        style={{ width: '100%', borderRadius: '10px', display: 'block' }}
-                    />
+                {/* نوار آیکون‌ها */}
+                <div className="share-bar">
+                    {tooltip && <div className="share-tooltip">{tooltip}</div>}
+                    {buttons.map((btn, i) => (
+                        <button
+                            key={i}
+                            className="share-bar-btn"
+                            onClick={btn.action}
+                            aria-label={btn.label}
+                        >
+                            <div className="share-bar-icon"
+                                 style={{ background: btn.bg, color: btn.color }}>
+                                <i className={`ti ${btn.icon}`} />
+                            </div>
+                        </button>
+                    ))}
                 </div>
 
-                {/* دکمه‌های شبکه اجتماعی */}
-                <div className="share-apps">
-                    <button className="share-app-btn" onClick={shareToTelegram}>
-                        <div className="share-app-icon" style={{ background: '#2AABEE' }}>
-                            <i className="ti ti-brand-telegram" />
-                        </div>
-                        <span>تلگرام</span>
-                    </button>
-
-                    <button className="share-app-btn" onClick={shareToWhatsApp}>
-                        <div className="share-app-icon" style={{ background: '#25D366' }}>
-                            <i className="ti ti-brand-whatsapp" />
-                        </div>
-                        <span>واتساپ</span>
-                    </button>
-
-                    <button className="share-app-btn" onClick={shareToTwitter}>
-                        <div className="share-app-icon" style={{ background: '#000' }}>
-                            <i className="ti ti-brand-x" />
-                        </div>
-                        <span>توییتر</span>
-                    </button>
-
-                    <button className="share-app-btn" onClick={shareNative}>
-                        <div className="share-app-icon" style={{ background: 'var(--blue)' }}>
-                            <i className="ti ti-share" />
-                        </div>
-                        <span>بیشتر</span>
-                    </button>
-                </div>
-
-                <div className="share-actions">
-                    <button className="share-action-btn" onClick={downloadBanner}>
-                        <i className="ti ti-download" />
-                        {downloading ? 'در حال دانلود...' : 'دانلود بنر'}
-                    </button>
-                    <button className="share-action-btn" onClick={copyLink}>
-                        <i className={`ti ${copied ? 'ti-check' : 'ti-link'}`} />
-                        {copied ? 'کپی شد!' : 'کپی لینک'}
-                    </button>
-                </div>
             </div>
         </div>
     );

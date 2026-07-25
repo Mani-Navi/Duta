@@ -1073,11 +1073,11 @@ a {
     from { opacity: 0; transform: translateY(-10px); }
     to   { opacity: 1; transform: translateY(0); }
 }
-/* ─── Share Sheet ───────────────────────────────────── */
+/* ─── Share Sheet v2 ────────────────────────────────── */
 .share-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     z-index: 100;
@@ -1085,283 +1085,81 @@ a {
     align-items: flex-end;
     justify-content: center;
     animation: fadeIn 0.2s ease;
+    padding: 20px;
 }
 
 @media (min-width: 600px) {
-    .share-overlay {
-        align-items: center;
-    }
+    .share-overlay { align-items: center; }
 }
 
-.share-sheet {
-    background: var(--card);
-    border-radius: 24px 24px 0 0;
-    padding: 20px 20px 36px;
+.share-sheet-v2 {
     width: 100%;
-    max-width: 500px;
+    max-width: 480px;
     animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@media (min-width: 600px) {
-    .share-sheet {
-        border-radius: 24px;
-        padding: 24px;
-    }
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(40px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-.share-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-}
-
-.share-title {
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--label);
-}
-
-.share-close {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: none;
-    background: var(--chip-bg);
-    color: var(--label-2);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-}
-
-.share-preview {
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 20px;
-    border: 0.5px solid var(--separator);
-}
-
-/* دکمه‌های شبکه اجتماعی */
-.share-apps {
-    display: flex;
-    justify-content: space-around;
-    margin-bottom: 16px;
-}
-
-.share-app-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-family: inherit;
-    padding: 8px;
-}
-
-.share-app-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    color: #fff;
-    transition: transform 0.15s;
-}
-
-.share-app-btn:active .share-app-icon {
-    transform: scale(0.92);
-}
-
-.share-app-btn span {
-    font-size: 12px;
-    color: var(--label-2);
-    font-weight: 500;
-}
-
-/* دکمه‌های action */
-.share-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.share-action-btn {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    padding: 12px;
+.share-preview-v2 {
     border-radius: 14px;
-    border: 0.5px solid var(--separator);
-    background: var(--chip-bg);
-    color: var(--label);
-    font-size: 14px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: opacity 0.15s;
+    overflow: hidden;
+    margin-bottom: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
 }
 
-.share-action-btn:active {
-    opacity: 0.7;
-}
-
-/* ─── Share Sheet ───────────────────────────────────── */
-.share-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 100;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    animation: fadeIn 0.2s ease;
-}
-
-@media (min-width: 600px) {
-    .share-overlay {
-        align-items: center;
-    }
-}
-
-.share-sheet {
+/* نوار آیکون‌ها */
+.share-bar {
+    position: relative;
     background: var(--card);
-    border-radius: 24px 24px 0 0;
-    padding: 20px 20px 36px;
-    width: 100%;
-    max-width: 500px;
-    animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@media (min-width: 600px) {
-    .share-sheet {
-        border-radius: 24px;
-        padding: 24px;
-    }
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(40px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-.share-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-}
-
-.share-title {
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--label);
-}
-
-.share-close {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    border: none;
-    background: var(--chip-bg);
-    color: var(--label-2);
-    cursor: pointer;
+    border-radius: 999px;
+    padding: 10px 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    gap: 6px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
 }
 
-.share-preview {
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 20px;
-    border: 0.5px solid var(--separator);
-}
-
-/* دکمه‌های شبکه اجتماعی */
-.share-apps {
-    display: flex;
-    justify-content: space-around;
-    margin-bottom: 16px;
-}
-
-.share-app-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
+.share-bar-btn {
     background: none;
     border: none;
     cursor: pointer;
-    font-family: inherit;
-    padding: 8px;
-}
-
-.share-app-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    color: #fff;
+    padding: 4px;
+    border-radius: 50%;
     transition: transform 0.15s;
 }
 
-.share-app-btn:active .share-app-icon {
-    transform: scale(0.92);
+.share-bar-btn:active {
+    transform: scale(0.88);
 }
 
-.share-app-btn span {
-    font-size: 12px;
-    color: var(--label-2);
-    font-weight: 500;
-}
-
-/* دکمه‌های action */
-.share-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.share-action-btn {
-    flex: 1;
+.share-bar-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 7px;
-    padding: 12px;
-    border-radius: 14px;
-    border: 0.5px solid var(--separator);
-    background: var(--chip-bg);
-    color: var(--label);
-    font-size: 14px;
+    font-size: 20px;
+    transition: transform 0.15s;
+}
+
+/* tooltip */
+.share-tooltip {
+    position: absolute;
+    top: -44px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1C1C1E;
+    color: #fff;
+    font-size: 13px;
     font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: opacity 0.15s;
+    padding: 7px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: fadeIn 0.15s ease;
 }
 
-.share-action-btn:active {
-    opacity: 0.7;
-}
-
-/* ─── Share Button در Detail ────────────────────────── */
+/* دکمه share در detail */
 .detail-share-btn {
     margin-right: auto;
     width: 32px;
@@ -1376,9 +1174,6 @@ a {
     justify-content: center;
     font-size: 15px;
     transition: background 0.15s;
-    margin-right: auto;
 }
 
-.detail-share-btn:hover {
-    background: var(--separator);
-}
+.detail-share-btn:hover { background: var(--separator); }
