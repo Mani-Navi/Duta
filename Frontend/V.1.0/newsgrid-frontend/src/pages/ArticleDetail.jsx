@@ -7,7 +7,7 @@ function ArticleDetail({ lang, article }) {
     const [clusterArticles, setClusterArticles] = useState([]);
     const [copied, setCopied] = useState(false);
 
-    const shareUrl = `https://news-grid-pi.vercel.app/article/${article.id}`;
+    const shareUrl = `https://news-grid-pi.vercel.app/article/${article.slug || article.id}`;
 
     useEffect(() => {
         if (article.cluster?.id) {

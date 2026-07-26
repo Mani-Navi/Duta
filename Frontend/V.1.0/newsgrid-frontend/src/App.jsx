@@ -72,7 +72,7 @@ function AppLayout() {
     const openArticle = (article) => {
         setRestoreScroll(window.scrollY);
         setSearchKeyword('');
-        navigate(`/article/${article.id}`);
+        navigate(`/article/${article.slug || article.id}`);
     };
 
     const goHome = () => {
@@ -126,7 +126,7 @@ function AppLayout() {
 
             <Routes>
                 <Route path="/" element={null} />
-                <Route path="/article/:id" element={<ArticleDetailPage lang={lang} />} />
+                <Route path="/article/:slug" element={<ArticleDetailPage lang={lang} />} />
                 <Route path="/features" element={<Features lang={lang} />} />
                 <Route path="/credibility" element={<Credibility lang={lang} />} />
                 <Route path="/about" element={<About lang={lang} />} />
