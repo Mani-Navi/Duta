@@ -55,6 +55,7 @@ function AppLayout() {
         window.matchMedia("(prefers-color-scheme: dark)").matches);
     const [searchKeyword, setSearchKeyword] = useState('');
     const scrollPositionRef = useRef(0);
+    const [restoreScroll, setRestoreScroll] = useState(null);
 
     const isDetail = location.pathname.startsWith('/article/');
     const view = isDetail ? 'detail'
@@ -69,23 +70,32 @@ function AppLayout() {
     };
 
     const openArticle = (article) => {
-        scrollPositionRef.current = window.scrollY;
+        setRestoreScroll(window.scrollY);
         setSearchKeyword('');
-        window.scrollTo(0, 0);
         navigate(`/article/${article.id}`);
     };
 
     const goHome = () => {
         navigate('/');
-        requestAnimationFrame(() => {
-            window.scrollTo(0, scrollPositionRef.current);
-        });
     };
 
     const handleNavigate = (v) => {
         if (v === 'home') goHome();
         else navigate(`/${v}`);
     };
+
+    useEffect(() => {
+        if (view === "home" && restoreScroll !== null) {
+            const timer = setTimeout(() => {
+                window.scrollTo({
+                    top: restoreScroll,
+                    behavior: "instant"
+                });
+            }, 100);
+
+            return () => clearTimeout(timer);
+        }
+    }, [view, restoreScroll]);
 
     useEffect(() => {
         document.documentElement.setAttribute('dir', 'rtl');
