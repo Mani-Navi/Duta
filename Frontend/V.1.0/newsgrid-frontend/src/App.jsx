@@ -39,6 +39,16 @@ function App() {
     };
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const articleId = params.get('article');
+        if (articleId) {
+            api.get(`/articles/${articleId}`)
+                .then(res => openArticle(res.data))
+                .catch(() => {});
+        }
+    }, []);
+
+    useEffect(() => {
         document.documentElement.setAttribute('dir', 'rtl');
         document.documentElement.setAttribute('lang', 'fa');
     }, [lang]);
