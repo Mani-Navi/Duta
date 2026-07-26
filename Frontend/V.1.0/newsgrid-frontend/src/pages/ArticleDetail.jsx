@@ -78,27 +78,26 @@ function ArticleDetail({ lang, article }) {
     };
 
     const copyLink = async () => {
-        const siteUrl = `https://news-grid-pi.vercel.app`;
-        await navigator.clipboard.writeText(siteUrl);
+        await navigator.clipboard.writeText('https://news-grid-pi.vercel.app');
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
 
     const shareToTelegram = () =>
-        window.open(`https://t.me/share/url?url=${encodeURIComponent(article.url)}&text=${encodeURIComponent(article.title)}`, '_blank');
+        window.open(`https://t.me/share/url?url=${encodeURIComponent('https://news-grid-pi.vercel.app')}&text=${encodeURIComponent(article.title)}`, '_blank');
 
     const shareToWhatsApp = () =>
-        window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + article.url)}`, '_blank');
+        window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + 'https://news-grid-pi.vercel.app')}`, '_blank');
 
     const shareToTwitter = () =>
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(article.url)}`, '_blank');
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent('https://news-grid-pi.vercel.app')}`, '_blank');
 
     const shareNative = async () => {
         if (navigator.share) {
-            await navigator.share({ title: article.title, url: article.url });
+            await navigator.share({ title: article.title, url: 'https://news-grid-pi.vercel.app' });
         } else {
-            await navigator.clipboard.writeText(article.url);
+            await navigator.clipboard.writeText('https://news-grid-pi.vercel.app');
         }
     };
 
