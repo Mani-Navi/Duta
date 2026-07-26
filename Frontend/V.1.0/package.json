@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@fontsource/vazirmatn": "^5.2.8",
-    "@tabler/icons-webfont": "^3.45.0"
+    "@tabler/icons-webfont": "^3.45.0",
+    "react-router-dom": "^7.18.1"
   }
 }

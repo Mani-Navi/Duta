@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react';
 import strings from '../strings/strings';
 import api from '../api/axiosConfig';
 
-const BACKEND = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
-
 function ArticleDetail({ lang, article }) {
     const t = strings[lang];
     const [clusterArticles, setClusterArticles] = useState([]);
     const [copied, setCopied] = useState(false);
 
-    const ogImageUrl = `${BACKEND}/api/articles/${article.id}/og-image`;
+    const shareUrl = `https://news-grid-pi.vercel.app/article/${article.id}`;
 
     useEffect(() => {
         if (article.cluster?.id) {
@@ -77,12 +75,18 @@ function ArticleDetail({ lang, article }) {
         );
     };
 
-    const shareUrl = `https://news-grid-pi.vercel.app/?article=${article.id}`;
-
     const copyLink = async () => {
         await navigator.clipboard.writeText(shareUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const shareNative = async () => {
+        if (navigator.share) {
+            await navigator.share({ title: article.title, url: shareUrl });
+        } else {
+            await copyLink();
+        }
     };
 
     const shareToTelegram = () =>
@@ -93,14 +97,6 @@ function ArticleDetail({ lang, article }) {
 
     const shareToTwitter = () =>
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
-
-    const shareNative = async () => {
-        if (navigator.share) {
-            await navigator.share({ title: article.title, url: shareUrl });
-        } else {
-            await navigator.clipboard.writeText(shareUrl);
-        }
-    };
 
     const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
     const sourceCount = article.cluster?.sourceCount ?? 1;
@@ -176,7 +172,7 @@ function ArticleDetail({ lang, article }) {
                 })}
             </div>
 
-            {/* ── نوار share ── */}
+            {/* نوار share */}
             <div className="share-inline-bar">
                 <span className="share-inline-label">اشتراک‌گذاری</span>
                 <div className="share-inline-btns">
