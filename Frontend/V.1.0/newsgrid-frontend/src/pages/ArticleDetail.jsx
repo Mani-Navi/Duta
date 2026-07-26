@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import strings from '../strings/strings';
 import api from '../api/axiosConfig';
-import ShareBanner from '../components/ShareBanner';
+
+const BACKEND = import.meta.env.VITE_API_URL?.replace('/api', '') || '';
 
 function ArticleDetail({ lang, article }) {
     const t = strings[lang];
     const [clusterArticles, setClusterArticles] = useState([]);
-    const [showShare, setShowShare] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    const ogImageUrl = `${BACKEND}/api/articles/${article.id}/og-image`;
 
     useEffect(() => {
         if (article.cluster?.id) {
@@ -74,12 +77,46 @@ function ArticleDetail({ lang, article }) {
         );
     };
 
+    // ── share actions ──
+    const copyLink = async () => {
+        await navigator.clipboard.writeText(ogImageUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const downloadBanner = async () => {
+        const res = await fetch(ogImageUrl);
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        link.download = 'newsgrid-share.png';
+        link.href = URL.createObjectURL(blob);
+        link.click();
+    };
+
+    const shareNative = async () => {
+        try {
+            const res = await fetch(ogImageUrl);
+            const blob = await res.blob();
+            const file = new File([blob], 'newsgrid-share.png', { type: 'image/png' });
+            if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                await navigator.share({ title: article.title, files: [file] });
+            } else downloadBanner();
+        } catch { downloadBanner(); }
+    };
+
+    const shareToTelegram = () =>
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(ogImageUrl)}&text=${encodeURIComponent(article.title)}`, '_blank');
+
+    const shareToWhatsApp = () =>
+        window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + ogImageUrl)}`, '_blank');
+
+    const shareToTwitter = () =>
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(ogImageUrl)}`, '_blank');
+
     const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
     const sourceCount = article.cluster?.sourceCount ?? 1;
     const scoreColor = getScoreColor(score);
     const category = article.source?.category;
-    const srcColor = article.source?.color || '#8E8E93';
-    const srcInitials = article.source?.initials || article.source?.name?.substring(0, 2) || '?';
     const allSources = [article, ...clusterArticles];
 
     return (
@@ -92,7 +129,6 @@ function ArticleDetail({ lang, article }) {
                 </div>
             )}
 
-            {/* Meta + دکمه share */}
             <div className="detail-meta">
                 {category && (
                     <span className="detail-category">
@@ -100,15 +136,6 @@ function ArticleDetail({ lang, article }) {
                     </span>
                 )}
                 <span className="detail-time">{formatTime(article.publishedAt)}</span>
-
-                {/* دکمه share */}
-                <button
-                    className="detail-share-btn"
-                    onClick={() => setShowShare(true)}
-                    aria-label="اشتراک‌گذاری"
-                >
-                    <i className="ti ti-share" />
-                </button>
             </div>
 
             <div className="detail-title">{article.title}</div>
@@ -160,12 +187,44 @@ function ArticleDetail({ lang, article }) {
                 })}
             </div>
 
-            <div className="footer-note">{t.clickToRead}</div>
+            {/* ── نوار share ── */}
+            <div className="share-inline-bar">
+                <span className="share-inline-label">اشتراک‌گذاری</span>
+                <div className="share-inline-btns">
+                    <button className="share-inline-btn" onClick={shareNative} aria-label="بیشتر">
+                        <div className="share-inline-icon" style={{ background: '#007AFF' }}>
+                            <i className="ti ti-share" />
+                        </div>
+                    </button>
+                    <button className="share-inline-btn" onClick={shareToTwitter} aria-label="توییتر">
+                        <div className="share-inline-icon" style={{ background: '#000' }}>
+                            <i className="ti ti-brand-x" />
+                        </div>
+                    </button>
+                    <button className="share-inline-btn" onClick={shareToWhatsApp} aria-label="واتساپ">
+                        <div className="share-inline-icon" style={{ background: '#25D366' }}>
+                            <i className="ti ti-brand-whatsapp" />
+                        </div>
+                    </button>
+                    <button className="share-inline-btn" onClick={shareToTelegram} aria-label="تلگرام">
+                        <div className="share-inline-icon" style={{ background: '#2AABEE' }}>
+                            <i className="ti ti-brand-telegram" />
+                        </div>
+                    </button>
+                    <button className="share-inline-btn" onClick={downloadBanner} aria-label="دانلود">
+                        <div className="share-inline-icon" style={{ background: 'var(--chip-bg)', color: 'var(--label)' }}>
+                            <i className="ti ti-download" />
+                        </div>
+                    </button>
+                    <button className="share-inline-btn" onClick={copyLink} aria-label="کپی لینک">
+                        <div className="share-inline-icon" style={{ background: 'var(--chip-bg)', color: copied ? '#34C759' : 'var(--label)' }}>
+                            <i className={`ti ${copied ? 'ti-check' : 'ti-link'}`} />
+                        </div>
+                    </button>
+                </div>
+            </div>
 
-            {/* Share Sheet */}
-            {showShare && (
-                <ShareBanner article={article} onClose={() => setShowShare(false)} />
-            )}
+            <div className="footer-note">{t.clickToRead}</div>
         </div>
     );
 }
