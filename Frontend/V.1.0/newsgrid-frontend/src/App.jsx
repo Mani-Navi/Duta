@@ -13,17 +13,17 @@ import './App.css';
 
 // ── Wrapper برای ArticleDetail — article رو از API میگیره ──
 function ArticleDetailPage({ lang }) {
-    const { id } = useParams();
+    const { slug } = useParams();
     const navigate = useNavigate();
     const [article, setArticle] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        api.get(`/articles/${id}`)
+        api.get(`/articles/slug/${slug}`) // ← endpoint جدید
             .then(res => setArticle(res.data))
             .catch(() => navigate('/'))
             .finally(() => setLoading(false));
-    }, [id]);
+    }, [slug]);
 
     if (loading) return (
         <div className="grid-status">
