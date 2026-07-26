@@ -77,41 +77,30 @@ function ArticleDetail({ lang, article }) {
         );
     };
 
-    // ── share actions ──
     const copyLink = async () => {
-        await navigator.clipboard.writeText(ogImageUrl);
+        const siteUrl = `https://news-grid-pi.vercel.app`;
+        await navigator.clipboard.writeText(siteUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const downloadBanner = async () => {
-        const res = await fetch(ogImageUrl);
-        const blob = await res.blob();
-        const link = document.createElement('a');
-        link.download = 'newsgrid-share.png';
-        link.href = URL.createObjectURL(blob);
-        link.click();
-    };
-
-    const shareNative = async () => {
-        try {
-            const res = await fetch(ogImageUrl);
-            const blob = await res.blob();
-            const file = new File([blob], 'newsgrid-share.png', { type: 'image/png' });
-            if (navigator.share && navigator.canShare?.({ files: [file] })) {
-                await navigator.share({ title: article.title, files: [file] });
-            } else downloadBanner();
-        } catch { downloadBanner(); }
-    };
 
     const shareToTelegram = () =>
-        window.open(`https://t.me/share/url?url=${encodeURIComponent(ogImageUrl)}&text=${encodeURIComponent(article.title)}`, '_blank');
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(article.url)}&text=${encodeURIComponent(article.title)}`, '_blank');
 
     const shareToWhatsApp = () =>
-        window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + ogImageUrl)}`, '_blank');
+        window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + article.url)}`, '_blank');
 
     const shareToTwitter = () =>
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(ogImageUrl)}`, '_blank');
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(article.url)}`, '_blank');
+
+    const shareNative = async () => {
+        if (navigator.share) {
+            await navigator.share({ title: article.title, url: article.url });
+        } else {
+            await navigator.clipboard.writeText(article.url);
+        }
+    };
 
     const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
     const sourceCount = article.cluster?.sourceCount ?? 1;
@@ -209,11 +198,6 @@ function ArticleDetail({ lang, article }) {
                     <button className="share-inline-btn" onClick={shareToTelegram} aria-label="تلگرام">
                         <div className="share-inline-icon" style={{ background: '#2AABEE' }}>
                             <i className="ti ti-brand-telegram" />
-                        </div>
-                    </button>
-                    <button className="share-inline-btn" onClick={downloadBanner} aria-label="دانلود">
-                        <div className="share-inline-icon" style={{ background: 'var(--chip-bg)', color: 'var(--label)' }}>
-                            <i className="ti ti-download" />
                         </div>
                     </button>
                     <button className="share-inline-btn" onClick={copyLink} aria-label="کپی لینک">
