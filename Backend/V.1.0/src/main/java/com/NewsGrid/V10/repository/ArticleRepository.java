@@ -2,7 +2,6 @@ package com.NewsGrid.V10.repository;
 
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.ArticleCluster;
-import com.NewsGrid.V10.entity.Category;
 import com.NewsGrid.V10.entity.Source;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,11 +14,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ArticleRepository extends JpaRepository<Article, Long> {
 
         boolean existsByUrl(String url);
+        boolean existsBySlug(String slug);
+
+        Optional<Article> findBySlug(String slug);
 
         @Modifying
         @Transactional
@@ -27,8 +30,8 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
         List<Article> findBySource(Source source);
         List<Article> findByCluster(ArticleCluster cluster);
+        Page<Article> findByBreakingTrue(Pageable pageable);
 
-        // همه اخبار — یه کارت به ازای هر cluster
         @Query(value = """
         SELECT a.* FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id
@@ -51,7 +54,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
                 nativeQuery = true)
         Page<Article> findRepresentativeArticles(Pageable pageable);
 
-        // فیلتر کتگوری
         @Query(value = """
         SELECT a.* FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id
@@ -81,7 +83,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
                 nativeQuery = true)
         Page<Article> findRepresentativeByCategory(@Param("categoryId") Long categoryId, Pageable pageable);
 
-        // breaking
         @Query(value = """
         SELECT a.* FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id
@@ -107,7 +108,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
                 nativeQuery = true)
         Page<Article> findRepresentativeBreaking(Pageable pageable);
 
-        // جستجو
         @Query(value = """
         SELECT a.* FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id

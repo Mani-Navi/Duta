@@ -27,15 +27,17 @@ public class Article {
 
     private ZonedDateTime publishedAt;
 
-    // آیا این خبر فوری است؟
     @Column(nullable = false)
     private boolean breaking = false;
+
+    // slug برای URL — مثل: انتقاد-شدید-وزیر-جنگ
+    @Column(columnDefinition = "TEXT")
+    private String slug;
 
     @ManyToOne
     @JoinColumn(name = "source_id")
     private Source source;
 
-    // cluster این خبر
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cluster_id")
     @JsonIgnoreProperties({"articles", "hibernateLazyInitializer"})

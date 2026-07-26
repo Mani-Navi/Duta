@@ -17,29 +17,26 @@ public class ArticleService {
     private final CategoryRepository categoryRepository;
 
     public Page<Article> getAllArticles(int page, int size) {
-        return articleRepository.findRepresentativeArticles(
-                PageRequest.of(page, size)
-        );
+        return articleRepository.findRepresentativeArticles(PageRequest.of(page, size));
     }
 
     public Page<Article> getArticlesByCategory(Long categoryId, int page, int size) {
         categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("کتگوری یافت نشد"));
-        return articleRepository.findRepresentativeByCategory(
-                categoryId,
-                PageRequest.of(page, size)
-        );
+        return articleRepository.findRepresentativeByCategory(categoryId, PageRequest.of(page, size));
     }
 
     public Page<Article> getBreakingArticles(int page, int size) {
-        return articleRepository.findRepresentativeBreaking(
-                PageRequest.of(page, size)
-        );
+        return articleRepository.findRepresentativeBreaking(PageRequest.of(page, size));
     }
 
     public Article getArticleById(Long id) {
-        return articleRepository
-                .findById(id)
+        return articleRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("خبر یافت نشد"));
+    }
+
+    public Article getArticleBySlug(String slug) {
+        return articleRepository.findBySlug(slug)
                 .orElseThrow(() -> new RuntimeException("خبر یافت نشد"));
     }
 
@@ -48,9 +45,6 @@ public class ArticleService {
     }
 
     public Page<Article> searchArticles(String keyword, int page, int size) {
-        return articleRepository.searchByKeyword(
-                keyword,
-                PageRequest.of(page, size)
-        );
+        return articleRepository.searchByKeyword(keyword, PageRequest.of(page, size));
     }
 }

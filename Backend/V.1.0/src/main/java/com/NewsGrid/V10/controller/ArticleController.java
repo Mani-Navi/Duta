@@ -22,7 +22,6 @@ public class ArticleController {
         return "done";
     }
 
-    // همه اخبار با pagination
     @GetMapping
     public Page<Article> getAllArticles(
             @RequestParam(defaultValue = "0") int page,
@@ -30,7 +29,6 @@ public class ArticleController {
         return articleService.getAllArticles(page, size);
     }
 
-    // اخبار یه کتگوری با pagination
     @GetMapping("/category/{categoryId}")
     public Page<Article> getByCategory(
             @PathVariable Long categoryId,
@@ -42,23 +40,27 @@ public class ArticleController {
     @GetMapping("/breaking")
     public Page<Article> getBreaking(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size){
+            @RequestParam(defaultValue = "20") int size) {
         return articleService.getBreakingArticles(page, size);
     }
 
-    // جزئیات یه خبر
+    // دریافت خبر با ID
     @GetMapping("/{id}")
     public Article getArticleById(@PathVariable Long id) {
         return articleService.getArticleById(id);
     }
 
-    // منبع یه خبر
+    // دریافت خبر با slug ← برای React Router
+    @GetMapping("/slug/{slug}")
+    public Article getArticleBySlug(@PathVariable String slug) {
+        return articleService.getArticleBySlug(slug);
+    }
+
     @GetMapping("/{id}/source")
     public Source getArticleSource(@PathVariable Long id) {
         return articleService.getArticleSource(id);
     }
 
-    // GET /api/articles/search?keyword=ایران&page=0&size=20
     @GetMapping("/search")
     public Page<Article> search(
             @RequestParam String keyword,

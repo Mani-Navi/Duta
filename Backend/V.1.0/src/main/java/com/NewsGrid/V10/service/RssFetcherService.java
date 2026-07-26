@@ -25,6 +25,7 @@ public class RssFetcherService {
     private final SourceRepository sourceRepository;
     private final ArticleRepository articleRepository;
     private final ClusteringService clusteringService;
+    private final SlugService slugService;
 
     private static final Set<String> BREAKING_KEYWORDS = Set.of(
             "زلزله", "سیل", "آتش‌سوزی", "آتش سوزی", "انفجار", "حمله",
@@ -51,7 +52,6 @@ public class RssFetcherService {
 
                 for (SyndEntry entry : feed.getEntries()) {
                     if (!articleRepository.existsByUrl(entry.getLink())) {
-
                         Article article = new Article();
                         article.setTitle(entry.getTitle());
                         article.setUrl(entry.getLink());
@@ -68,8 +68,9 @@ public class RssFetcherService {
 
                         article.setSource(source);
                         article.setBreaking(isBreaking(entry.getTitle()));
+                        // ساخت slug از تیتر
+                        article.setSlug(slugService.generateSlug(entry.getTitle(), articleRepository));
 
-                        // اول ذخیره کن، بعد cluster کن
                         articleRepository.save(article);
                         clusteringService.clusterArticle(article);
                     }
@@ -79,8 +80,7 @@ public class RssFetcherService {
                 sourceRepository.save(source);
 
             } catch (Exception e) {
-                System.err.println("خطا در خواندن RSS: "
-                        + source.getName() + " — " + e.getMessage());
+                System.err.println("خطا در خواندن RSS: " + source.getName() + " — " + e.getMessage());
             }
         }
     }
