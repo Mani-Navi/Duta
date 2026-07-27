@@ -140,6 +140,5 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
                 nativeQuery = true)
         Page<Article> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-        // به متدهای قبلی ArticleRepository اضافه کنید:
         Page<Article> findBySourceSourceTypeOrderByPublishedAtDesc(SourceType sourceType, Pageable pageable);
 }
