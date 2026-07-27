@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import NewsCard from './NewsCard';
 import api from '../api/axiosConfig';
 import strings from '../strings/strings';
+import TelegramNewsCard from './TelegramNewsCard';
 
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
