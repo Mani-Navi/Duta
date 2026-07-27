@@ -6,23 +6,23 @@ import org.springframework.stereotype.Service;
 @Service
 public class SlugService {
 
-    // کاراکترهای فارسی که باید با - جدا بشن
     public String generateSlug(String title, ArticleRepository articleRepository) {
         if (title == null || title.isBlank()) return "article";
 
         String slug = title
-                // حذف نشانه‌های نگارشی فارسی و انگلیسی
                 .replaceAll("[،؛؟!٪«»()\\[\\]،:.؛،\"'،،]", "")
                 .replaceAll("[^\\p{L}\\p{N}\\s-]", "")
-                // فاصله‌ها به -
                 .trim()
                 .replaceAll("\\s+", "-")
-                // چند - پشت هم به یکی
-                .replaceAll("-+", "-")
-                // حداکثر ۸۰ کاراکتر
-                .substring(0, Math.min(80, title.length()));
+                .replaceAll("-+", "-");
 
-        // اگه slug تکراری بود، id رو اضافه کن
+        // ── باگ برطرف شد: چک کردن طول خود slug به جای title ──
+        if (slug.length() > 80) {
+            slug = slug.substring(0, 80);
+        }
+
+        if (slug.isBlank()) slug = "article";
+
         String base = slug;
         int counter = 1;
         while (articleRepository.existsBySlug(slug)) {

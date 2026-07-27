@@ -2,6 +2,7 @@ package com.NewsGrid.V10.service;
 
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
+import com.NewsGrid.V10.entity.SourceType;
 import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.repository.SourceRepository;
 import com.rometools.rome.feed.synd.SyndEntry;
@@ -28,14 +29,9 @@ public class RssFetcherService {
     private final SlugService slugService;
 
     private static final Set<String> BREAKING_KEYWORDS = Set.of(
-            "زلزله", "سیل", "آتش‌سوزی", "آتش سوزی", "انفجار", "حمله",
+            "زلزله", "سیل", "آتش‌سوزی", "انفجار", "حمله",
             "جنگ", "بمب", "موشک", "کشته", "شهید", "سقوط", "تصادف",
-            "اورژانس", "بحران", "فوری", "خبر فوری", "ترور", "اشغال",
-            "طوفان", "سونامی", "آتشفشان", "رانش", "گروگان",
-            "earthquake", "flood", "fire", "explosion", "attack",
-            "war", "bomb", "missile", "killed", "dead", "crash",
-            "emergency", "crisis", "breaking", "urgent", "terror",
-            "storm", "tsunami", "volcano"
+            "اورژانس", "بحران", "فوری", "خبر فوری", "ترور"
     );
 
     @Scheduled(fixedRate = 300000)
@@ -43,44 +39,56 @@ public class RssFetcherService {
         ZonedDateTime cutoff = ZonedDateTime.now().minusDays(30);
         articleRepository.deleteByPublishedAtBefore(cutoff);
 
-        List<Source> sources = sourceRepository.findAll();
+        // ── ج Were فیلتر شد: فقط منابع واقعی RSS و غیرتلگرامی خوانده شوند ──
+        List<Source> sources = sourceRepository.findAll().stream()
+                .filter(s -> (s.getSourceType() == null || s.getSourceType() == SourceType.RSS))
+                .filter(s -> s.getRssUrl() != null && !s.getRssUrl().contains("t.me/"))
+                .toList();
+
+        System.out.println("🚀 شروع دریافت اخبار RSS برای " + sources.size() + " منبع...");
 
         for (Source source : sources) {
             try {
                 URL feedUrl = new URL(source.getRssUrl());
                 SyndFeed feed = new SyndFeedInput().build(new XmlReader(feedUrl));
+                int savedCount = 0;
 
                 for (SyndEntry entry : feed.getEntries()) {
-                    if (!articleRepository.existsByUrl(entry.getLink())) {
-                        Article article = new Article();
-                        article.setTitle(entry.getTitle());
-                        article.setUrl(entry.getLink());
+                    try {
+                        if (!articleRepository.existsByUrl(entry.getLink())) {
+                            Article article = new Article();
+                            article.setTitle(entry.getTitle());
+                            article.setUrl(entry.getLink());
 
-                        if (entry.getPublishedDate() != null) {
-                            article.setPublishedAt(
-                                    entry.getPublishedDate()
-                                            .toInstant()
-                                            .atZone(ZoneId.systemDefault())
-                            );
-                        } else {
-                            article.setPublishedAt(ZonedDateTime.now());
+                            if (entry.getPublishedDate() != null) {
+                                article.setPublishedAt(
+                                        entry.getPublishedDate()
+                                                .toInstant()
+                                                .atZone(ZoneId.systemDefault())
+                                );
+                            } else {
+                                article.setPublishedAt(ZonedDateTime.now());
+                            }
+
+                            article.setSource(source);
+                            article.setBreaking(isBreaking(entry.getTitle()));
+                            article.setSlug(slugService.generateSlug(entry.getTitle(), articleRepository));
+
+                            articleRepository.save(article);
+                            clusteringService.clusterArticle(article);
+                            savedCount++;
                         }
-
-                        article.setSource(source);
-                        article.setBreaking(isBreaking(entry.getTitle()));
-                        // ساخت slug از تیتر
-                        article.setSlug(slugService.generateSlug(entry.getTitle(), articleRepository));
-
-                        articleRepository.save(article);
-                        clusteringService.clusterArticle(article);
+                    } catch (Exception innerEx) {
+                        System.err.println("⚠️ خطا در ذخیره یک آیتم RSS: " + innerEx.getMessage());
                     }
                 }
 
                 source.setLastFetchedAt(ZonedDateTime.now());
                 sourceRepository.save(source);
+                System.out.println("✅ منبع RSS " + source.getName() + ": " + savedCount + " خبر جدید ذخیره شد.");
 
             } catch (Exception e) {
-                System.err.println("خطا در خواندن RSS: " + source.getName() + " — " + e.getMessage());
+                System.err.println("❌ خطا در خواندن RSS: " + source.getName() + " — " + e.getMessage());
             }
         }
     }
