@@ -17,6 +17,15 @@ function CategoryBar({ lang, activeCategory, onSelectCategory }) {
                 خبر فوری
             </button>
 
+            {/* دکمه اختصاصی تلگرام */}
+            <button
+                className={`cat ${activeCategory === 'telegram' ? 'active' : ''}`}
+                onClick={() => onSelectCategory('telegram')}
+                role="tab"
+            >
+                کانال‌های تلگرام
+            </button>
+
             {/* دسته‌بندی‌های معمولی */}
             {t.categories.map((cat, i) => (
                 <button

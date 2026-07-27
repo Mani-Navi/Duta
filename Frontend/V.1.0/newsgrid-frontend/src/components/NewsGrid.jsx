@@ -49,8 +49,14 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
             return api.get(`/articles/search?keyword=${encodeURIComponent(searchKeyword)}&page=${p}&size=20`);
         if (activeCategory === 'breaking')
             return api.get(`/articles/breaking?page=${p}&size=20`);
-        if (activeCategory === 0)
+
+        // ── جدید: دریافت اخبار اختصاصی تلگرام ──
+        if (activeCategory === 'telegram')
+            return api.get(`/articles/telegram?page=${p}&size=20`);
+
+        if (activeCategory === 'all' || activeCategory === 0 || activeCategory === null)
             return api.get(`/articles?page=${p}&size=20`);
+
         return api.get(`/articles/category/${activeCategory}?page=${p}&size=20`);
     };
 
@@ -126,9 +132,15 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
             <div className="grid">
                 {articles.map((article, index) => {
                     const isLast = index === articles.length - 1;
+                    const isTelegram = article.source?.sourceType === 'TELEGRAM';
+
                     return (
                         <div key={article.id} ref={isLast ? lastCardRef : null}>
-                            <NewsCard article={article} lang={lang} onOpen={onOpenArticle} />
+                            {isTelegram ? (
+                                <TelegramNewsCard article={article} lang={lang} onOpen={onOpenArticle} />
+                            ) : (
+                                <NewsCard article={article} lang={lang} onOpen={onOpenArticle} />
+                            )}
                         </div>
                     );
                 })}
