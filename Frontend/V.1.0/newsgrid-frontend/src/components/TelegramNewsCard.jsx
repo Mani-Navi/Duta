@@ -12,7 +12,6 @@ const TelegramNewsCard = ({ article, lang = 'fa', onOpen }) => {
         return date.toLocaleDateString('fa-IR');
     };
 
-    // محاسبه امتیاز اعتبار و تعداد منابع
     const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
     const sourceCount = article.cluster?.sourceCount ?? 1;
     const badgeClass = score >= 80 ? 'green' : score >= 50 ? 'yellow' : 'red';
@@ -32,7 +31,6 @@ const TelegramNewsCard = ({ article, lang = 'fa', onOpen }) => {
                     <span className="telegram-badge">تلگرام</span>
                 </div>
 
-                {/* بخش سمت راست هدر: چند منبع + درصد اعتبار */}
                 <div className="telegram-header-right" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {sourceCount > 1 && (
                         <span className="multi-source-badge">
@@ -51,9 +49,21 @@ const TelegramNewsCard = ({ article, lang = 'fa', onOpen }) => {
                 <p className="telegram-text">{article.title}</p>
             </div>
 
-            {/* فوتر: زمان و لینک مستقیم */}
-            <div className="telegram-footer">
+            {/* فوتر: زمان در راست، لینک تلگرام در چپ با فاصله کامل */}
+            <div
+                className="telegram-footer"
+                style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '100%',
+                    paddingTop: '10px',
+                    marginTop: '10px',
+                    borderTop: '1px solid rgba(128, 128, 128, 0.15)'
+                }}
+            >
                 <span className="telegram-time">{formatDate(article.publishedAt)}</span>
+
                 <a
                     href={article.url}
                     target="_blank"
