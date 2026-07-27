@@ -1,5 +1,5 @@
 import React from 'react';
-import './TelegramNewsCard.css'; // ← حتما این خط در بالا باشد
+import '../App.css'; // ← حتما این خط در بالا باشد
 
 const TelegramNewsCard = ({ article, lang = 'fa', onOpen }) => {
 
