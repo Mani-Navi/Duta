@@ -12,6 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.concurrent.CompletableFuture;
+
 @RestController
 @RequestMapping("/api/articles")
 @RequiredArgsConstructor
@@ -24,19 +26,24 @@ public class ArticleController {
 
     @GetMapping("/fetch-now")
     public String fetchNow() {
-        try {
-            rssFetcherService.fetchAllSources();
-        } catch (Exception e) {
-            System.err.println("خطا در اجرا RSS: " + e.getMessage());
-        }
+        // اجرای پردازش در پس‌زمینه بدون معطل کردن مرورگر (جلوگیری از تایم‌اوت Railway)
+        CompletableFuture.runAsync(() -> {
+            try {
+                System.out.println("🔄 دستی شروع شد: دریافت RSS...");
+                rssFetcherService.fetchAllSources();
+            } catch (Exception e) {
+                System.err.println("خطا در اجرا RSS: " + e.getMessage());
+            }
 
-        try {
-            telegramScraperService.fetchRecentPosts();
-        } catch (Exception e) {
-            System.err.println("خطا در اجرا تلگرام: " + e.getMessage());
-        }
+            try {
+                System.out.println("🔄 دستی شروع شد: دریافت تلگرام...");
+                telegramScraperService.fetchRecentPosts();
+            } catch (Exception e) {
+                System.err.println("خطا در اجرا تلگرام: " + e.getMessage());
+            }
+        });
 
-        return "done";
+        return "started";
     }
 
     @GetMapping
@@ -46,7 +53,6 @@ public class ArticleController {
         return articleService.getAllArticles(page, size);
     }
 
-    // دریافت اخبار اختصاصی تلگرام
     @GetMapping("/telegram")
     public Page<Article> getTelegramArticles(
             @RequestParam(defaultValue = "0") int page,
