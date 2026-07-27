@@ -3,6 +3,7 @@ package com.NewsGrid.V10.repository;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.ArticleCluster;
 import com.NewsGrid.V10.entity.Source;
+import com.NewsGrid.V10.entity.SourceType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -138,4 +139,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         """,
                 nativeQuery = true)
         Page<Article> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+        // به متدهای قبلی ArticleRepository اضافه کنید:
+        Page<Article> findBySourceSourceTypeOrderByPublishedAtDesc(SourceType sourceType, Pageable pageable);
 }

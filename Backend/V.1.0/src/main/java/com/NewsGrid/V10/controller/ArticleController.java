@@ -1,5 +1,6 @@
 package com.NewsGrid.V10.controller;
 
+import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.service.RssFetcherService;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
@@ -7,6 +8,8 @@ import com.NewsGrid.V10.service.ArticleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
+import com.NewsGrid.V10.entity.SourceType;
+import org.springframework.data.domain.PageRequest;
 
 @RestController
 @RequestMapping("/api/articles")
@@ -15,6 +18,7 @@ public class ArticleController {
 
     private final ArticleService articleService;
     private final RssFetcherService rssFetcherService;
+    private final ArticleRepository articleRepository;
 
     @GetMapping("/fetch-now")
     public String fetchNow() {
@@ -67,5 +71,16 @@ public class ArticleController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return articleService.searchArticles(keyword, page, size);
+    }
+
+    // دریافت اخبار اختصاصی تلگرام
+    @GetMapping("/telegram")
+    public Page<Article> getTelegramArticles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return articleRepository.findBySourceSourceTypeOrderByPublishedAtDesc(
+                SourceType.TELEGRAM,
+                PageRequest.of(page, size)
+        );
     }
 }
