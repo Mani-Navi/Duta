@@ -48,13 +48,12 @@ public class RssFetcherService {
 
         for (Source source : sources) {
             try {
-                // شبیه‌سازی دقیق مرورگر واقعی Chrome جهت دور زدن فایروال کلودفلر/ابرآروان سایت‌ها
                 URL feedUrl = new URL(source.getRssUrl());
                 URLConnection conn = feedUrl.openConnection();
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-                conn.setRequestProperty("Accept", "application/rss+xml, application/xml, text/xml, */*");
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(10000);
+                conn.setRequestProperty("Accept", "text/xml, application/xml, application/rss+xml, */*");
+                conn.setConnectTimeout(8000);
+                conn.setReadTimeout(8000);
 
                 SyndFeed feed = new SyndFeedInput().build(new XmlReader(conn));
                 int savedCount = 0;
@@ -84,9 +83,7 @@ public class RssFetcherService {
                             clusteringService.clusterArticle(article);
                             savedCount++;
                         }
-                    } catch (Exception ignored) {
-                        // حذف لاگ داخل حلقه جهت جلوگیری از پر شدن حجم لاگ در Railway
-                    }
+                    } catch (Exception ignored) {}
                 }
 
                 source.setLastFetchedAt(ZonedDateTime.now());
@@ -94,7 +91,8 @@ public class RssFetcherService {
                 System.out.println("✅ RSS " + source.getName() + ": " + savedCount + " خبر جدید.");
 
             } catch (Exception e) {
-                System.err.println("❌ خطا در RSS " + source.getName() + " ➔ " + e.getMessage());
+                // لاگ تک‌خطی کوتاه برای جلوگیری از پر شدن حافظه لاگ در Railway
+                System.err.println("⚠️ عدم دریافت RSS برای " + source.getName() + " (آدرس غیرفعال یا مسدود است)");
             }
         }
     }
