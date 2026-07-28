@@ -7,6 +7,9 @@ const TelegramNewsCard = ({ article, lang = 'fa', onOpen }) => {
         const now = new Date();
         const diffMins = Math.floor((now - date) / 60000);
 
+        // ── برطرف شدن باگ عدد منفی: اگر زیر ۱ دقیقه یا منفی بود ──
+        if (diffMins < 1) return lang === 'fa' ? 'همین الان' : 'just now';
+
         if (diffMins < 60) return `${diffMins} دقیقه پیش`;
         if (diffMins < 1440) return `${Math.floor(diffMins / 60)} ساعت پیش`;
         return date.toLocaleDateString('fa-IR');

@@ -11,6 +11,10 @@ function NewsCard({ article, lang, onOpen }) {
     const formatTime = (dateStr) => {
         if (!dateStr) return '';
         const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
+
+        // ── برطرف شدن باگ عدد منفی ──
+        if (diff < 1) return lang === 'fa' ? 'همین الان' : 'just now';
+
         if (diff < 60) return lang === 'fa' ? `${diff} دقیقه پیش` : `${diff} minutes ago`;
         const hours = Math.floor(diff / 60);
         if (hours < 24) return lang === 'fa' ? `${hours} ساعت پیش` : `${hours} hours ago`;
