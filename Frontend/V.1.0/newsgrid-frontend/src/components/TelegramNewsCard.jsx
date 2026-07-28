@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 const TelegramNewsCard = ({ article, lang = 'fa', onOpen }) => {
     const formatDate = (dateString) => {
@@ -78,4 +78,4 @@ const TelegramNewsCard = ({ article, lang = 'fa', onOpen }) => {
     );
 };
 
-export default TelegramNewsCard;
+export default memo(TelegramNewsCard);

@@ -27,6 +27,11 @@ function PriceTicker() {
     };
 
     useEffect(() => {
+        const fetchPrices = () => {
+            if (document.hidden) return; // اگر کاربر در تب دیگری است درخواست نزن
+            api.get('/prices').then(res => setPrices(res.data)).catch(() => {});
+        };
+
         fetchPrices();
         const interval = setInterval(fetchPrices, 5 * 60 * 1000);
         return () => clearInterval(interval);

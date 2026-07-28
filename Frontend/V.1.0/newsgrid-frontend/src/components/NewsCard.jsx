@@ -1,3 +1,5 @@
+import React, { memo } from 'react';
+
 function NewsCard({ article, lang, onOpen }) {
 
     const getBadgeClass = (score) => {
@@ -79,4 +81,4 @@ function NewsCard({ article, lang, onOpen }) {
     );
 }
 
-export default NewsCard;
+export default memo(NewsCard);
