@@ -13,8 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import javax.net.ssl.*;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
+import java.security.cert.X509Certificate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -34,66 +36,90 @@ public class RssFetcherService {
             "کشته", "شهید", "سقوط", "تصادف", "اورژانس", "بحران", "فوری", "خبر فوری", "ترور"
     );
 
+    static {
+        // نادیده گرفتن خطاهای SSL برای تمام سایت‌های ایرانی
+        try {
+            TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() { return null; }
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                    }
+            };
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+            HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
+        } catch (Exception ignored) {}
+    }
+
     @Scheduled(fixedRate = 300000)
     public void fetchAllSources() {
-        ZonedDateTime cutoff = ZonedDateTime.now().minusDays(30);
-        articleRepository.deleteByPublishedAtBefore(cutoff);
+        try {
+            ZonedDateTime cutoff = ZonedDateTime.now().minusDays(30);
+            articleRepository.deleteByPublishedAtBefore(cutoff);
 
-        List<Source> sources = sourceRepository.findAll().stream()
-                .filter(s -> (s.getSourceType() == null || s.getSourceType() == SourceType.RSS))
-                .filter(s -> s.getRssUrl() != null && !s.getRssUrl().contains("t.me/"))
-                .toList();
+            List<Source> sources = sourceRepository.findAll().stream()
+                    .filter(s -> (s.getSourceType() == null || s.getSourceType() == SourceType.RSS))
+                    .filter(s -> s.getRssUrl() != null && !s.getRssUrl().contains("t.me/"))
+                    .toList();
 
-        System.out.println("🚀 شروع دریافت اخبار RSS برای " + sources.size() + " منبع...");
+            System.out.println("🚀 شروع دریافت اخبار RSS برای " + sources.size() + " منبع...");
 
-        for (Source source : sources) {
-            try {
-                URL feedUrl = new URL(source.getRssUrl());
-                URLConnection conn = feedUrl.openConnection();
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-                conn.setRequestProperty("Accept", "text/xml, application/xml, application/rss+xml, */*");
-                conn.setConnectTimeout(8000);
-                conn.setReadTimeout(8000);
-
-                SyndFeed feed = new SyndFeedInput().build(new XmlReader(conn));
-                int savedCount = 0;
-
-                for (SyndEntry entry : feed.getEntries()) {
-                    try {
-                        if (!articleRepository.existsByUrl(entry.getLink())) {
-                            Article article = new Article();
-                            article.setTitle(entry.getTitle());
-                            article.setUrl(entry.getLink());
-
-                            if (entry.getPublishedDate() != null) {
-                                article.setPublishedAt(
-                                        entry.getPublishedDate()
-                                                .toInstant()
-                                                .atZone(ZoneId.systemDefault())
-                                );
-                            } else {
-                                article.setPublishedAt(ZonedDateTime.now());
-                            }
-
-                            article.setSource(source);
-                            article.setBreaking(isBreaking(entry.getTitle()));
-                            article.setSlug(slugService.generateSlug(entry.getTitle(), articleRepository));
-
-                            articleRepository.save(article);
-                            clusteringService.clusterArticle(article);
-                            savedCount++;
-                        }
-                    } catch (Exception ignored) {}
-                }
-
-                source.setLastFetchedAt(ZonedDateTime.now());
-                sourceRepository.save(source);
-                System.out.println("✅ RSS " + source.getName() + ": " + savedCount + " خبر جدید.");
-
-            } catch (Exception e) {
-                // لاگ تک‌خطی کوتاه برای جلوگیری از پر شدن حافظه لاگ در Railway
-                System.err.println("⚠️ عدم دریافت RSS برای " + source.getName() + " (آدرس غیرفعال یا مسدود است)");
+            for (Source source : sources) {
+                fetchSingleRssSource(source);
             }
+        } catch (Throwable t) {
+            System.err.println("⚠️ خطای عمومی در چرخه RSS: " + t.getMessage());
+        }
+    }
+
+    private void fetchSingleRssSource(Source source) {
+        try {
+            URL feedUrl = new URL(source.getRssUrl());
+            HttpURLConnection conn = (HttpURLConnection) feedUrl.openConnection();
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36");
+            conn.setRequestProperty("Accept", "text/xml, application/xml, application/rss+xml, */*");
+            conn.setConnectTimeout(5000); // ۵ ثانیه تایم‌اوت اتصال
+            conn.setReadTimeout(5000);    // ۵ ثانیه تایم‌اout خواندن
+
+            SyndFeed feed = new SyndFeedInput().build(new XmlReader(conn));
+            int savedCount = 0;
+
+            for (SyndEntry entry : feed.getEntries()) {
+                try {
+                    if (!articleRepository.existsByUrl(entry.getLink())) {
+                        Article article = new Article();
+                        article.setTitle(entry.getTitle());
+                        article.setUrl(entry.getLink());
+
+                        if (entry.getPublishedDate() != null) {
+                            article.setPublishedAt(
+                                    entry.getPublishedDate()
+                                            .toInstant()
+                                            .atZone(ZoneId.systemDefault())
+                            );
+                        } else {
+                            article.setPublishedAt(ZonedDateTime.now());
+                        }
+
+                        article.setSource(source);
+                        article.setBreaking(isBreaking(entry.getTitle()));
+                        article.setSlug(slugService.generateSlug(entry.getTitle(), articleRepository));
+
+                        articleRepository.save(article);
+                        clusteringService.clusterArticle(article);
+                        savedCount++;
+                    }
+                } catch (Throwable ignored) {}
+            }
+
+            source.setLastFetchedAt(ZonedDateTime.now());
+            sourceRepository.save(source);
+            System.out.println("✅ RSS " + source.getName() + ": " + savedCount + " خبر جدید.");
+
+        } catch (Throwable t) {
+            System.err.println("⚠️ عدم دریافت RSS برای " + source.getName());
         }
     }
 
