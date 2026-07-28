@@ -6,7 +6,6 @@ import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.entity.SourceType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -24,7 +23,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         boolean existsByUrl(String url);
         boolean existsBySlug(String slug);
 
-        @EntityGraph(attributePaths = {"source", "cluster", "source.category"})
         Optional<Article> findBySlug(String slug);
 
         @Modifying
@@ -34,7 +32,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         List<Article> findBySource(Source source);
         List<Article> findByCluster(ArticleCluster cluster);
 
-        @EntityGraph(attributePaths = {"source", "cluster", "source.category"})
         Page<Article> findBySourceSourceTypeOrderByPublishedAtDesc(SourceType sourceType, Pageable pageable);
 
         @Query(value = """
