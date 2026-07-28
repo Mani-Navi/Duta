@@ -24,8 +24,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         boolean existsByUrl(String url);
         boolean existsBySlug(String slug);
 
-        // رفع N+1 برای دریافت خبر با Slug
-        @EntityGraph(attributePaths = {"source", "cluster", "category", "source.category"})
+        @EntityGraph(attributePaths = {"source", "cluster", "source.category"})
         Optional<Article> findBySlug(String slug);
 
         @Modifying
@@ -35,8 +34,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         List<Article> findBySource(Source source);
         List<Article> findByCluster(ArticleCluster cluster);
 
-        // رفع N+1 برای اخبار اختصاصی تلگرام
-        @EntityGraph(attributePaths = {"source", "cluster", "category"})
+        @EntityGraph(attributePaths = {"source", "cluster", "source.category"})
         Page<Article> findBySourceSourceTypeOrderByPublishedAtDesc(SourceType sourceType, Pageable pageable);
 
         @Query(value = """
@@ -59,7 +57,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         @Query(value = """
     SELECT a.* FROM articles a
     LEFT JOIN sources s ON a.source_id = s.id
-    WHERE COALESCE(a.category_id, s.category_id) = :categoryId
+    WHERE s.category_id = :categoryId
     AND (
         a.cluster_id IS NULL
         OR a.id = (
@@ -72,7 +70,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     )
     ORDER BY a.published_at DESC
     """,
-                countQuery = "SELECT COUNT(DISTINCT COALESCE(a.cluster_id, a.id)) FROM articles a LEFT JOIN sources s ON a.source_id = s.id WHERE COALESCE(a.category_id, s.category_id) = :categoryId",
+                countQuery = "SELECT COUNT(DISTINCT COALESCE(a.cluster_id, a.id)) FROM articles a LEFT JOIN sources s ON a.source_id = s.id WHERE s.category_id = :categoryId",
                 nativeQuery = true)
         Page<Article> findRepresentativeByCategory(@Param("categoryId") Long categoryId, Pageable pageable);
 
