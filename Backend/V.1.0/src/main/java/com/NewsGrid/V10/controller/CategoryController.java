@@ -3,6 +3,7 @@ package com.NewsGrid.V10.controller;
 import com.NewsGrid.V10.entity.Category;
 import com.NewsGrid.V10.repository.CategoryRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,6 +17,7 @@ public class CategoryController {
     private final CategoryRepository categoryRepository;
 
     @GetMapping
+    @Cacheable(value = "categories") // ← کش کردن لیست کتگوری‌ها
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
     }

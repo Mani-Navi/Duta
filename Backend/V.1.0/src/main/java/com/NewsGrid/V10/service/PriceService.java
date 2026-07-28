@@ -14,9 +14,10 @@ public class PriceService {
 
     private Map<String, Object> cachedPrices = null;
     private Instant lastFetch = Instant.EPOCH;
-    private static final long CACHE_SECONDS = 300;
+    private static final long CACHE_SECONDS = 300; // ۵ دقیقه کش
 
-    public Map<String, Object> getPrices() {
+    // ── اضافه شدن synchronized جهت جلوگیری از Race Condition ریکوئست‌های همزمان ──
+    public synchronized Map<String, Object> getPrices() {
         long secondsSince = Instant.now().getEpochSecond() - lastFetch.getEpochSecond();
         if (cachedPrices != null && secondsSince < CACHE_SECONDS) {
             return cachedPrices;
@@ -41,7 +42,6 @@ public class PriceService {
     private Map<String, Object> fetchFromBonbast() throws Exception {
         RestTemplate rt = new RestTemplate();
 
-        // ── مرحله ۱: صفحه اصلی + گرفتن کوکی‌ها ──
         HttpHeaders h1 = new HttpHeaders();
         h1.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
         h1.set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
@@ -52,7 +52,6 @@ public class PriceService {
 
         String html = mainResp.getBody();
 
-        // کوکی‌ها رو جمع کن
         List<String> setCookies = mainResp.getHeaders().get("Set-Cookie");
         StringBuilder cookieHeader = new StringBuilder();
         if (setCookies != null) {
@@ -62,20 +61,16 @@ public class PriceService {
             }
         }
 
-        // ── مرحله ۲: param رو از HTML استخراج کن ──
         String param = extractParam(html);
         if (param == null) {
-            System.err.println("PriceService: param not found in HTML");
             return new HashMap<>();
         }
 
-        // ── مرحله ۳: بلافاصله به /json پست کن (با همون کوکی) ──
         HttpHeaders h2 = new HttpHeaders();
         h2.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         h2.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
         h2.set("Referer", "https://bonbast.com/");
         h2.set("X-Requested-With", "XMLHttpRequest");
-        h2.set("Accept", "application/json, text/javascript, */*; q=0.01");
         if (cookieHeader.length() > 0) {
             h2.set("Cookie", cookieHeader.toString());
         }
@@ -85,7 +80,6 @@ public class PriceService {
                 "https://bonbast.com/json", HttpMethod.POST, postEntity, Map.class);
 
         Map<String, Object> raw = jsonResp.getBody();
-
         if (raw == null || raw.containsKey("reset") || raw.containsKey("rest")) {
             return new HashMap<>();
         }
@@ -94,7 +88,6 @@ public class PriceService {
     }
 
     private String extractParam(String html) {
-        // $.post('/json', {param: "VALUE"}
         String[] markers = {"param: \"", "param:\"", "param: '", "param:'"};
         for (String marker : markers) {
             int idx = html.indexOf(marker);
@@ -108,15 +101,10 @@ public class PriceService {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> parseResponse(Map<String, Object> raw) {
         Map<String, Object> result = new HashMap<>();
-
-
-        // key های احتمالی bonbast برای هر ارز
-        addItem(result, raw, "usd",    "دلار",           new String[]{"usd1", "usd"});
-        addItem(result, raw, "gold",   "طلا (۱۸ عیار)", new String[]{"gol18", "gold18", "gold"});
-
+        addItem(result, raw, "usd", "دلار", new String[]{"usd1", "usd"});
+        addItem(result, raw, "gold", "طلا (۱۸ عیار)", new String[]{"gol18", "gold18", "gold"});
         result.put("updatedAt", Instant.now().toString());
         return result;
     }
