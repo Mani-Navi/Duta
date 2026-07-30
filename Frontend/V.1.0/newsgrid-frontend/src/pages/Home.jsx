@@ -5,7 +5,7 @@ import strings from '../strings/strings';
 import api from "../api/axiosConfig.js";
 
 function Home({ lang, onOpenArticle, searchKeyword }) {
-    const [activeCategory, setActiveCategory] = useState(0);
+    const [activeCategory, setActiveCategory] = useState(null);
     const [categories, setCategories] = useState([]);
 
     useEffect(() => {

@@ -37,15 +37,13 @@ function CategoryBar({ lang, activeCategory, onSelectCategory }) {
             </button>
 
             {/* دسته‌بندی‌های معمولی */}
-            {t.categories.map((cat, i) => (
+            {CATEGORIES.map((cat, i) => (
                 <button
-                    key={i}
-                    className={`cat ${activeCategory === i ? 'active' : ''}`}
-                    onClick={() => onSelectCategory(i)}
-                    role="tab"
-                    aria-selected={activeCategory === i}
+                    className={`cat ${activeCategory === cat.value ? 'active' : ''}`}
+                    onClick={() => onSelectCategory(cat.value)}
+                    aria-selected={activeCategory === cat.value}
                 >
-                    {cat}
+                    {cat.label}
                 </button>
             ))}
         </div>
