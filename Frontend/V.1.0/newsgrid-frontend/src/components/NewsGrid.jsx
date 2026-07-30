@@ -58,7 +58,7 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
         if (activeCategory === 'all' || activeCategory === 0 || activeCategory === null)
             return api.get(`/articles?page=${p}&size=20`);
 
-        return api.get(`/articles/category/${activeCategory}?page=${p}&size=20`);
+        api.get(`/articles/category?name=${encodeURIComponent(activeCategory)}&page=${page}&size=20`);
     };
 
     const fetchArticles = async () => {

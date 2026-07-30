@@ -3,6 +3,16 @@ import strings from '../strings/strings';
 function CategoryBar({ lang, activeCategory, onSelectCategory }) {
     const t = strings[lang];
 
+    const CATEGORIES = [
+        { label: 'همه', value: null },
+        { label: 'اقتصادی', value: 'اقتصادی' },
+        { label: 'سیاسی', value: 'سیاسی' },
+        { label: 'ورزشی', value: 'ورزشی' },
+        { label: 'تکنولوژی', value: 'تکنولوژی' },
+        { label: 'جهانی', value: 'جهانی' },
+        { label: 'عمومی', value: 'عمومی' },
+    ];
+
     return (
         <div className="categories" role="tablist" aria-label="دسته‌بندی اخبار">
             {/* دکمه خبر فوری */}
