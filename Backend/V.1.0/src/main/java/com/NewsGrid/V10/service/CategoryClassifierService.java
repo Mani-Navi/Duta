@@ -1,13 +1,14 @@
 package com.NewsGrid.V10.service;
 
+import com.NewsGrid.V10.entity.Source;
 import org.springframework.stereotype.Service;
+
 import java.util.*;
 
 @Service
 public class CategoryClassifierService {
 
-    // هر کتگوری → لیست کلمات کلیدی با وزن
-    // وزن بالاتر = اطمینان بیشتر
+    // هر کتگوری ➔ لیست کلمات کلیدی با وزن
     private static final Map<String, Map<String, Integer>> CATEGORY_KEYWORDS = new LinkedHashMap<>();
 
     static {
@@ -43,9 +44,9 @@ public class CategoryClassifierService {
         sport.put("جام", 9);     sport.put("قهرمان", 8);   sport.put("مسابقه", 8);
         sport.put("ورزشکار", 9); sport.put("کشتی", 9);     sport.put("والیبال", 9);
         sport.put("بسکتبال", 9); sport.put("تنیس", 9);     sport.put("شنا", 8);
-        sport.put("دو", 6);      sport.put("پرش", 7);      sport.put("مربی", 7);
-        sport.put("استادیوم", 8); sport.put("ورزشگاه", 8); sport.put("پنالتی", 9);
-        sport.put("آدیداس", 6);  sport.put("نایک", 6);     sport.put("فیفا", 10);
+        sport.put("مربی", 7);    sport.put("استادیوم", 8); sport.put("ورزشگاه", 8);
+        sport.put("پنالتی", 9);  sport.put("فیفا", 10);    sport.put("استقلال", 9);
+        sport.put("پرسپولیس", 9);
         CATEGORY_KEYWORDS.put("ورزشی", sport);
 
         // ── تکنولوژی ──
@@ -57,7 +58,7 @@ public class CategoryClassifierService {
         tech.put("استارتاپ", 9);    tech.put("سایبری", 9);   tech.put("هک", 9);
         tech.put("رمزارز", 9);      tech.put("بیت‌کوین", 10); tech.put("بلاکچین", 10);
         tech.put("ماهواره", 8);     tech.put("فضایی", 7);    tech.put("ربات", 8);
-        tech.put("چیپ", 8);         tech.put("پردازنده", 9); tech.put("اینستاگرام", 7);
+        tech.put("چیپ", 8);         tech.put("پردازنده", 9); tech.put("سامسونگ", 8);
         CATEGORY_KEYWORDS.put("تکنولوژی", tech);
 
         // ── جهانی ──
@@ -67,18 +68,23 @@ public class CategoryClassifierService {
         world.put("اوکراین", 9);   world.put("سازمان ملل", 10); world.put("ناتو", 10);
         world.put("بین‌الملل", 9); world.put("جهان", 6);     world.put("خارجی", 6);
         world.put("فرانسه", 7);    world.put("آلمان", 7);    world.put("انگلیس", 7);
-        world.put("ژاپن", 7);      world.put("هند", 7);      world.put("پاکستان", 8);
-        world.put("عربستان", 8);   world.put("ترکیه", 8);    world.put("امارات", 7);
-        world.put("بایدن", 8);     world.put("ترامپ", 8);    world.put("پوتین", 8);
+        world.put("پوتین", 8);     world.put("ترامپ", 8);    world.put("بایدن", 8);
         CATEGORY_KEYWORDS.put("جهانی", world);
     }
 
     /**
-     * تشخیص کتگوری از روی تیتر خبر
-     * @return نام کتگوری فارسی یا "عمومی" اگه تشخیص داده نشد
+     * تشخیص هوشمند کتگوری از روی تیتر خبر
+     * @param title تیتر خبر
+     * @param source منبع خبر جهت دریافت کتگوری پشتیبان (Fallback) در صورت عدم تطابق کلمات کلیدی
+     * @return نام کتگوری واقعی (بدون عبارت "عمومی")
      */
-    public String classify(String title) {
-        if (title == null || title.isBlank()) return "عمومی";
+    public String classify(String title, Source source) {
+        // تعیین کتگوری پشتیبان از روی منبع (در صورت پیدا نشدن کلمات کلیدی)
+        String fallbackCategory = (source != null && source.getCategory() != null && source.getCategory().getNameFa() != null)
+                ? source.getCategory().getNameFa()
+                : "سیاسی";
+
+        if (title == null || title.isBlank()) return fallbackCategory;
 
         String lower = title.toLowerCase();
         Map<String, Integer> scores = new HashMap<>();
@@ -99,10 +105,10 @@ public class CategoryClassifierService {
             }
         }
 
-        // اگه هیچ کتگوری‌ای پیدا نشد
-        if (scores.isEmpty()) return "عمومی";
+        // اگر هیچ کلمه کلیدی پیدا نشد، کتگوری پشتیبان منبع برگردانده می‌شود
+        if (scores.isEmpty()) return fallbackCategory;
 
-        // بالاترین امتیاز
+        // انتخاب کتگوری با بالاترین امتیاز
         return scores.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
                 .get()

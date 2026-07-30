@@ -6,6 +6,7 @@ import com.NewsGrid.V10.entity.SourceType;
 import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.repository.SourceRepository;
 import lombok.RequiredArgsConstructor;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -26,6 +27,7 @@ public class TelegramScraperService {
     private final ArticleRepository articleRepository;
     private final ClusteringService clusteringService;
     private final SlugService slugService;
+    private final CategoryClassifierService categoryClassifier;
 
     private static final Set<String> BREAKING_KEYWORDS = Set.of(
             "زلزله", "سیل", "آتش‌سوزی", "انفجار", "حمله", "جنگ", "بمب", "موشک",
@@ -90,6 +92,8 @@ public class TelegramScraperService {
                     article.setPublishedAt(publishedAt);
                     article.setBreaking(isBreaking(title));
                     article.setSlug(slugService.generateSlug(title, articleRepository));
+                    // هنگام ذخیره خبر:
+                    article.setCategory(categoryClassifier.classify(title));
 
                     articleRepository.save(article);
                     clusteringService.clusterArticle(article);
