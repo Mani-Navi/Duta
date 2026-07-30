@@ -20,10 +20,10 @@ public class ArticleService {
         return articleRepository.findRepresentativeArticles(PageRequest.of(page, size));
     }
 
-    public Page<Article> getArticlesByCategory(Long categoryId, int page, int size) {
-        categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException("کتگوری یافت نشد"));
-        return articleRepository.findRepresentativeByCategory(categoryId, PageRequest.of(page, size));
+    // signature رو عوض کن
+    public Page<Article> getArticlesByCategory(String categoryName, int page, int size) {
+        return articleRepository.findRepresentativeByCategory(
+                categoryName, PageRequest.of(page, size));
     }
 
     public Page<Article> getBreakingArticles(int page, int size) {

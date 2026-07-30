@@ -54,10 +54,11 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
                 nativeQuery = true)
         Page<Article> findRepresentativeArticles(Pageable pageable);
 
+        // query جدید برای فیلتر با نام کتگوری
         @Query(value = """
     SELECT a.* FROM articles a
     LEFT JOIN sources s ON a.source_id = s.id
-    WHERE s.category_id = :categoryId
+    WHERE a.category = :category
     AND (
         a.cluster_id IS NULL
         OR a.id = (
@@ -70,9 +71,16 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     )
     ORDER BY a.published_at DESC
     """,
-                countQuery = "SELECT COUNT(DISTINCT COALESCE(a.cluster_id, a.id)) FROM articles a LEFT JOIN sources s ON a.source_id = s.id WHERE s.category_id = :categoryId",
+                countQuery = """
+    SELECT COUNT(*) FROM (
+        SELECT DISTINCT COALESCE(a.cluster_id, a.id)
+        FROM articles a
+        WHERE a.category = :category
+    ) t
+    """,
                 nativeQuery = true)
-        Page<Article> findRepresentativeByCategory(@Param("categoryId") Long categoryId, Pageable pageable);
+        Page<Article> findRepresentativeByCategory(
+                @Param("category") String category, Pageable pageable);
 
         @Query(value = """
     SELECT a.* FROM articles a

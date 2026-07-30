@@ -105,6 +105,7 @@ public class RssFetcherService {
 
                         article.setSource(source);
                         article.setBreaking(isBreaking(entry.getTitle()));
+                        article.setCategory(categoryClassifier.classify(entry.getTitle()));
                         article.setSlug(slugService.generateSlug(entry.getTitle(), articleRepository));
 
                         articleRepository.save(article);
@@ -128,4 +129,7 @@ public class RssFetcherService {
         String lower = title.toLowerCase();
         return BREAKING_KEYWORDS.stream().anyMatch(lower::contains);
     }
+
+    // inject سرویس جدید
+    private final CategoryClassifierService categoryClassifier;
 }

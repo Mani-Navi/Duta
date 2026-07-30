@@ -38,6 +38,9 @@ public class Article {
     @JoinColumn(name = "source_id")
     private Source source;
 
+    @Column(length = 50)
+    private String category;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cluster_id")
     @JsonIgnoreProperties({"articles", "hibernateLazyInitializer"})

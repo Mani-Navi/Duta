@@ -7,6 +7,7 @@ import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.service.ArticleService;
 import com.NewsGrid.V10.service.RssFetcherService;
 import com.NewsGrid.V10.service.TelegramScraperService;
+import com.NewsGrid.V10.service.CategoryClassifierService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +24,7 @@ public class ArticleController {
     private final RssFetcherService rssFetcherService;
     private final TelegramScraperService telegramScraperService;
     private final ArticleRepository articleRepository;
+    private final CategoryClassifierService categoryClassifier;
 
     @GetMapping("/fetch-now")
     public String fetchNow() {
@@ -63,12 +65,13 @@ public class ArticleController {
         );
     }
 
-    @GetMapping("/category/{categoryId}")
+    // جدید — با نام کتگوری فارسی
+    @GetMapping("/category")
     public Page<Article> getByCategory(
-            @PathVariable Long categoryId,
+            @RequestParam String name,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return articleService.getArticlesByCategory(categoryId, page, size);
+        return articleService.getArticlesByCategory(name, page, size);
     }
 
     @GetMapping("/breaking")
@@ -99,5 +102,14 @@ public class ArticleController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return articleService.searchArticles(keyword, page, size);
+    }
+
+    @GetMapping("/reclassify")
+    public String reclassify() {
+        articleRepository.findAll().forEach(article -> {
+            article.setCategory(categoryClassifier.classify(article.getTitle()));
+            articleRepository.save(article);
+        });
+        return "done";
     }
 }
