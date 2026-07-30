@@ -8,7 +8,6 @@ import java.util.*;
 @Service
 public class CategoryClassifierService {
 
-    // هر کتگوری ➔ لیست کلمات کلیدی با وزن
     private static final Map<String, Map<String, Integer>> CATEGORY_KEYWORDS = new LinkedHashMap<>();
 
     static {
@@ -72,14 +71,15 @@ public class CategoryClassifierService {
         CATEGORY_KEYWORDS.put("جهانی", world);
     }
 
+    // ── اضافه شدن Overload تک پارامتری برای سازگاری با کدهای موجود ──
+    public String classify(String title) {
+        return classify(title, null);
+    }
+
     /**
      * تشخیص هوشمند کتگوری از روی تیتر خبر
-     * @param title تیتر خبر
-     * @param source منبع خبر جهت دریافت کتگوری پشتیبان (Fallback) در صورت عدم تطابق کلمات کلیدی
-     * @return نام کتگوری واقعی (بدون عبارت "عمومی")
      */
     public String classify(String title, Source source) {
-        // تعیین کتگوری پشتیبان از روی منبع (در صورت پیدا نشدن کلمات کلیدی)
         String fallbackCategory = (source != null && source.getCategory() != null && source.getCategory().getNameFa() != null)
                 ? source.getCategory().getNameFa()
                 : "سیاسی";
@@ -89,7 +89,6 @@ public class CategoryClassifierService {
         String lower = title.toLowerCase();
         Map<String, Integer> scores = new HashMap<>();
 
-        // محاسبه امتیاز هر کتگوری
         for (Map.Entry<String, Map<String, Integer>> catEntry : CATEGORY_KEYWORDS.entrySet()) {
             String category = catEntry.getKey();
             int totalScore = 0;
@@ -105,10 +104,8 @@ public class CategoryClassifierService {
             }
         }
 
-        // اگر هیچ کلمه کلیدی پیدا نشد، کتگوری پشتیبان منبع برگردانده می‌شود
         if (scores.isEmpty()) return fallbackCategory;
 
-        // انتخاب کتگوری با بالاترین امتیاز
         return scores.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
                 .get()
