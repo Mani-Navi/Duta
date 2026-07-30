@@ -48,16 +48,20 @@ function NewsGrid({ lang, activeCategory, onOpenArticle, searchKeyword }) {
     const fetchUrl = (p) => {
         if (searchKeyword)
             return api.get(`/articles/search?keyword=${encodeURIComponent(searchKeyword)}&page=${p}&size=20`);
+
+        // ۱. هدایت به اندپوینت خبر فوری
         if (activeCategory === 'breaking')
             return api.get(`/articles/breaking?page=${p}&size=20`);
 
-        // ── جدید: دریافت اخبار اختصاصی تلگرام ──
+        // ۲. هدایت به اندپوینت اختصاصی تلگرام
         if (activeCategory === 'telegram')
             return api.get(`/articles/telegram?page=${p}&size=20`);
 
-        if (activeCategory === 'all' || activeCategory === 0 || activeCategory === null)
+        // ۳. همه اخبار
+        if (activeCategory === 'all' || activeCategory === null || activeCategory === undefined)
             return api.get(`/articles?page=${p}&size=20`);
 
+        // ۴. فیلتر موضوعی کتگوری جدید با نام فارسی (اقتصادی، سیاسی و...)
         return api.get(`/articles/category?name=${encodeURIComponent(activeCategory)}&page=${p}&size=20`);
     };
 

@@ -10,7 +10,6 @@ function CategoryBar({ lang, activeCategory, onSelectCategory }) {
         { label: 'ورزشی', value: 'ورزشی' },
         { label: 'تکنولوژی', value: 'تکنولوژی' },
         { label: 'جهانی', value: 'جهانی' },
-        { label: 'عمومی', value: 'عمومی' },
     ];
 
     return (
@@ -39,6 +38,7 @@ function CategoryBar({ lang, activeCategory, onSelectCategory }) {
             {/* دسته‌بندی‌های معمولی */}
             {CATEGORIES.map((cat, i) => (
                 <button
+                    key={cat.value || i}
                     className={`cat ${activeCategory === cat.value ? 'active' : ''}`}
                     onClick={() => onSelectCategory(cat.value)}
                     aria-selected={activeCategory === cat.value}
