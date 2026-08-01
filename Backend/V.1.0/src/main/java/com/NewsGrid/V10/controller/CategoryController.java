@@ -14,10 +14,11 @@ import java.util.List;
 @RequestMapping({"/api/categories", "/api/Categories"})
 @AllArgsConstructor
 public class CategoryController {
+
     private final CategoryRepository categoryRepository;
 
     @GetMapping
-    @Cacheable(value = "categories") // ← کش کردن لیست کتگوری‌ها
+    @Cacheable(value = "categories")
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
     }

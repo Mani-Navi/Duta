@@ -17,11 +17,10 @@ public class ClusterController {
     private final ArticleClusterRepository clusterRepository;
     private final ArticleRepository articleRepository;
 
-    // همه مقالات یه cluster
     @GetMapping("/{id}/articles")
     public List<Article> getClusterArticles(@PathVariable Long id) {
         ArticleCluster cluster = clusterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("cluster یافت نشد"));
+                .orElseThrow(() -> new RuntimeException("کلستر یافت نشد"));
         return articleRepository.findByCluster(cluster);
     }
 }

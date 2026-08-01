@@ -3,14 +3,22 @@ package com.NewsGrid.V10.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
 @Entity
-@Table(name = "articles")
-@Data
+@Table(name = "articles", indexes = {
+        @Index(name = "idx_article_url", columnList = "url", unique = true),
+        @Index(name = "idx_article_published_at", columnList = "publishedAt DESC"),
+        @Index(name = "idx_article_breaking", columnList = "breaking"),
+        @Index(name = "idx_article_category", columnList = "category")
+})
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Article {
@@ -30,11 +38,10 @@ public class Article {
     @Column(nullable = false)
     private boolean breaking = false;
 
-    // slug برای URL — مثل: انتقاد-شدید-وزیر-جنگ
     @Column(columnDefinition = "TEXT")
     private String slug;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "source_id")
     private Source source;
 
@@ -45,4 +52,11 @@ public class Article {
     @JoinColumn(name = "cluster_id")
     @JsonIgnoreProperties({"articles", "hibernateLazyInitializer"})
     private ArticleCluster cluster;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.publishedAt == null) {
+            this.publishedAt = ZonedDateTime.now(ZoneOffset.UTC);
+        }
+    }
 }

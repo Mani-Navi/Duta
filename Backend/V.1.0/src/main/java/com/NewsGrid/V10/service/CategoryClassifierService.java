@@ -50,7 +50,7 @@ public class CategoryClassifierService {
 
         // ── تکنولوژی ──
         Map<String, Integer> tech = new HashMap<>();
-        tech.put("هوش مصنوعی", 10); tech.put("ChatGPT", 10); tech.put("گوگل", 8);
+        tech.put("هوش مصنوعی", 10); tech.put("chatgpt", 10); tech.put("گوگل", 8);
         tech.put("اپل", 8);         tech.put("مایکروسافت", 8); tech.put("اینترنت", 7);
         tech.put("موبایل", 7);      tech.put("اپلیکیشن", 8); tech.put("نرم‌افزار", 9);
         tech.put("سخت‌افزار", 9);   tech.put("فناوری", 8);   tech.put("دیجیتال", 7);
@@ -71,14 +71,10 @@ public class CategoryClassifierService {
         CATEGORY_KEYWORDS.put("جهانی", world);
     }
 
-    // ── اضافه شدن Overload تک پارامتری برای سازگاری با کدهای موجود ──
     public String classify(String title) {
         return classify(title, null);
     }
 
-    /**
-     * تشخیص هوشمند کتگوری از روی تیتر خبر
-     */
     public String classify(String title, Source source) {
         String fallbackCategory = (source != null && source.getCategory() != null && source.getCategory().getNameFa() != null)
                 ? source.getCategory().getNameFa()

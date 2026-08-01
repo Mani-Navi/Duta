@@ -25,8 +25,8 @@ public class SecurityConfig implements WebMvcConfigurer {
                         "http://localhost:5173",
                         "http://localhost:4173"
                 )
-                .allowedMethods("GET")
-                .allowedHeaders("Content-Type", "Accept", "X-Requested-With")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
                 .maxAge(3600);
     }
 
@@ -42,7 +42,6 @@ public class SecurityConfig implements WebMvcConfigurer {
                 response.setHeader("X-XSS-Protection", "1; mode=block");
                 response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
                 response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-                response.setHeader("Server", "");
                 chain.doFilter(req, res);
             }
         };

@@ -5,16 +5,19 @@ import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.entity.SourceType;
 import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.service.ArticleService;
+import com.NewsGrid.V10.service.CategoryClassifierService;
 import com.NewsGrid.V10.service.RssFetcherService;
 import com.NewsGrid.V10.service.TelegramScraperService;
-import com.NewsGrid.V10.service.CategoryClassifierService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/articles")
 @RequiredArgsConstructor
@@ -26,22 +29,24 @@ public class ArticleController {
     private final ArticleRepository articleRepository;
     private final CategoryClassifierService categoryClassifier;
 
+    // OPTIMIZED: Max page size safeguard to prevent memory overload (DoS protection)
+    private static final int MAX_PAGE_SIZE = 100;
+
     @GetMapping("/fetch-now")
     public String fetchNow() {
-        // اجرای پردازش در پس‌زمینه بدون معطل کردن مرورگر (جلوگیری از تایم‌اوت Railway)
         CompletableFuture.runAsync(() -> {
             try {
-                System.out.println("🔄 دستی شروع شد: دریافت RSS...");
+                log.info("Manual fetch triggered: Fetching RSS sources...");
                 rssFetcherService.fetchAllSources();
             } catch (Exception e) {
-                System.err.println("خطا در اجرا RSS: " + e.getMessage());
+                log.error("Error during manual RSS fetch: {}", e.getMessage());
             }
 
             try {
-                System.out.println("🔄 دستی شروع شد: دریافت تلگرام...");
+                log.info("Manual fetch triggered: Fetching Telegram channels...");
                 telegramScraperService.fetchRecentPosts();
             } catch (Exception e) {
-                System.err.println("خطا در اجرا تلگرام: " + e.getMessage());
+                log.error("Error during manual Telegram fetch: {}", e.getMessage());
             }
         });
 
@@ -52,33 +57,36 @@ public class ArticleController {
     public Page<Article> getAllArticles(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return articleService.getAllArticles(page, size);
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        return articleService.getAllArticles(page, safeSize);
     }
 
     @GetMapping("/telegram")
     public Page<Article> getTelegramArticles(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
         return articleRepository.findBySourceSourceTypeOrderByPublishedAtDesc(
                 SourceType.TELEGRAM,
-                PageRequest.of(page, size)
+                PageRequest.of(page, safeSize)
         );
     }
 
-    // جدید — با نام کتگوری فارسی
     @GetMapping("/category")
     public Page<Article> getByCategory(
             @RequestParam String name,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return articleService.getArticlesByCategory(name, page, size);
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        return articleService.getArticlesByCategory(name, page, safeSize);
     }
 
     @GetMapping("/breaking")
     public Page<Article> getBreaking(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return articleService.getBreakingArticles(page, size);
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        return articleService.getBreakingArticles(page, safeSize);
     }
 
     @GetMapping("/{id}")
@@ -101,15 +109,27 @@ public class ArticleController {
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return articleService.searchArticles(keyword, page, size);
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        return articleService.searchArticles(keyword, page, safeSize);
     }
 
+    // OPTIMIZED: Batch reclassification to prevent Memory Leak / OOM Crash
+    @Async
     @GetMapping("/reclassify")
     public String reclassify() {
-        articleRepository.findAll().forEach(article -> {
-            article.setCategory(categoryClassifier.classify(article.getTitle()));
-            articleRepository.save(article);
-        });
+        int page = 0;
+        Page<Article> articlePage;
+
+        do {
+            articlePage = articleRepository.findAll(PageRequest.of(page, 100));
+            articlePage.getContent().forEach(article -> {
+                article.setCategory(categoryClassifier.classify(article.getTitle(), article.getSource()));
+            });
+            articleRepository.saveAll(articlePage.getContent());
+            page++;
+        } while (articlePage.hasNext());
+
+        log.info("Batch reclassification of all articles completed.");
         return "done";
     }
 }

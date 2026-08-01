@@ -16,7 +16,6 @@ public class SlugService {
                 .replaceAll("\\s+", "-")
                 .replaceAll("-+", "-");
 
-        // ── باگ برطرف شد: چک کردن طول خود slug به جای title ──
         if (slug.length() > 80) {
             slug = slug.substring(0, 80);
         }

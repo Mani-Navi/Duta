@@ -1,22 +1,35 @@
 package com.NewsGrid.V10.service;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.http.*;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class PriceService {
 
     private Map<String, Object> cachedPrices = null;
     private Instant lastFetch = Instant.EPOCH;
-    private static final long CACHE_SECONDS = 300; // ۵ دقیقه کش
+    private static final long CACHE_SECONDS = 300;
 
-    // ── اضافه شدن synchronized جهت جلوگیری از Race Condition ریکوئست‌های همزمان ──
+    // OPTIMIZED: Reusable RestTemplate instance with 5s timeout to prevent Thread blocking
+    private final RestTemplate restTemplate;
+
+    public PriceService(RestTemplateBuilder builder) {
+        this.restTemplate = builder
+                .setConnectTimeout(Duration.ofSeconds(5))
+                .setReadTimeout(Duration.ofSeconds(5))
+                .build();
+    }
+
     public synchronized Map<String, Object> getPrices() {
         long secondsSince = Instant.now().getEpochSecond() - lastFetch.getEpochSecond();
         if (cachedPrices != null && secondsSince < CACHE_SECONDS) {
@@ -31,7 +44,7 @@ public class PriceService {
                 return cachedPrices;
             }
         } catch (Exception e) {
-            System.err.println("PriceService error: " + e.getMessage());
+            log.error("PriceService fetch error: {}", e.getMessage());
         }
 
         if (cachedPrices != null) return cachedPrices;
@@ -40,14 +53,12 @@ public class PriceService {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> fetchFromBonbast() throws Exception {
-        RestTemplate rt = new RestTemplate();
-
         HttpHeaders h1 = new HttpHeaders();
         h1.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
         h1.set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
         h1.set("Accept-Language", "fa,en-US;q=0.7,en;q=0.3");
 
-        ResponseEntity<String> mainResp = rt.exchange(
+        ResponseEntity<String> mainResp = restTemplate.exchange(
                 "https://bonbast.com", HttpMethod.GET, new HttpEntity<>(h1), String.class);
 
         String html = mainResp.getBody();
@@ -62,9 +73,7 @@ public class PriceService {
         }
 
         String param = extractParam(html);
-        if (param == null) {
-            return new HashMap<>();
-        }
+        if (param == null) return new HashMap<>();
 
         HttpHeaders h2 = new HttpHeaders();
         h2.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -76,7 +85,7 @@ public class PriceService {
         }
 
         HttpEntity<String> postEntity = new HttpEntity<>("param=" + param, h2);
-        ResponseEntity<Map> jsonResp = rt.exchange(
+        ResponseEntity<Map> jsonResp = restTemplate.exchange(
                 "https://bonbast.com/json", HttpMethod.POST, postEntity, Map.class);
 
         Map<String, Object> raw = jsonResp.getBody();
@@ -88,6 +97,7 @@ public class PriceService {
     }
 
     private String extractParam(String html) {
+        if (html == null) return null;
         String[] markers = {"param: \"", "param:\"", "param: '", "param:'"};
         for (String marker : markers) {
             int idx = html.indexOf(marker);

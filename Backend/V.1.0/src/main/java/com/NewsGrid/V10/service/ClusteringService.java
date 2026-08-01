@@ -8,8 +8,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,13 +21,12 @@ public class ClusteringService {
     private final ArticleClusterRepository clusterRepository;
     private final ArticleRepository articleRepository;
 
-    // آستانه similarity برای تشخیص خبر مشابه
     private static final double SIMILARITY_THRESHOLD = 0.25;
-
-    // بازه زمانی مقایسه — ۶ ساعت
     private static final int CLUSTER_WINDOW_HOURS = 6;
 
-    // stop words فارسی
+    // OPTIMIZED: Pre-compiled regex pattern for tokenization (Prevents CPU overhead)
+    private static final Pattern CLEAN_PATTERN = Pattern.compile("[،.؟!٪«»()\\[\\]،:؛]");
+
     private static final Set<String> STOP_WORDS = Set.of(
             "و", "در", "به", "از", "که", "این", "را", "با", "است", "آن",
             "یک", "های", "برای", "یا", "اما", "تا", "هم", "می",
@@ -36,14 +37,11 @@ public class ClusteringService {
 
     @Transactional
     public void clusterArticle(Article article) {
-        // cluster های ۶ ساعت اخیر رو بگیر
-        ZonedDateTime since = ZonedDateTime.now().minusHours(CLUSTER_WINDOW_HOURS);
+        ZonedDateTime since = ZonedDateTime.now(ZoneOffset.UTC).minusHours(CLUSTER_WINDOW_HOURS);
         List<ArticleCluster> recentClusters = clusterRepository.findByCreatedAtAfter(since);
 
-        // توکن‌های عنوان خبر جدید
         Set<String> newTokens = tokenize(article.getTitle());
 
-        // بهترین cluster رو پیدا کن
         ArticleCluster bestCluster = null;
         double bestSimilarity = 0;
 
@@ -58,10 +56,8 @@ public class ClusteringService {
         }
 
         if (bestCluster != null) {
-            // به cluster موجود اضافه کن
             addToCluster(article, bestCluster);
         } else {
-            // cluster جدید بساز
             createNewCluster(article);
         }
     }
@@ -70,17 +66,13 @@ public class ClusteringService {
         article.setCluster(cluster);
         articleRepository.save(article);
 
-        // تعداد منابع رو بروز کن
         cluster.setSourceCount(cluster.getSourceCount() + 1);
-        cluster.setUpdatedAt(ZonedDateTime.now());
+        cluster.setUpdatedAt(ZonedDateTime.now(ZoneOffset.UTC));
 
-        // اگه منبع این خبر معتبرتره، تیتر رو عوض کن
-        int newCredibility = article.getSource().getCredibility();
-        if (newCredibility > cluster.getCredibilityScore()) {
+        if (article.getSource() != null && article.getSource().getCredibility() > cluster.getCredibilityScore()) {
             cluster.setRepresentativeTitle(article.getTitle());
         }
 
-        // امتیاز رو بروز کن
         cluster.setCredibilityScore(calculateScore(cluster));
         clusterRepository.save(cluster);
     }
@@ -88,10 +80,10 @@ public class ClusteringService {
     private void createNewCluster(Article article) {
         ArticleCluster cluster = new ArticleCluster();
         cluster.setRepresentativeTitle(article.getTitle());
-        cluster.setCredibilityScore(article.getSource().getCredibility());
+        cluster.setCredibilityScore(article.getSource() != null ? article.getSource().getCredibility() : 50);
         cluster.setSourceCount(1);
-        cluster.setCreatedAt(ZonedDateTime.now());
-        cluster.setUpdatedAt(ZonedDateTime.now());
+        cluster.setCreatedAt(ZonedDateTime.now(ZoneOffset.UTC));
+        cluster.setUpdatedAt(ZonedDateTime.now(ZoneOffset.UTC));
 
         cluster = clusterRepository.save(cluster);
 
@@ -101,24 +93,17 @@ public class ClusteringService {
 
     private int calculateScore(ArticleCluster cluster) {
         List<Article> articles = articleRepository.findByCluster(cluster);
-
         if (articles.isEmpty()) return 0;
 
-        // میانگین وزنی:
-        // ۶۰% — بالاترین credibility منبع
-        // ۳۰% — امتیاز تعداد منابع (هر منبع اضافه +۱۰، max 30)
-        // ۱۰% — تازگی خبر
-
         int maxCredibility = articles.stream()
-                .mapToInt(a -> a.getSource().getCredibility())
+                .mapToInt(a -> a.getSource() != null ? a.getSource().getCredibility() : 50)
                 .max()
                 .orElse(0);
 
         int sourceBonus = Math.min(30, (cluster.getSourceCount() - 1) * 10);
 
-        // تازگی — اگه زیر ۲ ساعت باشه ۱۰ امتیاز، وگرنه ۰
         long hoursOld = java.time.Duration.between(
-                cluster.getCreatedAt(), ZonedDateTime.now()
+                cluster.getCreatedAt(), ZonedDateTime.now(ZoneOffset.UTC)
         ).toHours();
         int freshnessScore = hoursOld < 2 ? 10 : 0;
 
@@ -126,7 +111,6 @@ public class ClusteringService {
         return Math.min(100, total);
     }
 
-    // ── Jaccard Similarity ──────────────────────────────
     private double jaccardSimilarity(Set<String> a, Set<String> b) {
         if (a.isEmpty() || b.isEmpty()) return 0;
 
@@ -141,9 +125,7 @@ public class ClusteringService {
 
     private Set<String> tokenize(String text) {
         if (text == null) return Collections.emptySet();
-        return Arrays.stream(text
-                        .replaceAll("[،.؟!٪«»()\\[\\]،:؛]", " ")
-                        .split("\\s+"))
+        return Arrays.stream(CLEAN_PATTERN.matcher(text).replaceAll(" ").split("\\s+"))
                 .map(String::trim)
                 .filter(w -> w.length() > 1)
                 .filter(w -> !STOP_WORDS.contains(w))

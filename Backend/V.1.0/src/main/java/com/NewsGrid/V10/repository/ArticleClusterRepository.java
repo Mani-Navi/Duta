@@ -14,13 +14,10 @@ import java.util.List;
 @Repository
 public interface ArticleClusterRepository extends JpaRepository<ArticleCluster, Long> {
 
-    // cluster های اخیر برای مقایسه (۶ ساعت اخیر)
     List<ArticleCluster> findByCreatedAtAfter(ZonedDateTime since);
 
-    // همه cluster ها با pagination
     Page<ArticleCluster> findAll(Pageable pageable);
 
-    // جستجو در cluster ها
     @Query("SELECT c FROM ArticleCluster c WHERE " +
             "LOWER(c.representativeTitle) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<ArticleCluster> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);

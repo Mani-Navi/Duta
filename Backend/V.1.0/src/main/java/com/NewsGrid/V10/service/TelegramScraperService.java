@@ -6,6 +6,7 @@ import com.NewsGrid.V10.entity.SourceType;
 import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.repository.SourceRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -14,11 +15,13 @@ import org.jsoup.select.Elements;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TelegramScraperService {
@@ -34,7 +37,7 @@ public class TelegramScraperService {
             "کشته", "شهید", "سقوط", "تصادف", "اورژانس", "بحران", "فوری", "خبر فوری", "ترور"
     );
 
-    @Scheduled(fixedRate = 300000) // هر ۵ دقیقه
+    @Scheduled(fixedRate = 300000)
     public void fetchRecentPosts() {
         List<Source> telegramSources = sourceRepository.findBySourceType(SourceType.TELEGRAM);
 
@@ -53,9 +56,9 @@ public class TelegramScraperService {
             String url = "https://t.me/s/" + cleanUsername;
 
             Document doc = Jsoup.connect(url)
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36")
                     .header("Accept-Language", "fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7")
-                    .timeout(12000)
+                    .timeout(10000)
                     .get();
 
             Elements posts = doc.select(".tgme_widget_message");
@@ -77,7 +80,7 @@ public class TelegramScraperService {
 
                     String title = extractTitle(fullText);
 
-                    ZonedDateTime publishedAt = ZonedDateTime.now();
+                    ZonedDateTime publishedAt = ZonedDateTime.now(ZoneOffset.UTC);
                     Element timeEl = post.selectFirst("time[datetime]");
                     if (timeEl != null) {
                         try {
@@ -92,24 +95,23 @@ public class TelegramScraperService {
                     article.setPublishedAt(publishedAt);
                     article.setBreaking(isBreaking(title));
                     article.setSlug(slugService.generateSlug(title, articleRepository));
-                    // هنگام ذخیره خبر:
-                    article.setCategory(categoryClassifier.classify(title));
+                    article.setCategory(categoryClassifier.classify(title, source));
 
                     articleRepository.save(article);
                     clusteringService.clusterArticle(article);
                     savedCount++;
 
                 } catch (Exception innerEx) {
-                    System.err.println("⚠️ خطا در ذخیره یک پست تلگرام: " + innerEx.getMessage());
+                    log.debug("Error saving individual Telegram post: {}", innerEx.getMessage());
                 }
             }
 
-            source.setLastFetchedAt(ZonedDateTime.now());
+            source.setLastFetchedAt(ZonedDateTime.now(ZoneOffset.UTC));
             sourceRepository.save(source);
-            System.out.println("✅ کانال تلگرام " + source.getName() + ": " + savedCount + " خبر جدید ذخیره شد.");
+            log.info("Telegram channel {}: {} new posts saved.", source.getName(), savedCount);
 
         } catch (Exception e) {
-            System.err.println("❌ خطا در کراول کانال تلگرام " + source.getTelegramUsername() + ": " + e.getMessage());
+            log.error("Failed to scrape Telegram channel {}: {}", source.getTelegramUsername(), e.getMessage());
         }
     }
 

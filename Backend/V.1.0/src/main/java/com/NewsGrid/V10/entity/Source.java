@@ -2,14 +2,19 @@ package com.NewsGrid.V10.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.ZonedDateTime;
 
 @Entity
-@Table(name = "sources")
-@Data
+@Table(name = "sources", indexes = {
+        @Index(name = "idx_source_type", columnList = "source_type"),
+        @Index(name = "idx_source_credibility", columnList = "credibility DESC")
+})
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Source {
@@ -24,7 +29,7 @@ public class Source {
     private String rssUrl;
 
     @Column(name = "telegram_username")
-    private String telegramUsername; // مثلا: km_ap
+    private String telegramUsername;
 
     @Column(nullable = false)
     private Short credibility;
@@ -39,7 +44,7 @@ public class Source {
     @Column(name = "source_type", nullable = false)
     private SourceType sourceType = SourceType.RSS;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
     private Category category;
 

@@ -35,81 +35,103 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         Page<Article> findBySourceSourceTypeOrderByPublishedAtDesc(SourceType sourceType, Pageable pageable);
 
         @Query(value = """
-    SELECT a.* FROM articles a
-    LEFT JOIN sources s ON a.source_id = s.id
-    WHERE a.cluster_id IS NULL
-    OR a.id = (
-        SELECT a2.id FROM articles a2
-        LEFT JOIN sources s2 ON a2.source_id = s2.id
-        WHERE a2.cluster_id = a.cluster_id
-        ORDER BY s2.credibility DESC, a2.published_at DESC
-        LIMIT 1
-    )
-    ORDER BY a.published_at DESC
-    """,
-                countQuery = "SELECT COUNT(DISTINCT COALESCE(cluster_id, id)) FROM articles",
-                nativeQuery = true)
-        Page<Article> findRepresentativeArticles(Pageable pageable);
-
-        // query جدید برای فیلتر با نام کتگوری (اصلاح‌شده)
-        @Query(value = """
-    SELECT a.* FROM articles a
-    LEFT JOIN sources s ON a.source_id = s.id
-    WHERE a.category = :category
-    AND (
-        a.cluster_id IS NULL
+        SELECT a.* FROM articles a
+        LEFT JOIN sources s ON a.source_id = s.id
+        WHERE a.cluster_id IS NULL
         OR a.id = (
             SELECT a2.id FROM articles a2
             LEFT JOIN sources s2 ON a2.source_id = s2.id
             WHERE a2.cluster_id = a.cluster_id
-            AND a2.category = :category
             ORDER BY s2.credibility DESC, a2.published_at DESC
             LIMIT 1
         )
-    )
-    ORDER BY a.published_at DESC
-    """,
-                countQuery = """
-    SELECT COUNT(*) FROM (
-        SELECT DISTINCT COALESCE(a.cluster_id, a.id)
-        FROM articles a
+        ORDER BY a.published_at DESC
+        """,
+                countQuery = "SELECT COUNT(DISTINCT COALESCE(cluster_id, id)) FROM articles",
+                nativeQuery = true)
+        Page<Article> findRepresentativeArticles(Pageable pageable);
+
+        @Query(value = """
+        SELECT a.* FROM articles a
+        LEFT JOIN sources s ON a.source_id = s.id
         WHERE a.category = :category
-    ) t
-    """,
+        AND (
+            a.cluster_id IS NULL
+            OR a.id = (
+                SELECT a2.id FROM articles a2
+                LEFT JOIN sources s2 ON a2.source_id = s2.id
+                WHERE a2.cluster_id = a.cluster_id
+                AND a2.category = :category
+                ORDER BY s2.credibility DESC, a2.published_at DESC
+                LIMIT 1
+            )
+        )
+        ORDER BY a.published_at DESC
+        """,
+                countQuery = """
+        SELECT COUNT(*) FROM (
+            SELECT DISTINCT COALESCE(a.cluster_id, a.id)
+            FROM articles a
+            WHERE a.category = :category
+        ) t
+        """,
                 nativeQuery = true)
         Page<Article> findRepresentativeByCategory(
                 @Param("category") String category, Pageable pageable);
 
         @Query(value = """
-    SELECT a.* FROM articles a
-    LEFT JOIN sources s ON a.source_id = s.id
-    WHERE a.breaking = true
-    AND (
-        a.cluster_id IS NULL
-        OR a.id = (
-            SELECT a2.id FROM articles a2
-            LEFT JOIN sources s2 ON a2.source_id = s2.id
-            WHERE a2.cluster_id = a.cluster_id
-            ORDER BY s2.credibility DESC, a2.published_at DESC
-            LIMIT 1
+        SELECT a.* FROM articles a
+        LEFT JOIN sources s ON a.source_id = s.id
+        WHERE a.breaking = true
+        AND (
+            a.cluster_id IS NULL
+            OR a.id = (
+                SELECT a2.id FROM articles a2
+                LEFT JOIN sources s2 ON a2.source_id = s2.id
+                WHERE a2.cluster_id = a.cluster_id
+                ORDER BY s2.credibility DESC, a2.published_at DESC
+                LIMIT 1
+            )
         )
-    )
-    ORDER BY a.published_at DESC
-    """,
+        ORDER BY a.published_at DESC
+        """,
                 countQuery = "SELECT COUNT(DISTINCT COALESCE(cluster_id, id)) FROM articles WHERE breaking = true",
                 nativeQuery = true)
         Page<Article> findRepresentativeBreaking(Pageable pageable);
 
         @Query(value = """
-    SELECT a.* FROM articles a
-    LEFT JOIN sources s ON a.source_id = s.id
-    WHERE (
-        LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-        OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-    )
-    ORDER BY a.published_at DESC
-    """,
+        SELECT a.* FROM articles a
+        LEFT JOIN sources s ON a.source_id = s.id
+        WHERE (
+            LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        )
+        ORDER BY a.published_at DESC
+        """,
                 countQuery = "SELECT COUNT(*) FROM articles a LEFT JOIN sources s ON a.source_id = s.id WHERE LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))",
                 nativeQuery = true)
         Page<Article> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+        // OPTIMIZED: Keyset / Cursor-based Pagination for ultra-fast deep pagination
+        @Query(value = """
+        SELECT a.* FROM articles a
+        LEFT JOIN sources s ON a.source_id = s.id
+        WHERE (a.published_at < :lastPublishedAt OR (a.published_at = :lastPublishedAt AND a.id < :lastId))
+        AND (
+            a.cluster_id IS NULL
+            OR a.id = (
+                SELECT a2.id FROM articles a2
+                LEFT JOIN sources s2 ON a2.source_id = s2.id
+                WHERE a2.cluster_id = a.cluster_id
+                ORDER BY s2.credibility DESC, a2.published_at DESC
+                LIMIT 1
+            )
+        )
+        ORDER BY a.published_at DESC, a.id DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+        List<Article> findNextArticlesCursor(
+                @Param("lastPublishedAt") ZonedDateTime lastPublishedAt,
+                @Param("lastId") Long lastId,
+                @Param("limit") int limit);
 }

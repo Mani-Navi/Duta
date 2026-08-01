@@ -1,10 +1,13 @@
 package com.NewsGrid.V10.config;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
+import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.concurrent.TimeUnit;
 
 @Configuration
 @EnableCaching
@@ -12,7 +15,12 @@ public class CacheConfig {
 
     @Bean
     public CacheManager cacheManager() {
-        // تعریف متصل‌کننده کش در حافظه (In-Memory) اسپرینگ
-        return new ConcurrentMapCacheManager("categories", "articles", "prices");
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager("categories", "articles", "prices");
+        cacheManager.setCaffeine(Caffeine.newBuilder()
+                .initialCapacity(100)
+                .maximumSize(500) // Safety bound for RAM memory
+                .expireAfterWrite(10, TimeUnit.MINUTES) // Auto TTL refresh
+                .recordStats());
+        return cacheManager;
     }
 }
