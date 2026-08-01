@@ -1513,3 +1513,29 @@ body:not(.dark) .capsule-badge.red-badge {
         padding: 2px 6px;
     }
 }
+
+/* ── تضمین نمایش نوار قیمت در موبایل ── */
+.nav-center,
+.price-ticker-capsules {
+    display: flex !important;
+}
+
+@media (max-width: 768px) {
+    .nav-row {
+        flex-wrap: wrap !important;
+    }
+
+    .nav-center {
+        display: flex !important;
+        width: 100% !important;
+        justify-content: center !important;
+        order: 3 !important;
+        margin-top: 6px !important;
+    }
+
+    .price-ticker-capsules {
+        display: flex !important;
+        width: 100% !important;
+        justify-content: center !important;
+    }
+}
