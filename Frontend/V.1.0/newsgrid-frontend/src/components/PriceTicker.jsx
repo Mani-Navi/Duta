@@ -6,7 +6,7 @@ function PriceTicker({ lang = 'fa' }) {
 
     useEffect(() => {
         const fetchPrices = () => {
-            if (document.hidden) return; // اگر کاربر در تب دیگری است درخواست نزن
+            if (document.hidden) return;
             api.get('/prices')
                 .then(res => setPrices(res.data))
                 .catch(() => {});
@@ -20,19 +20,21 @@ function PriceTicker({ lang = 'fa' }) {
     if (!prices || prices.error) return null;
 
     return (
-        <div className="price-ticker">
+        <div className="price-ticker-capsules" dir="rtl">
             {prices.usd && (
-                <div className="price-item green-trend">
-                    <span className="price-label">{prices.usd.label}:</span>
-                    <span className="price-val">{prices.usd.price} تومان</span>
-                    <span className="trend-badge green">▲ +0.4%</span>
+                <div className="price-capsule">
+                    <span className="capsule-title">دلار آمریکا</span>
+                    <span className="capsule-price">{prices.usd.price}</span>
+                    <span className="capsule-unit">تومان</span>
+                    <span className="capsule-badge green-badge" dir="ltr">▲ 2.84%</span>
                 </div>
             )}
             {prices.gold && (
-                <div className="price-item red-trend">
-                    <span className="price-label">{prices.gold.label}:</span>
-                    <span className="price-val">{prices.gold.price} تومان</span>
-                    <span className="trend-badge red">▼ -0.2%</span>
+                <div className="price-capsule">
+                    <span className="capsule-title">طلا ۱۸ عیار</span>
+                    <span className="capsule-price">{prices.gold.price}</span>
+                    <span className="capsule-unit">تومان/گرم</span>
+                    <span className="capsule-badge green-badge" dir="ltr">▲ 3.03%</span>
                 </div>
             )}
         </div>

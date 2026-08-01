@@ -1372,3 +1372,106 @@ a {
     background: #0062cc;
     box-shadow: 0 6px 18px rgba(0, 122, 255, 0.4);
 }
+
+/* ── کپسول‌های لوکس و مدرن قیمت دلار و طلا ── */
+.price-ticker-capsules {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.price-ticker-capsules::-webkit-scrollbar {
+    display: none;
+}
+
+.price-capsule {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.price-capsule:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.capsule-title {
+    font-weight: 700;
+    color: #e2e8f0;
+}
+
+.capsule-price {
+    font-weight: 800;
+    font-family: inherit;
+    color: #ffffff;
+}
+
+.capsule-unit {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.capsule-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.capsule-badge.green-badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.capsule-badge.red-badge {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* پشتیبانی از حالت لایت مود (Light Mode) */
+body:not(.dark) .price-capsule {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+body:not(.dark) .capsule-title {
+    color: #1e293b;
+}
+
+body:not(.dark) .capsule-price {
+    color: #0f172a;
+}
+
+body:not(.dark) .capsule-unit {
+    color: #64748b;
+}
+
+body:not(.dark) .capsule-badge.green-badge {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+
+body:not(.dark) .capsule-badge.red-badge {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+}
