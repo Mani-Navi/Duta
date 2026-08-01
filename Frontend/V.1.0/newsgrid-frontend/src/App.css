@@ -1475,3 +1475,103 @@ body:not(.dark) .capsule-badge.red-badge {
     color: #b91c1c;
     border-color: #fca5a5;
 }
+
+/* ── ۱. کانتینر اصلی و استاندارد کل سایت ── */
+.app-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 20px 40px 20px;
+    direction: rtl;
+}
+
+/* ── ۲. بازطراحی هدر اصلی (Navbar) ── */
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.12);
+    margin-bottom: 16px;
+    gap: 16px;
+}
+
+/* لوگو برند Nitt */
+.brand-logo {
+    font-size: 22px;
+    font-weight: 800;
+    color: #007AFF;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: -0.5px;
+}
+
+.brand-logo span {
+    color: #1e293b;
+}
+
+body.dark .brand-logo span {
+    color: #f8fafc;
+}
+
+/* ── ۳. یکپارچه‌سازی نوار کتگوری‌ها ── */
+.category-container {
+    width: 100%;
+    margin: 16px 0 24px 0;
+}
+
+.categories-scroll {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 4px 2px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.categories-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── ۴. شبکه‌بندی منظم و یکدست کارت‌ها (Grid Layout) ── */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── ۵. یکسان‌سازی ارتفاع و ابعاد تمام کارت‌ها (معمولی و تلگرام) ── */
+.card {
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-radius: 16px;
+    padding: 18px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+}
+
+/* کارت تلگرام متناسب با گرید */
+.card.telegram-news-card {
+    border: 1px solid rgba(42, 171, 238, 0.3) !important;
+    box-shadow: 0 4px 14px rgba(42, 171, 238, 0.08);
+}
