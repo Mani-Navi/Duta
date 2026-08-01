@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
-import PriceTicker from './components/PriceTicker';
 import Home from './pages/Home';
 import About from './pages/About';
 import ArticleDetail from './pages/ArticleDetail';
@@ -46,23 +45,15 @@ function App() {
 
     return (
         <div>
-            {/* Ticker همیشه نشون داده میشه */}
-            <PriceTicker />
-
-            {/* دسکتاپ: navbar معمولی | موبایل: فقط لوگو */}
-            {!isMobile ? (
-                <Navbar
-                    lang={lang}
-                    dark={dark}
-                    view={view}
-                    onToggleTheme={() => setDark(prev => !prev)}
-                    onNavigate={setView}
-                    onSearch={handleSearch}
-                />
-            ) : (
-                // موبایل: navbar حذف میشه
-                null
-            )}
+            {/* Navbar همیشه هم در دسکتاپ و هم در موبایل رندر می‌شود */}
+            <Navbar
+                lang={lang}
+                dark={dark}
+                view={view}
+                onToggleTheme={() => setDark(prev => !prev)}
+                onNavigate={setView}
+                onSearch={handleSearch}
+            />
 
             {/* دکمه بک — فقط توی صفحه detail */}
             {view === 'detail' && (
