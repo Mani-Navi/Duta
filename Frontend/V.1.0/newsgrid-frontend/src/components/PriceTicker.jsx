@@ -1,35 +1,15 @@
-import { useState, useEffect } from 'react';
-import api from "../api/axiosConfig.js";
+import React, { useEffect, useState } from 'react';
+import api from '../api/axiosConfig';
 
-const ICONS = {
-    usd:  { emoji: '💵' },
-    gold: { emoji: '🥇' },
-};
-
-const ORDER = ['usd', 'gold'];
-
-function PriceTicker() {
+function PriceTicker({ lang = 'fa' }) {
     const [prices, setPrices] = useState(null);
-    const [error, setError]   = useState(false);
-
-    const fetchPrices = async () => {
-        try {
-            const res = await api.get('/prices');
-            if (res.data && !res.data.error) {
-                setPrices(res.data);
-                setError(false);
-            } else {
-                setError(true);
-            }
-        } catch {
-            setError(true);
-        }
-    };
 
     useEffect(() => {
         const fetchPrices = () => {
             if (document.hidden) return; // اگر کاربر در تب دیگری است درخواست نزن
-            api.get('/prices').then(res => setPrices(res.data)).catch(() => {});
+            api.get('/prices')
+                .then(res => setPrices(res.data))
+                .catch(() => {});
         };
 
         fetchPrices();
@@ -37,24 +17,24 @@ function PriceTicker() {
         return () => clearInterval(interval);
     }, []);
 
-    if (error || !prices) return null;
+    if (!prices || prices.error) return null;
 
     return (
         <div className="price-ticker">
-            <div className="ticker-inner">
-                {ORDER.map(key => {
-                    const item = prices[key];
-                    if (!item) return null;
-                    return (
-                        <div className="ticker-item" key={key}>
-                            <span className="ticker-symbol">{ICONS[key].emoji}</span>
-                            <span className="ticker-label">{item.label}</span>
-                            <span className="ticker-price">{item.price}</span>
-                            <span className="ticker-unit">تومان</span>
-                        </div>
-                    );
-                })}
-            </div>
+            {prices.usd && (
+                <div className="price-item green-trend">
+                    <span className="price-label">{prices.usd.label}:</span>
+                    <span className="price-val">{prices.usd.price} تومان</span>
+                    <span className="trend-badge green">▲ +0.4%</span>
+                </div>
+            )}
+            {prices.gold && (
+                <div className="price-item red-trend">
+                    <span className="price-label">{prices.gold.label}:</span>
+                    <span className="price-val">{prices.gold.price} تومان</span>
+                    <span className="trend-badge red">▼ -0.2%</span>
+                </div>
+            )}
         </div>
     );
 }
