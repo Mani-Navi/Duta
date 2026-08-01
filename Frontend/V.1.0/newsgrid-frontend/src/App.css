@@ -70,6 +70,12 @@ a {
 
 .logo span { color: var(--blue); }
 
+.nav-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .nav-right {
     display: flex;
     align-items: center;
@@ -351,7 +357,7 @@ a {
 .source-icon {
     width: 32px;
     height: 32px;
-    border-radius: 9px;
+    border-radius: 99px;
     background: rgba(0,122,255,0.1);
     display: flex;
     align-items: center;
@@ -669,78 +675,66 @@ a {
 .search-input::placeholder {
     color: var(--label-3);
 }
-/* ─── Price Ticker ─────────────────────────────────────── */
 
-.price-ticker {
-    width: 100%;
-    background: var(--navbar-bg);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
-    border-bottom: 0.5px solid var(--separator);
-    height: 36px;
+/* ─── Price Ticker Capsules ────────────────────────────── */
+
+.price-ticker-capsules {
     display: flex;
     align-items: center;
-    overflow: hidden;
+    gap: 10px;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
-.ticker-inner {
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    width: 100%;
-    justify-content: space-around;
+.price-ticker-capsules::-webkit-scrollbar {
+    display: none;
 }
 
-.ticker-item {
-    display: flex;
+.price-capsule {
+    background: var(--chip-bg);
+    border: 1px solid var(--separator);
+    border-radius: 9999px;
+    padding: 5px 12px;
+    display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 0 16px;
+    gap: 6px;
+    font-size: 12px;
     white-space: nowrap;
 }
 
-.ticker-item:last-child {
-    border-left: none;
+.capsule-title {
+    font-weight: 700;
+    color: var(--label);
 }
 
-.ticker-symbol {
-    font-size: 13px;
-    line-height: 1;
+.capsule-price {
+    font-weight: 700;
+    color: var(--label);
 }
 
-.ticker-label {
-    font-size: 11px;
-    font-weight: 500;
+.capsule-unit {
+    font-size: 10px;
     color: var(--label-2);
 }
 
-.ticker-price {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--label);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.2px;
-}
-
-.ticker-unit {
+.capsule-badge {
     font-size: 10px;
-    color: var(--label-3);
-    font-weight: 400;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
 }
 
-@media (max-width: 480px) {
-    .ticker-label {
-        display: none;
-    }
+.capsule-badge.green-badge {
+    background: rgba(52, 199, 89, 0.15);
+    color: var(--green);
+}
 
-    .ticker-item {
-        padding: 0 10px;
-        gap: 4px;
-    }
-
-    .ticker-price {
-        font-size: 11px;
-    }
+.capsule-badge.red-badge {
+    background: rgba(255, 59, 48, 0.15);
+    color: var(--red);
 }
 
 /* ─── Back Bar ─────────────────────────────────────── */
@@ -748,20 +742,6 @@ a {
     max-width: 640px;
     margin: 0 auto;
     padding: 10px 20px 0;
-}
-
-.back-btn {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    font-size: 15px;
-    color: var(--blue);
-    font-weight: 500;
-    background: none;
-    border: none;
-    font-family: inherit;
-    cursor: pointer;
-    padding: 0;
 }
 
 /* ─── About Page ─────────────────────────────────────── */
@@ -858,6 +838,24 @@ a {
 }
 
 @media (max-width: 768px) {
+    .nav-row {
+        flex-wrap: wrap !important;
+        gap: 10px;
+    }
+
+    .nav-center {
+        order: 3 !important;
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+        margin-top: 4px !important;
+    }
+
+    .price-ticker-capsules {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
     .bottom-nav {
         display: flex;
         position: fixed;
@@ -903,7 +901,6 @@ a {
         color: var(--blue);
     }
 
-    /* سرچ باز شده */
     .bottom-search {
         position: fixed;
         bottom: 70px;
@@ -920,7 +917,6 @@ a {
         background: var(--chip-bg);
     }
 
-    /* فضای پایین برای محتوا که زیر bottom nav نره */
     .grid,
     .detail-content,
     .page-content {
@@ -1073,247 +1069,14 @@ a {
     from { opacity: 0; transform: translateY(-10px); }
     to   { opacity: 1; transform: translateY(0); }
 }
-/* ─── Share Sheet v2 ────────────────────────────────── */
-.share-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    z-index: 100;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    animation: fadeIn 0.2s ease;
-    padding: 20px;
-}
 
-@media (min-width: 600px) {
-    .share-overlay { align-items: center; }
-}
-
-.share-sheet-v2 {
-    width: 100%;
-    max-width: 480px;
-    animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.share-preview-v2 {
-    border-radius: 14px;
-    overflow: hidden;
-    margin-bottom: 14px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-}
-
-/* نوار آیکون‌ها */
-.share-bar {
-    position: relative;
-    background: var(--card);
-    border-radius: 999px;
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-}
-
-.share-bar-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 50%;
-    transition: transform 0.15s;
-}
-
-.share-bar-btn:active {
-    transform: scale(0.88);
-}
-
-.share-bar-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    transition: transform 0.15s;
-}
-
-/* tooltip */
-.share-tooltip {
-    position: absolute;
-    top: -44px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1C1C1E;
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 7px 14px;
-    border-radius: 20px;
-    white-space: nowrap;
-    pointer-events: none;
-    animation: fadeIn 0.15s ease;
-}
-
-/* دکمه share در detail */
-.detail-share-btn {
-    margin-right: auto;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    background: var(--chip-bg);
-    color: var(--label-2);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    transition: background 0.15s;
-}
-
-.detail-share-btn:hover { background: var(--separator); }
-
-/* ─── Inline Share Bar ──────────────────────────────── */
-.share-inline-bar {
-    margin: 20px 0 4px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--card);
-    border-radius: 20px;
-    padding: 12px 16px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-}
-
-.share-inline-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--label-2);
-    white-space: nowrap;
-}
-
-.share-inline-btns {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    justify-content: flex-end;
-}
-
-.share-inline-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    transition: transform 0.15s;
-}
-
-.share-inline-btn:active {
-    transform: scale(0.88);
-}
-
-.share-inline-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    color: #fff;
-}
-/* استایل مکمل کارت تلگرام که با تم لایت/دارک سایت ست می‌شود */
-.card.telegram-news-card {
-    border: 1px solid rgba(42, 171, 238, 0.35) !important;
-    box-shadow: 0 4px 12px rgba(42, 171, 238, 0.08);
-    position: relative;
-    overflow: hidden;
-}
-
-.card.telegram-news-card:hover {
-    border-color: #2AABEE !important;
-    box-shadow: 0 6px 18px rgba(42, 171, 238, 0.2);
-}
-
-.telegram-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-}
-
-.telegram-icon {
-    width: 32px;
-    height: 32px;
-    background: #2AABEE;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    flex-shrink: 0;
-}
-
-.telegram-source {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.telegram-source .source-name {
-    font-weight: 700;
-    font-size: 13px;
-    opacity: 0.95;
-}
-
-.telegram-badge {
-    font-size: 10px;
-    color: #0088cc;
-    font-weight: 600;
-}
-
-.telegram-time {
-    font-size: 11px;
-    opacity: 0.65;
-}
-
-.telegram-text {
-    font-size: 14px;
-    line-height: 1.6;
-    font-weight: 500;
-    margin: 0 0 12px 0;
-}
-
-.telegram-footer {
-    display: flex;
-    justify-content: flex-end;
-    border-top: 1px solid rgba(128, 128, 128, 0.15);
-    padding-top: 10px;
-}
-
-.view-in-telegram {
-    font-size: 12px;
-    color: #0088cc;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.view-in-telegram:hover {
-    text-decoration: underline;
-}
-
-/* ── انیمیشن Shimmer برای اسکلتون لودر ── */
+/* ─── Skeleton Loader ────────────────────────────────── */
 .skeleton-card {
     pointer-events: none;
 }
 
 .shimmer {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.05) 100%);
+    background: linear-gradient(90deg, var(--chip-bg) 0%, var(--separator) 50%, var(--chip-bg) 100%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     border-radius: 8px;
@@ -1340,7 +1103,7 @@ a {
     height: 12px;
 }
 
-/* ── استایل دکمه تلاش مجدد (Retry Button) ── */
+/* ─── Retry Container ────────────────────────────────── */
 .retry-container {
     display: flex;
     flex-direction: column;
@@ -1352,7 +1115,7 @@ a {
 }
 
 .retry-btn {
-    background: #007AFF;
+    background: var(--blue);
     color: #ffffff;
     border: none;
     padding: 10px 24px;
@@ -1369,173 +1132,5 @@ a {
 
 .retry-btn:hover {
     transform: translateY(-2px);
-    background: #0062cc;
-    box-shadow: 0 6px 18px rgba(0, 122, 255, 0.4);
-}
-
-/* ── کپسول‌های لوکس و مدرن قیمت دلار و طلا ── */
-.price-ticker-capsules {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 6px 0;
-    overflow-x: auto;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-.price-ticker-capsules::-webkit-scrollbar {
-    display: none;
-}
-
-.price-capsule {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 9999px;
-    padding: 6px 14px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-}
-
-.price-capsule:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.08);
-}
-
-.capsule-title {
-    font-weight: 700;
-    color: #e2e8f0;
-}
-
-.capsule-price {
-    font-weight: 800;
-    font-family: inherit;
-    color: #ffffff;
-}
-
-.capsule-unit {
-    font-size: 11px;
-    color: #94a3b8;
-    font-weight: 500;
-}
-
-.capsule-badge {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 9999px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.capsule-badge.green-badge {
-    background: rgba(16, 185, 129, 0.2);
-    color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.capsule-badge.red-badge {
-    background: rgba(239, 68, 68, 0.2);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-/* پشتیبانی از حالت لایت مود (Light Mode) */
-body:not(.dark) .price-capsule {
-    background: #ffffff;
-    border-color: rgba(0, 0, 0, 0.08);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-}
-
-body:not(.dark) .capsule-title {
-    color: #1e293b;
-}
-
-body:not(.dark) .capsule-price {
-    color: #0f172a;
-}
-
-body:not(.dark) .capsule-unit {
-    color: #64748b;
-}
-
-body:not(.dark) .capsule-badge.green-badge {
-    background: #dcfce7;
-    color: #15803d;
-    border-color: #bbf7d0;
-}
-
-body:not(.dark) .capsule-badge.red-badge {
-    background: #fee2e2;
-    color: #b91c1c;
-    border-color: #fca5a5;
-}
-
-/* ── تنظیمات نمایش قیمت طلا و دلار در موبایل ── */
-@media (max-width: 768px) {
-    .nav-row {
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-
-    /* نوار قیمت در موبایل در سطر زیرین لوگو و وسط‌چین قرار می‌گیرد */
-    .nav-center {
-        order: 3;
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding-top: 8px;
-        margin-top: 4px;
-        border-top: 1px solid rgba(128, 128, 128, 0.1);
-    }
-
-    /* کوچک‌تر و فشرده‌تر شدن کپسول‌ها در موبایل جهت جاگیری عالی */
-    .price-ticker-capsules {
-        width: 100%;
-        justify-content: center;
-        gap: 8px;
-    }
-
-    .price-capsule {
-        padding: 4px 10px;
-        font-size: 11px;
-        gap: 6px;
-    }
-
-    .capsule-badge {
-        font-size: 10px;
-        padding: 2px 6px;
-    }
-}
-
-/* ── تضمین نمایش نوار قیمت در موبایل ── */
-.nav-center,
-.price-ticker-capsules {
-    display: flex !important;
-}
-
-@media (max-width: 768px) {
-    .nav-row {
-        flex-wrap: wrap !important;
-    }
-
-    .nav-center {
-        display: flex !important;
-        width: 100% !important;
-        justify-content: center !important;
-        order: 3 !important;
-        margin-top: 6px !important;
-    }
-
-    .price-ticker-capsules {
-        display: flex !important;
-        width: 100% !important;
-        justify-content: center !important;
-    }
+    opacity: 0.9;
 }
