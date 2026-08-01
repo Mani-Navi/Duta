@@ -6,6 +6,7 @@ import About from './pages/About';
 import ArticleDetail from './pages/ArticleDetail';
 import Features from './pages/Features';
 import Credibility from './pages/Credibility';
+import PriceTicker from "./components/PriceTicker.jsx";
 import './App.css';
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
 
     return (
         <div>
+            <PriceTicker/>
             {/* Navbar همیشه هم در دسکتاپ و هم در موبایل رندر می‌شود */}
             <Navbar
                 lang={lang}
