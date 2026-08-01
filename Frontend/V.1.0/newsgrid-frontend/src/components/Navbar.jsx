@@ -1,5 +1,6 @@
 import strings from '../strings/strings';
 import { useState, useEffect, useRef } from 'react';
+import PriceTicker from './PriceTicker'; // ← اضافه شدن کامپوننت قیمت دلار و طلا
 
 function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     const t = strings['fa'];
@@ -51,9 +52,15 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <nav className="navbar" aria-label="منوی اصلی" ref={navRef}>
             <div className="nav-row">
+                {/* تغییر لوگو به Nitt */}
                 <div className="logo" onClick={() => onNavigate('home')}
-                     role="button" tabIndex={0} aria-label="NewsGrid - صفحه اصلی">
-                    News<span>Grid</span>
+                     role="button" tabIndex={0} aria-label="Nitt - صفحه اصلی">
+                    Nitt
+                </div>
+
+                {/* جایگاه تمیز قیمت دلار و طلا در وسط هدر */}
+                <div className="nav-center">
+                    <PriceTicker lang="fa" />
                 </div>
 
                 <div className="nav-right">
