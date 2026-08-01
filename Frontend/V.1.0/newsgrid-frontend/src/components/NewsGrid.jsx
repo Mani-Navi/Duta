@@ -122,7 +122,7 @@ function NewsGrid({ lang = 'fa', activeCategory, onOpenArticle, searchKeyword })
         <div className="retry-container">
             <div className="status-text error">{error}</div>
             <button className="retry-btn" onClick={loadNewArticles}>
-                🔄 {lang === 'fa' ? 'تلاش مجدد' : 'Retry'}
+                 {lang === 'fa' ? 'تلاش مجدد' : 'Retry'}
             </button>
         </div>
     );
