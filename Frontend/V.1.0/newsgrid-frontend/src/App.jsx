@@ -108,8 +108,6 @@ function AppLayout() {
 
     return (
         <div>
-            <PriceTicker />
-
             <div className="desktop-only">
                 <Navbar
                     lang={lang} dark={dark} view={view}
