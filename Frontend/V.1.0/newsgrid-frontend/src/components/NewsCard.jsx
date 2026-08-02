@@ -3,7 +3,6 @@ import api from '../api/axiosConfig';
 
 function NewsCard({ article, onOpen }) {
 
-    // OPTIMIZED: Prefetch details on hover or touch start for 0ms load latency
     const handlePrefetch = () => {
         const slug = article.slug || article.id;
         if (slug) {
@@ -81,7 +80,8 @@ function NewsCard({ article, onOpen }) {
                 </div>
             </div>
 
-            <div className="card-title">{article.title}</div>
+            {/* OPTIMIZED: Heading H3 for card titles (Lighthouse A11y & SEO) */}
+            <h3 className="card-title">{article.title}</h3>
 
             <div className="card-bottom">
                 <span className="time">{formatTime(article.publishedAt)}</span>

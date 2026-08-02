@@ -49,15 +49,15 @@ function ArticleDetailPage() {
     if (!article) return null;
 
     return (
-        <>
+        <main id="main-content">
             <div className="back-bar">
                 <button className="back-btn" onClick={() => navigate(-1)} aria-label="بازگشت به اخبار">
-                    <i className="ti ti-chevron-right" />
+                    <i className="ti ti-chevron-right" aria-hidden="true" />
                     بازگشت به اخبار
                 </button>
             </div>
             <ArticleDetail article={article} />
-        </>
+        </main>
     );
 }
 
@@ -117,13 +117,16 @@ function AppLayout() {
 
     return (
         <ErrorBoundary>
+            {/* 1 & 2. Skip link for keyboard accessibility */}
+            <a href="#main-content" className="skip-link">
+                پرش به محتوای اصلی
+            </a>
+
             <div>
-                {/* قیمت دلار و طلا مخصوص موبایل */}
                 <div className="mobile-only" style={{ padding: '8px 0', background: 'var(--navbar-bg)' }}>
                     <PriceTicker />
                 </div>
 
-                {/* هدر کامل دسکتاپ شامل لوگو، قیمت‌ها در وسط و لینک‌ها */}
                 <div className="desktop-only">
                     <Navbar
                         dark={dark} view={view}
@@ -133,23 +136,26 @@ function AppLayout() {
                     />
                 </div>
 
-                <div style={{ display: view === 'home' ? 'block' : 'none' }}>
-                    <Home onOpenArticle={openArticle} searchKeyword={searchKeyword} />
-                </div>
-
-                <Suspense fallback={
-                    <div className="grid-status">
-                        <div className="status-text">در حال بارگذاری...</div>
+                {/* 1. Landmark Semantic <main> wrapping news content */}
+                <main id="main-content">
+                    <div style={{ display: view === 'home' ? 'block' : 'none' }}>
+                        <Home onOpenArticle={openArticle} searchKeyword={searchKeyword} />
                     </div>
-                }>
-                    <Routes>
-                        <Route path="/" element={null} />
-                        <Route path="/article/:slug" element={<ArticleDetailPage />} />
-                        <Route path="/features" element={<Features />} />
-                        <Route path="/credibility" element={<Credibility />} />
-                        <Route path="/about" element={<About />} />
-                    </Routes>
-                </Suspense>
+
+                    <Suspense fallback={
+                        <div className="grid-status">
+                            <div className="status-text">در حال بارگذاری...</div>
+                        </div>
+                    }>
+                        <Routes>
+                            <Route path="/" element={null} />
+                            <Route path="/article/:slug" element={<ArticleDetailPage />} />
+                            <Route path="/features" element={<Features />} />
+                            <Route path="/credibility" element={<Credibility />} />
+                            <Route path="/about" element={<About />} />
+                        </Routes>
+                    </Suspense>
+                </main>
 
                 <div className="mobile-only">
                     <BottomNav

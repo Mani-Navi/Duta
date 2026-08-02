@@ -50,31 +50,23 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     };
 
     return (
-        <nav className="navbar" aria-label="منوی اصلی" ref={navRef}>
+        <header className="navbar" ref={navRef}>
             <div className="nav-row">
-                <div
-                    className="logo"
-                    onClick={() => onNavigate('home')}
-                    role="button"
-                    tabIndex={0}
-                    aria-label="Nitt - صفحه اصلی"
-                    onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
-                >
+                <h1 className="logo" onClick={() => onNavigate('home')}>
                     Nitt
-                </div>
+                </h1>
 
-                {/* قیمت طلا و دلار دقیقاً در وسط هدر دسکتاپ (مطابق تصویر اول) */}
                 <div className="nav-center">
                     <PriceTicker />
                 </div>
 
                 <div className="nav-right">
                     {!searchOpen && (
-                        <div className="nav-links" role="navigation">
+                        <nav className="nav-links" aria-label="لینک‌های هدر">
                             <a onClick={() => onNavigate('features')} role="button" tabIndex={0}>{t.features}</a>
                             <a onClick={() => onNavigate('credibility')} role="button" tabIndex={0}>{t.credibility}</a>
                             <a onClick={() => onNavigate('about')} role="button" tabIndex={0}>{t.about}</a>
-                        </div>
+                        </nav>
                     )}
 
                     <div className="nav-tools">
@@ -82,7 +74,7 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                             <button
                                 className="tool-btn theme-toggle"
                                 onClick={toggleSearch}
-                                aria-label={searchOpen ? 'بستن جستجو' : 'جستجو'}
+                                aria-label={searchOpen ? 'بستن فرم جستجو' : 'باز کردن فرم جستجو'}
                                 aria-expanded={searchOpen}
                             >
                                 {searchOpen ? '✕' : '🔍'}
@@ -101,18 +93,19 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
 
             {searchOpen && (
                 <div className="search-bar" role="search">
+                    <label htmlFor="search-input" className="sr-only">جستجو در اخبار</label>
                     <input
+                        id="search-input"
                         autoFocus
                         type="search"
                         value={keyword}
                         onChange={handleSearch}
                         placeholder="جستجو در اخبار و منابع..."
                         className="search-input"
-                        aria-label="جستجو در اخبار"
                     />
                 </div>
             )}
-        </nav>
+        </header>
     );
 }
 
