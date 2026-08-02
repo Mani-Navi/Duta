@@ -13,17 +13,23 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true, // OPTIMIZED: Remove console.log in production build for high performance
+        drop_console: true,
         drop_debugger: true
       }
     },
     rollupOptions: {
       output: {
-        // OPTIMIZED: Code Splitting - Split heavy vendor libraries into smaller cached JS chunks
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-router': ['react-router-dom'],
-          'vendor-query': ['@tanstack/react-query', 'axios']
+        // OPTIMIZED: Function-based manualChunks for Rolldown & Rollup compatibility
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('@tanstack') || id.includes('axios')) {
+              return 'vendor-query';
+            }
+            return 'vendor';
+          }
         }
       }
     }
