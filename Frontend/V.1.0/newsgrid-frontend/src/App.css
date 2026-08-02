@@ -970,7 +970,7 @@ a {
 
 .view-in-telegram:hover { text-decoration: underline; }
 
-/* ─── Apple-Style Light & Dark Skeleton Loaders ─────── */
+/* ─── Ultra-Smooth Hardware-Accelerated Shimmer Animation ─── */
 
 .skeleton-card {
     pointer-events: none;
@@ -978,24 +978,30 @@ a {
     background: var(--card) !important;
 }
 
-/* Light Mode Shimmer (Apple Gray Shimmer) */
+/* Light Mode Shimmer */
 body:not(.dark) .shimmer {
-    background: linear-gradient(90deg, #e5e5ea 0%, #f2f2f7 50%, #e5e5ea 100%) !important;
+    background-image: linear-gradient(90deg, #e5e5ea 0%, #ffffff 50%, #e5e5ea 100%) !important;
     background-size: 200% 100% !important;
-    animation: shimmer 1.4s infinite linear !important;
+    background-repeat: no-repeat !important;
+    animation: shimmerMove 1.3s infinite linear !important;
 }
 
 /* Dark Mode Shimmer */
 .dark .shimmer,
 body.dark .shimmer {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.18) 50%, rgba(255, 255, 255, 0.06) 100%) !important;
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.04) 100%) !important;
     background-size: 200% 100% !important;
-    animation: shimmer 1.4s infinite linear !important;
+    background-repeat: no-repeat !important;
+    animation: shimmerMove 1.3s infinite linear !important;
 }
 
-@keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+@keyframes shimmerMove {
+    0% {
+        background-position: -250px 0;
+    }
+    100% {
+        background-position: 250px 0;
+    }
 }
 
 .skeleton-badge {
@@ -1013,7 +1019,6 @@ body.dark .shimmer {
     width: 70px;
     height: 12px;
 }
-
 /* ─── Inline Share Bar ──────────────────────────────── */
 .share-inline-bar {
     margin: 20px 0 4px;
