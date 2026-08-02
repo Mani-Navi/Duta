@@ -1,13 +1,13 @@
-import { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
+import PriceTicker from './components/PriceTicker';
 import Home from './pages/Home';
 import ErrorBoundary from './components/ErrorBoundary';
 import api from './api/axiosConfig';
 import './App.css';
 
-// OPTIMIZED: Lazy loading non-critical routes to shrink initial JS bundle size
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
 const Features = lazy(() => import('./pages/Features'));
 const Credibility = lazy(() => import('./pages/Credibility'));
@@ -118,6 +118,9 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
+                {/* OPTIMIZED: PriceTicker is now visible on BOTH Mobile and Desktop */}
+                <PriceTicker />
+
                 <div className="desktop-only">
                     <Navbar
                         dark={dark} view={view}

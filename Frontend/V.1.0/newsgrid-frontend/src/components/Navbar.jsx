@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import strings from '../strings/strings';
-import PriceTicker from './PriceTicker';
 
 function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     const t = strings.fa;
@@ -52,7 +51,6 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <nav className="navbar" aria-label="منوی اصلی" ref={navRef}>
             <div className="nav-row">
-                {/* تغییر برند به Nitt */}
                 <div
                     className="logo"
                     onClick={() => onNavigate('home')}
@@ -62,10 +60,6 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                     onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
                 >
                     Nitt
-                </div>
-
-                <div className="nav-center">
-                    <PriceTicker />
                 </div>
 
                 <div className="nav-right">
