@@ -8,6 +8,7 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000;
 const CACHE_KEY = 'nitt_initial_articles_cache';
 
 function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
+    // Initialize state
     const [articles, setArticles] = useState(() => {
         if (!activeCategory && !searchKeyword) {
             try {
@@ -30,10 +31,9 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     const observer = useRef(null);
     const latestIdRef = useRef(null);
 
+    // OPTIMIZED: Always clear articles on ANY category switch (including 'all' / null) to show Skeleton Loader
     useEffect(() => {
-        if (activeCategory || searchKeyword) {
-            setArticles([]);
-        }
+        setArticles([]);
         setPage(0);
         setHasMore(true);
         setNewCount(0);
@@ -150,7 +150,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         if (node) observer.current.observe(node);
     }, [loading, hasMore]);
 
-    // OPTIMIZED: Guaranteed Retry Button when initial load fails
     if (error && articles.length === 0) {
         return (
             <div className="retry-container">
@@ -198,7 +197,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                 )}
             </div>
 
-            {/* Retry button at bottom if pagination fetch failed */}
             {error && articles.length > 0 && (
                 <div className="retry-container" style={{ padding: '20px' }}>
                     <div className="status-text error">{error}</div>
