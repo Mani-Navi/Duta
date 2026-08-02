@@ -970,24 +970,44 @@ a {
 
 .view-in-telegram:hover { text-decoration: underline; }
 
-/* ── انیمیشن Shimmer برای اسکلتون لودر ── */
-.skeleton-card { pointer-events: none; }
+/* ─── Apple-Style Light & Dark Skeleton Loaders ─────── */
 
-.shimmer {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.05) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite linear;
-    border-radius: 8px;
+.skeleton-card {
+    pointer-events: none;
+    min-height: 130px;
+    background: var(--card) !important;
 }
 
-@keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+/* Light Mode Shimmer (Apple Gray Shimmer) */
+body:not(.dark) .shimmer {
+    background: linear-gradient(90deg, #e5e5ea 0%, #f2f2f7 50%, #e5e5ea 100%) !important;
+    background-size: 200% 100% !important;
+    animation: shimmer 1.4s infinite linear !important;
 }
 
-.skeleton-badge { width: 32px; height: 32px; border-radius: 50%; }
-.skeleton-title-line { height: 14px; border-radius: 6px; }
-.skeleton-time { width: 80px; height: 12px; }
+/* Dark Mode Shimmer */
+.dark .shimmer,
+body.dark .shimmer {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.18) 50%, rgba(255, 255, 255, 0.06) 100%) !important;
+    background-size: 200% 100% !important;
+    animation: shimmer 1.4s infinite linear !important;
+}
+
+.skeleton-badge {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+}
+
+.skeleton-title-line {
+    height: 14px;
+    border-radius: 6px;
+}
+
+.skeleton-time {
+    width: 70px;
+    height: 12px;
+}
 
 /* ─── Inline Share Bar ──────────────────────────────── */
 .share-inline-bar {
