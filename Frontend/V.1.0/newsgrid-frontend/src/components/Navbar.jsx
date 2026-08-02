@@ -52,9 +52,10 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <header className="navbar" ref={navRef}>
             <div className="nav-row">
-                {/* لوگوی جدید Nitt افقی با خط جداکننده نازک و فونت مشکی خوانا */}
+                {/* LTR Logo Alignment: Nitt on Left | Divider | News in Bites on Right */}
                 <div
                     className="logo"
+                    dir="ltr"
                     onClick={() => onNavigate('home')}
                     role="button"
                     tabIndex={0}
