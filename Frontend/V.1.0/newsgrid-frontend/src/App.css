@@ -993,6 +993,11 @@ body.dark .shimmer {
     animation: shimmer 1.4s infinite linear !important;
 }
 
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
 .skeleton-badge {
     width: 20px;
     height: 20px;
