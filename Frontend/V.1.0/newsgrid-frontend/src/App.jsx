@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
@@ -88,31 +88,27 @@ function AppLayout() {
         navigate(`/article/${article.slug || article.id}`);
     };
 
+    // OPTIMIZED: Reset scroll to top when navigating to Home from subpages
     const handleNavigate = (v) => {
-        if (v === 'home') navigate('/');
-        else navigate(`/${v}`);
+        if (v === 'home') {
+            setRestoreScroll(0);
+            window.scrollTo(0, 0);
+            navigate('/');
+        } else {
+            navigate(`/${v}`);
+        }
     };
 
-    // OPTIMIZED: Reset scroll to top when navigating to non-home subpages
+    // Handle Route Scroll Shifts
     useEffect(() => {
-        if (location.pathname !== '/') {
+        if (location.pathname === '/') {
+            if (restoreScroll !== null) {
+                window.scrollTo({ top: restoreScroll, behavior: 'instant' });
+            }
+        } else {
             window.scrollTo(0, 0);
         }
-    }, [location.pathname]);
-
-    // Restore scroll position when returning to Home
-    useEffect(() => {
-        if (view === "home" && restoreScroll !== null) {
-            const timer = setTimeout(() => {
-                window.scrollTo({
-                    top: restoreScroll,
-                    behavior: "instant"
-                });
-            }, 50);
-
-            return () => clearTimeout(timer);
-        }
-    }, [view, restoreScroll]);
+    }, [location.pathname, restoreScroll]);
 
     useEffect(() => {
         document.documentElement.setAttribute('dir', 'rtl');
