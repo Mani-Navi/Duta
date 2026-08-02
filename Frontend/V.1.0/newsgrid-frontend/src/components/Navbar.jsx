@@ -52,7 +52,7 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <header className="navbar" ref={navRef}>
             <div className="nav-row">
-                {/* لوگوی جدید و رسمی Nitt با نقطه آبی‌رنگ و زیرعنوان News in Bites */}
+                {/* لوگوی جدید Nitt افقی با خط جداکننده نازک و فونت مشکی خوانا */}
                 <div
                     className="logo"
                     onClick={() => onNavigate('home')}
@@ -61,9 +61,10 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                     aria-label="Nitt - News in Bites"
                     onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
                 >
-                    <div className="logo-text">
+                    <span className="logo-text">
                         N<span className="logo-dot">i</span>tt
-                    </div>
+                    </span>
+                    <span className="logo-divider" aria-hidden="true" />
                     <span className="logo-sub">News in Bites</span>
                 </div>
 
