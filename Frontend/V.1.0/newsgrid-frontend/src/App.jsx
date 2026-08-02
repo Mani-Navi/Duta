@@ -38,10 +38,12 @@ function ArticleDetailPage() {
         };
     }, [slug, navigate]);
 
+    // OPTIMIZED: GPU-Accelerated Nitt Spinner Loading Animation
     if (loading) {
         return (
-            <div className="grid-status">
-                <div className="status-text">در حال بارگذاری خبر...</div>
+            <div className="nitt-loading-box">
+                <div className="nitt-spinner" aria-hidden="true" />
+                <span className="nitt-loading-text">در حال بارگذاری خبر...</span>
             </div>
         );
     }
@@ -88,7 +90,6 @@ function AppLayout() {
         navigate(`/article/${article.slug || article.id}`);
     };
 
-    // OPTIMIZED: Reset scroll to top when navigating to Home from subpages
     const handleNavigate = (v) => {
         if (v === 'home') {
             setRestoreScroll(0);
@@ -99,7 +100,6 @@ function AppLayout() {
         }
     };
 
-    // Handle Route Scroll Shifts
     useEffect(() => {
         if (location.pathname === '/') {
             if (restoreScroll !== null) {
@@ -141,8 +141,9 @@ function AppLayout() {
                     </div>
 
                     <Suspense fallback={
-                        <div className="grid-status">
-                            <div className="status-text">در حال بارگذاری...</div>
+                        <div className="nitt-loading-box">
+                            <div className="nitt-spinner" aria-hidden="true" />
+                            <span className="nitt-loading-text">در حال بارگذاری...</span>
                         </div>
                     }>
                         <Routes>

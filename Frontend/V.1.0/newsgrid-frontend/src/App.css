@@ -1253,3 +1253,40 @@ body.dark .price-chip.gold .chip-label { color: #facc15; }
     color: var(--label) !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
+
+/* ─── Ultra-Lightweight Pure CSS Spinner ─────────────── */
+.nitt-loading-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 12px;
+    width: 100%;
+}
+
+.nitt-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(0, 122, 255, 0.18);
+    border-top-color: #007AFF; /* رنگ آبی اصلی برند Nitt */
+    border-radius: 50%;
+    animation: nittSpin 0.7s linear infinite;
+    will-change: transform;
+}
+
+.dark .nitt-spinner,
+body.dark .nitt-spinner {
+    border-color: rgba(255, 255, 255, 0.12);
+    border-top-color: #007AFF;
+}
+
+@keyframes nittSpin {
+    to { transform: rotate(360deg); }
+}
+
+.nitt-loading-text {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--label-2);
+}
