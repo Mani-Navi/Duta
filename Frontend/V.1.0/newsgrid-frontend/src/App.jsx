@@ -117,12 +117,8 @@ function AppLayout() {
 
     return (
         <ErrorBoundary>
-            {/* 1 & 2. Skip link for keyboard accessibility */}
-            <a href="#main-content" className="skip-link">
-                پرش به محتوای اصلی
-            </a>
-
             <div>
+                {/* قیمت دلار و طلا مخصوص موبایل */}
                 <div className="mobile-only" style={{ padding: '8px 0', background: 'var(--navbar-bg)' }}>
                     <PriceTicker />
                 </div>
@@ -136,7 +132,6 @@ function AppLayout() {
                     />
                 </div>
 
-                {/* 1. Landmark Semantic <main> wrapping news content */}
                 <main id="main-content">
                     <div style={{ display: view === 'home' ? 'block' : 'none' }}>
                         <Home onOpenArticle={openArticle} searchKeyword={searchKeyword} />
