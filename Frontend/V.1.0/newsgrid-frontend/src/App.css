@@ -1410,24 +1410,6 @@ body.dark .price-chip.gold .chip-label {
     color: #facc15;
 }
 
-/* ─── Accessibility: Skip to Main Content Link ─────── */
-.skip-link {
-    position: absolute;
-    left: -9999px;
-    z-index: 9999;
-}
-
-.skip-link:focus {
-    left: 20px;
-    top: 20px;
-    background: #FFFFFF;
-    color: #007AFF;
-    padding: 12px 20px;
-    border-radius: 12px;
-    font-weight: 700;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
 /* Screen Reader Only class for labels */
 .sr-only {
     position: absolute;
