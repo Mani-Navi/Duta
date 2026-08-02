@@ -58,6 +58,7 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
                     className={`bottom-nav-item ${activeView === 'home' ? 'active' : ''}`}
                     onClick={() => { closeSearch(); onNavigate('home'); }}
                     aria-label="خانه"
+                    aria-current={activeView === 'home' ? 'page' : undefined}
                 >
                     <i className="ti ti-home" aria-hidden="true" />
                     <span>خانه</span>
@@ -77,6 +78,7 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
                     className={`bottom-nav-item ${activeView === 'features' ? 'active' : ''}`}
                     onClick={() => { closeSearch(); onNavigate('features'); }}
                     aria-label="ویژگی‌ها"
+                    aria-current={activeView === 'features' ? 'page' : undefined}
                 >
                     <i className="ti ti-layout-grid" aria-hidden="true" />
                     <span>ویژگی‌ها</span>
@@ -85,7 +87,8 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
                 <button
                     className={`bottom-nav-item ${activeView === 'about' ? 'active' : ''}`}
                     onClick={() => { closeSearch(); onNavigate('about'); }}
-                    aria-label="درباره ما"
+                    aria-label="درباره"
+                    aria-current={activeView === 'about' ? 'page' : undefined}
                 >
                     <i className="ti ti-info-circle" aria-hidden="true" />
                     <span>درباره</span>

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import NewsCard from './NewsCard';
 import TelegramNewsCard from './TelegramNewsCard';
-import NewsCardSkeleton from './NewsCardSkeleton';
 import api from '../api/axiosConfig';
 
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
@@ -18,7 +17,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     const observer = useRef(null);
     const latestIdRef = useRef(null);
 
-    // Reset grid on filter/search change
     useEffect(() => {
         setArticles([]);
         setPage(0);
@@ -28,23 +26,23 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     }, [activeCategory, searchKeyword]);
 
     const fetchUrl = useCallback((p) => {
-        if (searchKeyword) {
+        if (searchKeyword)
             return api.get(`/articles/search?keyword=${encodeURIComponent(searchKeyword)}&page=${p}&size=20`);
-        }
-        if (activeCategory === 'breaking') {
+
+        if (activeCategory === 'breaking')
             return api.get(`/articles/breaking?page=${p}&size=20`);
-        }
-        if (activeCategory === 'telegram') {
+
+        if (activeCategory === 'telegram')
             return api.get(`/articles/telegram?page=${p}&size=20`);
-        }
-        if (activeCategory === 'all' || activeCategory === 0 || activeCategory === null) {
+
+        if (activeCategory === 'all' || activeCategory === null || activeCategory === undefined)
             return api.get(`/articles?page=${p}&size=20`);
-        }
+
         return api.get(`/articles/category?name=${encodeURIComponent(activeCategory)}&page=${p}&size=20`);
     }, [activeCategory, searchKeyword]);
 
     const fetchArticles = useCallback(async () => {
-        if (loading || (page > 0 && !hasMore)) return;
+        if (loading || (!hasMore && page > 0)) return;
 
         try {
             setLoading(true);
@@ -56,7 +54,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
 
             setArticles(prev => {
                 const combined = page === 0 ? newItems : [...prev, ...newItems];
-                // OPTIMIZED: Unique items by ID to prevent duplicate React Key warnings
                 const uniqueMap = new Map();
                 combined.forEach(item => {
                     if (item.id) uniqueMap.set(item.id, item);
@@ -80,7 +77,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
 
         } catch (err) {
             console.error("Error fetching articles:", err);
-            setError('خطا در دریافت اخبار. لطفاً اتصال شبکه را بررسی کنید.');
+            setError("خطا در دریافت اخبار");
         } finally {
             setLoading(false);
         }
@@ -88,9 +85,8 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
 
     useEffect(() => {
         fetchArticles();
-    }, [page, refreshKey, activeCategory, searchKeyword]);
+    }, [page, activeCategory, searchKeyword, refreshKey]);
 
-    // Auto polling for new breaking news counter
     useEffect(() => {
         const interval = setInterval(async () => {
             if (!latestIdRef.current || document.hidden) return;
@@ -122,28 +118,28 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         if (loading) return;
         if (observer.current) observer.current.disconnect();
         observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && hasMore) {
+            if (entries[0].isIntersecting && hasMore)
                 setPage(prev => prev + 1);
-            }
         });
         if (node) observer.current.observe(node);
     }, [loading, hasMore]);
 
-    if (error && articles.length === 0) {
-        return (
-            <div className="retry-container">
-                <div className="status-text error">{error}</div>
-                <button className="retry-btn" onClick={loadNewArticles}>
-                    تلاش مجدد
-                </button>
-            </div>
-        );
-    }
+    if (error && articles.length === 0) return (
+        <div className="grid-status">
+            <div className="status-text error">{error}</div>
+        </div>
+    );
+
+    if (!loading && articles.length === 0) return (
+        <div className="grid-status">
+            <div className="status-text">خبری یافت نشد</div>
+        </div>
+    );
 
     return (
         <>
             {newCount > 0 && (
-                <div className="new-articles-bar" onClick={loadNewArticles} role="button" tabIndex={0}>
+                <div className="new-articles-bar" onClick={loadNewArticles}>
                     <i className="ti ti-arrow-up" />
                     {newCount} خبر جدید
                 </div>
@@ -164,23 +160,11 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                         </div>
                     );
                 })}
-
-                {/* Skeleton Loader during initial page load */}
-                {loading && articles.length === 0 && (
-                    <>
-                        <NewsCardSkeleton />
-                        <NewsCardSkeleton />
-                        <NewsCardSkeleton />
-                        <NewsCardSkeleton />
-                        <NewsCardSkeleton />
-                        <NewsCardSkeleton />
-                    </>
-                )}
             </div>
 
-            {loading && articles.length > 0 && (
+            {loading && (
                 <div className="grid-status">
-                    <div className="status-text">در حال دریافت اخبار بیشتر...</div>
+                    <div className="status-text">در حال بارگذاری...</div>
                 </div>
             )}
 

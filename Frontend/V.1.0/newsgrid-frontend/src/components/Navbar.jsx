@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import strings from '../strings/strings';
 import PriceTicker from './PriceTicker';
 
 function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
+    const t = strings.fa;
     const [searchOpen, setSearchOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
     const navRef = useRef(null);
@@ -55,10 +57,10 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                     onClick={() => onNavigate('home')}
                     role="button"
                     tabIndex={0}
-                    aria-label="Nitt - صفحه اصلی"
+                    aria-label="NewsGrid - صفحه اصلی"
                     onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
                 >
-                    Nitt
+                    News<span>Grid</span>
                 </div>
 
                 <div className="nav-center">
@@ -68,9 +70,9 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                 <div className="nav-right">
                     {!searchOpen && (
                         <div className="nav-links" role="navigation">
-                            <a onClick={() => onNavigate('features')} role="button" tabIndex={0}>ویژگی‌ها</a>
-                            <a onClick={() => onNavigate('credibility')} role="button" tabIndex={0}>امتیاز اعتبار</a>
-                            <a onClick={() => onNavigate('about')} role="button" tabIndex={0}>درباره ما</a>
+                            <a onClick={() => onNavigate('features')} role="button" tabIndex={0}>{t.features}</a>
+                            <a onClick={() => onNavigate('credibility')} role="button" tabIndex={0}>{t.credibility}</a>
+                            <a onClick={() => onNavigate('about')} role="button" tabIndex={0}>{t.about}</a>
                         </div>
                     )}
 
