@@ -1252,3 +1252,64 @@ a {
     from { opacity: 0; transform: translateY(-15px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Modern Price Ticker Capsules ─────────────────── */
+.price-ticker-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 4px 0;
+    width: 100%;
+    white-space: nowrap;
+}
+
+.price-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 99px;
+    font-size: 12.5px;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.dark .price-chip,
+body.dark .price-chip {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.chip-label {
+    font-weight: 700;
+    color: var(--label-2);
+    font-size: 11.5px;
+}
+
+.chip-value {
+    font-weight: 800;
+    color: var(--label);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.2px;
+}
+
+.chip-unit {
+    font-size: 10.5px;
+    color: var(--label-3);
+    font-weight: 500;
+}
+
+@media (max-width: 600px) {
+    .price-ticker-wrapper {
+        gap: 6px;
+    }
+    .price-chip {
+        padding: 4px 10px;
+        font-size: 11px;
+        gap: 4px;
+    }
+    .chip-label { font-size: 10.5px; }
+    .chip-unit { font-size: 9.5px; }
+}
