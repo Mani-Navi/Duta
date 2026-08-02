@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
@@ -93,6 +93,14 @@ function AppLayout() {
         else navigate(`/${v}`);
     };
 
+    // OPTIMIZED: Reset scroll to top when navigating to non-home subpages
+    useEffect(() => {
+        if (location.pathname !== '/') {
+            window.scrollTo(0, 0);
+        }
+    }, [location.pathname]);
+
+    // Restore scroll position when returning to Home
     useEffect(() => {
         if (view === "home" && restoreScroll !== null) {
             const timer = setTimeout(() => {
@@ -151,7 +159,6 @@ function AppLayout() {
                     </Suspense>
                 </main>
 
-                {/* OPTIMIZED: Semantic Footer to complete Accessibility Tree for AI Agents */}
                 <footer className="footer-note" style={{ padding: '20px', textAlign: 'center', opacity: 0.7 }} role="contentinfo">
                     تمامی حقوق برای Nitt محفوظ است © {new Date().getFullYear()}
                 </footer>
