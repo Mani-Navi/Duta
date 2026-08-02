@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import NewsCard from './NewsCard';
 import TelegramNewsCard from './TelegramNewsCard';
+import NewsCardSkeleton from './NewsCardSkeleton';
 import api from '../api/axiosConfig';
 
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
@@ -77,7 +78,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
 
         } catch (err) {
             console.error("Error fetching articles:", err);
-            setError("خطا در دریافت اخبار");
+            setError("خطا در دریافت اخبار. لطفاً اتصال اینترنت خود را بررسی کنید.");
         } finally {
             setLoading(false);
         }
@@ -86,19 +87,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     useEffect(() => {
         fetchArticles();
     }, [page, activeCategory, searchKeyword, refreshKey]);
-
-    useEffect(() => {
-        const interval = setInterval(async () => {
-            if (!latestIdRef.current || document.hidden) return;
-            try {
-                const res = await fetchUrl(0);
-                const rawList = Array.isArray(res.data) ? res.data : (res.data?.content || []);
-                const fresh = rawList.filter(a => a.id > latestIdRef.current);
-                if (fresh.length > 0) setNewCount(fresh.length);
-            } catch (ignored) {}
-        }, AUTO_REFRESH_MS);
-        return () => clearInterval(interval);
-    }, [fetchUrl]);
 
     const loadNewArticles = () => {
         setArticles([]);
@@ -124,28 +112,30 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         if (node) observer.current.observe(node);
     }, [loading, hasMore]);
 
-    if (error && articles.length === 0) return (
-        <div className="grid-status">
-            <div className="status-text error">{error}</div>
-        </div>
-    );
-
-    if (!loading && articles.length === 0) return (
-        <div className="grid-status">
-            <div className="status-text">خبری یافت نشد</div>
-        </div>
-    );
+    // ── نمایش حالت خطا با دکمه اختصاصی «تلاش مجدد» ──
+    if (error && articles.length === 0) {
+        return (
+            <div className="retry-container">
+                <div className="status-text error">{error}</div>
+                <button className="retry-btn" onClick={loadNewArticles}>
+                    <i className="ti ti-refresh" />
+                    تلاش مجدد
+                </button>
+            </div>
+        );
+    }
 
     return (
         <>
             {newCount > 0 && (
-                <div className="new-articles-bar" onClick={loadNewArticles}>
+                <div className="new-articles-bar" onClick={loadNewArticles} role="button" tabIndex={0}>
                     <i className="ti ti-arrow-up" />
                     {newCount} خبر جدید
                 </div>
             )}
 
             <div className="grid">
+                {/* لیست اخبار اصلی */}
                 {articles.map((article, index) => {
                     const isLast = index === articles.length - 1;
                     const isTelegram = article.source?.sourceType === 'TELEGRAM';
@@ -160,11 +150,23 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                         </div>
                     );
                 })}
+
+                {/* انیمیشن اسکلتون لودر در صورت در حال بارگذاری بودن صفحه اول */}
+                {loading && articles.length === 0 && (
+                    <>
+                        <NewsCardSkeleton />
+                        <NewsCardSkeleton />
+                        <NewsCardSkeleton />
+                        <NewsCardSkeleton />
+                        <NewsCardSkeleton />
+                        <NewsCardSkeleton />
+                    </>
+                )}
             </div>
 
-            {loading && (
+            {loading && articles.length > 0 && (
                 <div className="grid-status">
-                    <div className="status-text">در حال بارگذاری...</div>
+                    <div className="status-text">در حال دریافت اخبار بیشتر...</div>
                 </div>
             )}
 

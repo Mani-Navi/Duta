@@ -52,15 +52,16 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <nav className="navbar" aria-label="منوی اصلی" ref={navRef}>
             <div className="nav-row">
+                {/* تغییر برند به Nitt */}
                 <div
                     className="logo"
                     onClick={() => onNavigate('home')}
                     role="button"
                     tabIndex={0}
-                    aria-label="NewsGrid - صفحه اصلی"
+                    aria-label="Nitt - صفحه اصلی"
                     onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
                 >
-                    News<span>Grid</span>
+                    Nitt
                 </div>
 
                 <div className="nav-center">
