@@ -1,0 +1,14 @@
+# Nitt — Smart Persian News Aggregator
+
+> Nitt is an intelligent Persian news aggregator platform featuring real-time credibility scoring and automated article clustering.
+
+## Core Features
+- [Home - Latest News](https://news-grid-pi.vercel.app/): Aggregated Persian news from trusted outlets.
+- [Features](https://news-grid-pi.vercel.app/features): Live credibility scores and rumor alerts.
+- [Credibility System](https://news-grid-pi.vercel.app/credibility): Transparent 3-step algorithm breakdown.
+- [About Nitt](https://news-grid-pi.vercel.app/about): Mission and contact information.
+
+## Primary Endpoints
+- GET /api/articles: Latest aggregated news with pagination and cluster scores.
+- GET /api/categories: News categories.
+- GET /api/prices: Real-time USD currency and Gold prices.

@@ -49,7 +49,7 @@ function ArticleDetailPage() {
     if (!article) return null;
 
     return (
-        <main id="main-content">
+        <main id="main-content" aria-label="محتوای خبر">
             <div className="back-bar">
                 <button className="back-btn" onClick={() => navigate(-1)} aria-label="بازگشت به اخبار">
                     <i className="ti ti-chevron-right" aria-hidden="true" />
@@ -118,7 +118,6 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
-                {/* قیمت دلار و طلا مخصوص موبایل */}
                 <div className="mobile-only" style={{ padding: '8px 0', background: 'var(--navbar-bg)' }}>
                     <PriceTicker />
                 </div>
@@ -132,7 +131,7 @@ function AppLayout() {
                     />
                 </div>
 
-                <main id="main-content">
+                <main id="main-content" aria-label="محتوای اصلی اخبار">
                     <div style={{ display: view === 'home' ? 'block' : 'none' }}>
                         <Home onOpenArticle={openArticle} searchKeyword={searchKeyword} />
                     </div>
@@ -151,6 +150,11 @@ function AppLayout() {
                         </Routes>
                     </Suspense>
                 </main>
+
+                {/* OPTIMIZED: Semantic Footer to complete Accessibility Tree for AI Agents */}
+                <footer className="footer-note" style={{ padding: '20px', textAlign: 'center', opacity: 0.7 }} role="contentinfo">
+                    تمامی حقوق برای Nitt محفوظ است © {new Date().getFullYear()}
+                </footer>
 
                 <div className="mobile-only">
                     <BottomNav

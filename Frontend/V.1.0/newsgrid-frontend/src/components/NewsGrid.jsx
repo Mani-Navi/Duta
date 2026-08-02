@@ -8,7 +8,6 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000;
 const CACHE_KEY = 'nitt_initial_articles_cache';
 
 function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
-    // OPTIMIZED: Instant LCP - Initialize state from LocalStorage for 0ms initial render
     const [articles, setArticles] = useState(() => {
         if (!activeCategory && !searchKeyword) {
             try {
@@ -81,7 +80,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                     if (validIds.length > 0) {
                         latestIdRef.current = Math.max(...validIds);
                     }
-                    // Save first page to LocalStorage for instant LCP on next visit
                     if (page === 0 && !activeCategory && !searchKeyword) {
                         try {
                             localStorage.setItem(CACHE_KEY, JSON.stringify(nextList.slice(0, 15)));
@@ -99,7 +97,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
 
         } catch (err) {
             console.error("Error fetching articles:", err);
-            setError("خطا در دریافت اخبار");
+            setError("خطا در دریافت اخبار. لطفاً اتصال شبکه را بررسی کنید.");
         } finally {
             setLoading(false);
         }
@@ -123,6 +121,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     }, [fetchUrl]);
 
     const loadNewArticles = () => {
+        setError(null);
         setArticles([]);
         setHasMore(true);
         setNewCount(0);
@@ -136,6 +135,11 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         }
     };
 
+    const retryFetchPage = () => {
+        setError(null);
+        fetchArticles();
+    };
+
     const lastCardRef = useCallback(node => {
         if (loading) return;
         if (observer.current) observer.current.disconnect();
@@ -146,11 +150,18 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         if (node) observer.current.observe(node);
     }, [loading, hasMore]);
 
-    if (error && articles.length === 0) return (
-        <div className="grid-status">
-            <div className="status-text error">{error}</div>
-        </div>
-    );
+    // OPTIMIZED: Guaranteed Retry Button when initial load fails
+    if (error && articles.length === 0) {
+        return (
+            <div className="retry-container">
+                <div className="status-text error">{error}</div>
+                <button className="retry-btn" onClick={loadNewArticles}>
+                    <i className="ti ti-refresh" />
+                    تلاش مجدد
+                </button>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -177,7 +188,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                     );
                 })}
 
-                {/* Skeleton Loader only if articles array is completely empty */}
                 {loading && articles.length === 0 && (
                     <>
                         <NewsCardSkeleton />
@@ -188,13 +198,24 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                 )}
             </div>
 
+            {/* Retry button at bottom if pagination fetch failed */}
+            {error && articles.length > 0 && (
+                <div className="retry-container" style={{ padding: '20px' }}>
+                    <div className="status-text error">{error}</div>
+                    <button className="retry-btn" onClick={retryFetchPage}>
+                        <i className="ti ti-refresh" />
+                        تلاش مجدد
+                    </button>
+                </div>
+            )}
+
             {loading && articles.length > 0 && (
                 <div className="grid-status">
                     <div className="status-text">در حال بارگذاری...</div>
                 </div>
             )}
 
-            {!hasMore && articles.length > 0 && (
+            {!hasMore && articles.length > 0 && !error && (
                 <div className="grid-status">
                     <div className="status-text">همه اخبار نمایش داده شد</div>
                 </div>
