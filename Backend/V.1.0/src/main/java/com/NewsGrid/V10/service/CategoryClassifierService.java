@@ -20,8 +20,9 @@ public class CategoryClassifierService {
         eco.put("اقتصاد", 6); eco.put("قیمت", 5);  eco.put("گران", 5);
         eco.put("ارزان", 5);  eco.put("مالی", 6);   eco.put("سرمایه‌گذاری", 8);
         eco.put("تجارت", 7);  eco.put("بیمه", 6);   eco.put("گمرک", 7);
-        eco.put("ریال", 8);   eco.put("یورو", 8);   eco.put("طلا", 7);
+        eco.put("ریال", 8);   eco.put("یورو", 8);   eco.put("طلا", 9);
         eco.put("مسکن", 6);   eco.put("اشتغال", 6); eco.put("بیکاری", 7);
+        eco.put("خرید", 6);   eco.put("قسطی", 8);   eco.put("فروش", 6);
         CATEGORY_KEYWORDS.put("اقتصادی", eco);
 
         // ── سیاسی ──
@@ -34,6 +35,8 @@ public class CategoryClassifierService {
         pol.put("دیپلماسی", 9);   pol.put("سفیر", 8);      pol.put("سفارت", 8);
         pol.put("معاون", 7);      pol.put("استعفا", 9);    pol.put("رای", 8);
         pol.put("مذاکره", 8);     pol.put("توافق", 7);     pol.put("پارلمان", 9);
+        pol.put("ایران", 6);      pol.put("تکذیب", 8);     pol.put("تنگه هرمز", 10);
+        pol.put("موافقت", 6);     pol.put("بازگشایی", 6);  pol.put("نظامی", 8);
         CATEGORY_KEYWORDS.put("سیاسی", pol);
 
         // ── ورزشی ──
