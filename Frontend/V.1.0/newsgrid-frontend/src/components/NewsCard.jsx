@@ -1,15 +1,6 @@
 import { memo } from 'react';
-import api from '../api/axiosConfig';
 
 function NewsCard({ article, onOpen }) {
-
-    // OPTIMIZED: Prefetch article details on hover or touch start for 0ms load latency
-    const handlePrefetch = () => {
-        const slug = article.slug || article.id;
-        if (slug) {
-            api.get(`/articles/slug/${slug}`).catch(() => {});
-        }
-    };
 
     const getBadgeClass = (score) => {
         if (score >= 80) return 'green';
@@ -33,27 +24,27 @@ function NewsCard({ article, onOpen }) {
     const sourceCount = article.cluster?.sourceCount ?? 1;
     const badgeClass = getBadgeClass(score);
     const isBreaking = article.breaking;
-    const srcColor = article.source?.color || '#8E8E93';
+    const srcColor = article.source?.color || '#FF7A00';
     const srcInitials = article.source?.initials || article.source?.name?.substring(0, 2) || '?';
 
     return (
         <article
             className={`card ${isBreaking ? 'breaking' : ''}`}
             onClick={() => onOpen(article)}
-            onMouseEnter={handlePrefetch}
-            onTouchStart={handlePrefetch}
             role="button"
             tabIndex={0}
             aria-label={article.title}
             onKeyDown={(e) => e.key === 'Enter' && onOpen(article)}
         >
+            {/* نوار ویژه خبر فوری مطابقت با HTML ۶ */}
             {isBreaking && (
                 <div className="breaking-strip">
-                    <span className="pulse-dot" />
+                    <span className="pulse-dot" aria-hidden="true" />
                     خبر فوری
                 </div>
             )}
 
+            {/* بخش بالای کارت: منبع و آیکون محلی + درصد اعتبار */}
             <div className="card-top">
                 <span className="src-group">
                     <span
@@ -81,8 +72,10 @@ function NewsCard({ article, onOpen }) {
                 </div>
             </div>
 
+            {/* تیتر خبر */}
             <div className="card-title">{article.title}</div>
 
+            {/* بخش پایین کارت: زمان و آیکون خروجی */}
             <div className="card-bottom">
                 <span className="time">{formatTime(article.publishedAt)}</span>
                 <i className="ti ti-external-link ext" aria-hidden="true" />

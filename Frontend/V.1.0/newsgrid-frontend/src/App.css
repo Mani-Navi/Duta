@@ -188,23 +188,75 @@ a {
     padding: 14px 20px 60px;
 }
 
+/* ─── Exact Match with HTML 6 UI Design ───────────────── */
+
 .card {
     background: var(--card);
     border-radius: 18px;
     padding: 16px;
     cursor: pointer;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 6px 16px rgba(0,0,0,0.05);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    will-change: transform;
+    transition: transform 0.15s ease;
 }
 
-.card:hover { transform: translateY(-2px); }
+.card:hover {
+    transform: translateY(-2px);
+}
 
-.card-top {
+/* Breaking News Card Style */
+.card.breaking {
+    border: 1.5px solid rgba(225,29,72,0.4);
+    background: rgba(225,29,72,0.07);
+    border-radius: 14px;
+}
+
+.breaking-strip {
+    background: #E11D48;
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    padding: 6px 14px;
+    border-radius: 12.5px 12.5px 0 0;
+    margin: -16px -16px 12px -16px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
+    gap: 6px;
+}
+
+.pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+    animation: pulse 1.3s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.65); }
+}
+
+/* Source Group & Badge */
+.src-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.src-badge {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+    letter-spacing: 0.2px;
 }
 
 .source-label {
@@ -239,6 +291,9 @@ a {
     align-items: center;
     justify-content: space-between;
 }
+
+.time { font-size: 12px; color: var(--label-3); }
+.ext { font-size: 13px; color: var(--label-3); }
 
 .time { font-size: 12px; color: var(--label-3); }
 .ext { font-size: 13px; color: var(--label-3); }
