@@ -1223,3 +1223,13 @@ body.dark .price-chip.gold .chip-label { color: #facc15; }
     .logo-sub { font-size: 10.5px; }
     .logo-divider { height: 15px; }
 }
+
+/* ─── About Page Header Brand Logo ─────────────────── */
+.about-logo-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    user-select: none;
+}

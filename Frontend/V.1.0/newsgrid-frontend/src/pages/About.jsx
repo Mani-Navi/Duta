@@ -6,7 +6,15 @@ function About() {
     return (
         <div className="page-content">
             <div className="page-header">
-                <h1>{t.aboutTitle}</h1>
+                {/* جایگزینی لوگوی رسمی برندی Nitt به جای متن ساده */}
+                <div className="about-logo-header" dir="ltr" aria-label="Nitt — News in Bites">
+                    <span className="logo-text" style={{ fontSize: '36px' }}>
+                        N<span className="logo-dot">i</span>tt
+                    </span>
+                    <span className="logo-divider" style={{ height: '24px' }} />
+                    <span className="logo-sub" style={{ fontSize: '15px' }}>News in Bites</span>
+                </div>
+
                 <p>{t.aboutDesc}</p>
             </div>
 
