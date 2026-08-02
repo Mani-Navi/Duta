@@ -1174,32 +1174,32 @@ body.dark .price-chip.gold .chip-label { color: #facc15; }
     box-shadow: 0 6px 20px rgba(0, 122, 255, 0.45);
 }
 
-/* ─── Exact Match Nitt Logo: Left: Nitt | Divider | Right: News in Bites ─── */
+/* ─── Perfect Baseline Alignment for Nitt Logo & Subtitle ─── */
 
 .logo {
     display: flex;
-    align-items: center;
+    align-items: center; /* تراز تراز افقی دقیق در مرکز خط */
     gap: 10px;
     cursor: pointer;
     user-select: none;
+    height: 32px;
 }
 
-/* متن اصلی Nitt به رنگ مشکی/سفید اصلی */
 .logo-text {
     font-size: 26px;
     font-weight: 800;
     letter-spacing: -0.6px;
-    color: var(--label) !important; /* رنگ اصلی مشکی در لایت، سفید در دارک */
+    color: var(--label) !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    line-height: 1;
+    line-height: 1; /* حذف فاصله خطی بالا/پایین فونت */
+    display: flex;
+    align-items: center;
 }
 
-/* فقط نقطه حرف i به رنگ آبی برندی */
 .logo-dot {
     color: var(--blue) !important;
 }
 
-/* خط عمودی جداکننده */
 .logo-divider {
     width: 1px;
     height: 18px;
@@ -1207,17 +1207,19 @@ body.dark .price-chip.gold .chip-label { color: #facc15; }
     flex-shrink: 0;
 }
 
-/* عبارت News in Bites به رنگ مشکی/سفید اصلی سمت راست خط */
 .logo-sub {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
-    color: var(--label) !important; /* رنگ اصلی مشکی در لایت، سفید در دارک */
+    color: var(--label) !important;
     letter-spacing: 0.2px;
     white-space: nowrap;
+    line-height: 1; /* هم‌خط شدن کامل با Nitt */
+    display: flex;
+    align-items: center;
 }
 
 @media (max-width: 480px) {
     .logo-text { font-size: 22px; }
-    .logo-sub { font-size: 10px; }
+    .logo-sub { font-size: 10.5px; }
     .logo-divider { height: 15px; }
 }
