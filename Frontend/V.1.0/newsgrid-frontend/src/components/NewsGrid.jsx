@@ -3,8 +3,8 @@ import NewsCard from './NewsCard';
 import TelegramNewsCard from './TelegramNewsCard';
 import api from '../api/axiosConfig';
 
-// OPTIMIZED: Check for new breaking articles every 30 seconds (Fast polling)
-const AUTO_REFRESH_MS = 30 * 1000;
+// Reverted back to 5 minutes (300,000 ms) as requested
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
 
 function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     const [articles, setArticles] = useState([]);
