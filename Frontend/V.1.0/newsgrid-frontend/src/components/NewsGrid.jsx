@@ -1,13 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import NewsCard from './NewsCard';
 import TelegramNewsCard from './TelegramNewsCard';
+import NewsCardSkeleton from './NewsCardSkeleton';
 import api from '../api/axiosConfig';
 
-// Reverted back to 5 minutes (300,000 ms) as requested
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
+const CACHE_KEY = 'nitt_initial_articles_cache';
 
 function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
-    const [articles, setArticles] = useState([]);
+    // OPTIMIZED: Instant LCP - Initialize state from LocalStorage for 0ms initial render
+    const [articles, setArticles] = useState(() => {
+        if (!activeCategory && !searchKeyword) {
+            try {
+                const saved = localStorage.getItem(CACHE_KEY);
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+        return [];
+    });
+
     const [newCount, setNewCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -19,7 +32,9 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     const latestIdRef = useRef(null);
 
     useEffect(() => {
-        setArticles([]);
+        if (activeCategory || searchKeyword) {
+            setArticles([]);
+        }
         setPage(0);
         setHasMore(true);
         setNewCount(0);
@@ -66,6 +81,12 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                     if (validIds.length > 0) {
                         latestIdRef.current = Math.max(...validIds);
                     }
+                    // Save first page to LocalStorage for instant LCP on next visit
+                    if (page === 0 && !activeCategory && !searchKeyword) {
+                        try {
+                            localStorage.setItem(CACHE_KEY, JSON.stringify(nextList.slice(0, 15)));
+                        } catch (e) {}
+                    }
                 }
                 return nextList;
             });
@@ -82,13 +103,12 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         } finally {
             setLoading(false);
         }
-    }, [fetchUrl, hasMore, loading, page]);
+    }, [fetchUrl, hasMore, loading, page, activeCategory, searchKeyword]);
 
     useEffect(() => {
         fetchArticles();
     }, [page, activeCategory, searchKeyword, refreshKey]);
 
-    // OPTIMIZED: Polling every 30 seconds for immediate new news notification
     useEffect(() => {
         const interval = setInterval(async () => {
             if (!latestIdRef.current || document.hidden) return;
@@ -96,9 +116,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                 const res = await fetchUrl(0);
                 const rawList = Array.isArray(res.data) ? res.data : (res.data?.content || []);
                 const fresh = rawList.filter(a => Number(a.id) > Number(latestIdRef.current));
-                if (fresh.length > 0) {
-                    setNewCount(fresh.length);
-                }
+                if (fresh.length > 0) setNewCount(fresh.length);
             } catch (ignored) {}
         }, AUTO_REFRESH_MS);
         return () => clearInterval(interval);
@@ -134,12 +152,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         </div>
     );
 
-    if (!loading && articles.length === 0) return (
-        <div className="grid-status">
-            <div className="status-text">خبری یافت نشد</div>
-        </div>
-    );
-
     return (
         <>
             {newCount > 0 && (
@@ -164,9 +176,19 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                         </div>
                     );
                 })}
+
+                {/* Skeleton Loader only if articles array is completely empty */}
+                {loading && articles.length === 0 && (
+                    <>
+                        <NewsCardSkeleton />
+                        <NewsCardSkeleton />
+                        <NewsCardSkeleton />
+                        <NewsCardSkeleton />
+                    </>
+                )}
             </div>
 
-            {loading && (
+            {loading && articles.length > 0 && (
                 <div className="grid-status">
                     <div className="status-text">در حال بارگذاری...</div>
                 </div>
