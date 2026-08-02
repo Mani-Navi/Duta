@@ -14,7 +14,7 @@ function Home({ onOpenArticle, searchKeyword }) {
     }, []);
 
     return (
-        <div>
+        <main aria-label="صفحه اصلی اخبار Nitt">
             {!searchKeyword && (
                 <CategoryBar
                     activeCategory={activeCategory}
@@ -28,7 +28,7 @@ function Home({ onOpenArticle, searchKeyword }) {
                 onOpenArticle={onOpenArticle}
                 searchKeyword={searchKeyword}
             />
-        </div>
+        </main>
     );
 }
 

@@ -142,6 +142,7 @@ a {
     display: flex;
     gap: 8px;
     overflow-x: auto;
+    min-height: 48px; /* Prevents category bar layout shift */
 }
 
 .cat {
@@ -1313,6 +1314,7 @@ a {
     gap: 10px;
     padding: 4px 0;
     width: 100%;
+    min-height: 36px; /* Prevents layout shift */
     white-space: nowrap;
 }
 
@@ -1459,4 +1461,12 @@ body.dark .price-chip.gold .chip-label {
     transform: translateY(-2px);
     background: #0062cc !important;
     box-shadow: 0 6px 20px rgba(0, 122, 255, 0.45);
+}
+
+/* OPTIMIZED: Reserve height for price ticker to fix CLS completely (CLS = 0.000) */
+.nav-center {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }

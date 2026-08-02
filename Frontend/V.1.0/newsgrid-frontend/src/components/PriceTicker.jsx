@@ -21,22 +21,31 @@ function PriceTicker() {
         return () => clearInterval(interval);
     }, []);
 
-    if (!prices || prices.error) return null;
-
     return (
         <div className="price-ticker-wrapper" dir="rtl" aria-label="قیمت زنده دلار و طلا">
-            {prices.usd && (
+            {prices?.usd ? (
                 <div className="price-chip usd">
                     <span className="chip-label">دلار</span>
                     <span className="chip-value">{prices.usd.price}</span>
                     <span className="chip-unit">تومان</span>
                 </div>
+            ) : (
+                <div className="price-chip usd skeleton-chip" aria-hidden="true" style={{ opacity: 0.4 }}>
+                    <span className="chip-label">دلار</span>
+                    <span className="chip-value">---,---</span>
+                </div>
             )}
-            {prices.gold && (
+
+            {prices?.gold ? (
                 <div className="price-chip gold">
                     <span className="chip-label">طلا ۱۸ عیار</span>
                     <span className="chip-value">{prices.gold.price}</span>
                     <span className="chip-unit">تومان/گرم</span>
+                </div>
+            ) : (
+                <div className="price-chip gold skeleton-chip" aria-hidden="true" style={{ opacity: 0.4 }}>
+                    <span className="chip-label">طلا ۱۸ عیار</span>
+                    <span className="chip-value">-,---,---</span>
                 </div>
             )}
         </div>
