@@ -1173,3 +1173,36 @@ body.dark .price-chip.gold .chip-label { color: #facc15; }
     background: #0062cc !important;
     box-shadow: 0 6px 20px rgba(0, 122, 255, 0.45);
 }
+
+/* ─── Official Nitt Logo Typography & Subtitle ─────── */
+.logo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    cursor: pointer;
+    user-select: none;
+    line-height: 1.1;
+}
+
+.logo-text {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.6px;
+    color: var(--label);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* نقطه آبی‌رنگ روی حرف i */
+.logo-dot {
+    color: var(--blue);
+}
+
+/* زیرعنوان News in Bites */
+.logo-sub {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--label-2);
+    letter-spacing: 0.3px;
+    margin-top: 1px;
+    opacity: 0.8;
+}

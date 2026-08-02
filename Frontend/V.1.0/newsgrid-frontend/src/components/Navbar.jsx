@@ -52,15 +52,19 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <header className="navbar" ref={navRef}>
             <div className="nav-row">
+                {/* لوگوی جدید و رسمی Nitt با نقطه آبی‌رنگ و زیرعنوان News in Bites */}
                 <div
                     className="logo"
                     onClick={() => onNavigate('home')}
                     role="button"
                     tabIndex={0}
-                    aria-label="Nitt - صفحه اصلی"
+                    aria-label="Nitt - News in Bites"
                     onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
                 >
-                    Nitt
+                    <div className="logo-text">
+                        N<span className="logo-dot">i</span>tt
+                    </div>
+                    <span className="logo-sub">News in Bites</span>
                 </div>
 
                 <div className="nav-center">
@@ -69,7 +73,7 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
 
                 <div className="nav-right">
                     {!searchOpen && (
-                        <nav className="nav-links" aria-label="لینک‌های بالای صفحه">
+                        <nav className="nav-links" aria-label="لینک‌های هدر">
                             <a onClick={() => onNavigate('features')} role="button" tabIndex={0}>{t.features}</a>
                             <a onClick={() => onNavigate('credibility')} role="button" tabIndex={0}>{t.credibility}</a>
                             <a onClick={() => onNavigate('about')} role="button" tabIndex={0}>{t.about}</a>
