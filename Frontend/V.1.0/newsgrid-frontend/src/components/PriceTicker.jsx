@@ -26,14 +26,14 @@ function PriceTicker() {
     return (
         <div className="price-ticker-wrapper" dir="rtl" aria-label="قیمت زنده دلار و طلا">
             {prices.usd && (
-                <div className="price-chip">
+                <div className="price-chip usd">
                     <span className="chip-label">دلار</span>
                     <span className="chip-value">{prices.usd.price}</span>
                     <span className="chip-unit">تومان</span>
                 </div>
             )}
             {prices.gold && (
-                <div className="price-chip">
+                <div className="price-chip gold">
                     <span className="chip-label">طلا ۱۸ عیار</span>
                     <span className="chip-value">{prices.gold.price}</span>
                     <span className="chip-unit">تومان/گرم</span>

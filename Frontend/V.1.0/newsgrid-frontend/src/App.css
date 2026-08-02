@@ -1313,3 +1313,51 @@ body.dark .price-chip {
     .chip-label { font-size: 10.5px; }
     .chip-unit { font-size: 9.5px; }
 }
+
+/* ─── Glassmorphism Gold & Dollar Price Chips ──────── */
+
+/* دلار (سبز شیشه‌ای) */
+.price-chip.usd {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.price-chip.usd .chip-label {
+    color: #047857;
+}
+
+.dark .price-chip.usd,
+body.dark .price-chip.usd {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(52, 211, 153, 0.35);
+}
+
+.dark .price-chip.usd .chip-label,
+body.dark .price-chip.usd .chip-label {
+    color: #34d399;
+}
+
+/* طلا (طلایی شیشه‌ای) */
+.price-chip.gold {
+    background: rgba(234, 179, 8, 0.1);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.price-chip.gold .chip-label {
+    color: #b45309;
+}
+
+.dark .price-chip.gold,
+body.dark .price-chip.gold {
+    background: rgba(234, 179, 8, 0.15);
+    border-color: rgba(250, 204, 21, 0.35);
+}
+
+.dark .price-chip.gold .chip-label,
+body.dark .price-chip.gold .chip-label {
+    color: #facc15;
+}
