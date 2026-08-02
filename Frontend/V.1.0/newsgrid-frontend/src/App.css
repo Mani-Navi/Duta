@@ -1233,3 +1233,23 @@ body.dark .price-chip.gold .chip-label { color: #facc15; }
     margin-bottom: 14px;
     user-select: none;
 }
+
+/* ─── About Page "درباره Nitt" Header ──────────────── */
+.about-title-heading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    color: var(--label);
+}
+
+.logo-text-inline {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.6px;
+    color: var(--label) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}

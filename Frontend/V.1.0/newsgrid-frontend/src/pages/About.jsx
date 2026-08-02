@@ -6,14 +6,13 @@ function About() {
     return (
         <div className="page-content">
             <div className="page-header">
-                {/* جایگزینی لوگوی رسمی برندی Nitt به جای متن ساده */}
-                <div className="about-logo-header" dir="ltr" aria-label="Nitt — News in Bites">
-                    <span className="logo-text" style={{ fontSize: '36px' }}>
+                {/* ترکیب شیک عبارت «درباره» و لوگوی رسمی Nitt */}
+                <h1 className="about-title-heading">
+                    درباره{' '}
+                    <span className="logo-text-inline" dir="ltr" aria-label="Nitt">
                         N<span className="logo-dot">i</span>tt
                     </span>
-                    <span className="logo-divider" style={{ height: '24px' }} />
-                    <span className="logo-sub" style={{ fontSize: '15px' }}>News in Bites</span>
-                </div>
+                </h1>
 
                 <p>{t.aboutDesc}</p>
             </div>
