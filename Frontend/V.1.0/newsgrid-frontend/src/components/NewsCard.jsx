@@ -80,8 +80,7 @@ function NewsCard({ article, onOpen }) {
                 </div>
             </div>
 
-            {/* OPTIMIZED: Heading H3 for card titles (Lighthouse A11y & SEO) */}
-            <h3 className="card-title">{article.title}</h3>
+            <h2 className="card-title">{article.title}</h2>
 
             <div className="card-bottom">
                 <span className="time">{formatTime(article.publishedAt)}</span>

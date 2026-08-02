@@ -1,5 +1,4 @@
 function CategoryBar({ activeCategory, onSelectCategory }) {
-
     const CATEGORIES = [
         { label: 'همه', value: null },
         { label: 'اقتصادی', value: 'اقتصادی' },
@@ -10,40 +9,32 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
     ];
 
     return (
-        <div className="categories" role="tablist" aria-label="دسته‌بندی اخبار">
-            {/* دکمه خبر فوری */}
+        <nav className="categories" aria-label="دسته‌بندی اخبار">
             <button
-                className={`cat cat-breaking ${activeCategory === 'breaking' ? 'active-breaking' : ''}`}
+                className={`cat cat-breaking ${activeCategory === 'breaking' ? 'active' : ''}`}
                 onClick={() => onSelectCategory('breaking')}
-                role="tab"
-                aria-selected={activeCategory === 'breaking'}
-                aria-label="خبر فوری"
             >
                 <span className="pulse-dot" aria-hidden="true" />
                 خبر فوری
             </button>
 
-            {/* دکمه اختصاصی تلگرام */}
             <button
                 className={`cat ${activeCategory === 'telegram' ? 'active' : ''}`}
                 onClick={() => onSelectCategory('telegram')}
-                role="tab"
             >
                 کانال‌های تلگرام
             </button>
 
-            {/* دسته‌بندی‌های معمولی */}
             {CATEGORIES.map((cat, i) => (
                 <button
                     key={cat.value || i}
                     className={`cat ${activeCategory === cat.value ? 'active' : ''}`}
                     onClick={() => onSelectCategory(cat.value)}
-                    aria-selected={activeCategory === cat.value}
                 >
                     {cat.label}
                 </button>
             ))}
-        </div>
+        </nav>
     );
 }
 
