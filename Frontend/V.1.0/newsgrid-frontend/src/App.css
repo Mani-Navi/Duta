@@ -221,6 +221,17 @@ a {
     text-transform: uppercase;
     letter-spacing: 0.3px;
     color: var(--label-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* سه نقطه در صورت طولانی بودن نام منبع */
+}
+
+.src-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0; /* اجازه خلاصه شدن نام‌های طولانی */
+    flex: 1;
 }
 
 .badge {
@@ -1036,12 +1047,22 @@ a {
 }
 
 /* ─── Multi Source Badge ────────────────────────────── */
+.card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 10px;
+    flex-wrap: nowrap; /* جلوگیری از شکستن سطر */
+    gap: 8px;
+}
+
 .card-top-right {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-shrink: 0; /* قفل شدن در گوشه بالا بدون افتادن به سطر بعد */
 }
-
 .multi-source-badge {
     display: flex;
     align-items: center;
