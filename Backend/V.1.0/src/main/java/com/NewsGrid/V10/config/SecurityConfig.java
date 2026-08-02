@@ -18,6 +18,7 @@ public class SecurityConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        // OPTIMIZED: Restrict CORS strictly to verified Vercel production and local dev domains
         registry.addMapping("/api/**")
                 .allowedOriginPatterns(
                         "https://news-grid-pi.vercel.app",
@@ -37,11 +38,36 @@ public class SecurityConfig implements WebMvcConfigurer {
             public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
                     throws IOException, ServletException {
                 HttpServletResponse response = (HttpServletResponse) res;
-                response.setHeader("X-Content-Type-Options", "nosniff");
+
+                // 1. Anti-Clickjacking Protection
                 response.setHeader("X-Frame-Options", "DENY");
+
+                // 2. MIME Type Sniffing Prevention
+                response.setHeader("X-Content-Type-Options", "nosniff");
+
+                // 3. XSS Protection Filter
                 response.setHeader("X-XSS-Protection", "1; mode=block");
+
+                // 4. Strict Transport Security (HSTS - 1 Year)
+                response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+
+                // 5. Referrer Policy
                 response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-                response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+
+                // 6. Content Security Policy (CSP - OWASP ZAP Compliant)
+                response.setHeader("Content-Security-Policy",
+                        "default-src 'self'; " +
+                                "script-src 'self' 'unsafe-inline'; " +
+                                "style-src 'self' 'unsafe-inline'; " +
+                                "img-src 'self' data: https: http:; " +
+                                "font-src 'self' data: https:; " +
+                                "connect-src 'self' https://newsgrid-production-16cb.up.railway.app https://*.up.railway.app; " +
+                                "frame-ancestors 'none';");
+
+                // 7. Dynamic API Cache-Control (Prevent Stale Data Caching)
+                response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+                response.setHeader("Pragma", "no-cache");
+
                 chain.doFilter(req, res);
             }
         };
