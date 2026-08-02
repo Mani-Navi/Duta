@@ -118,9 +118,12 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
-                {/* OPTIMIZED: PriceTicker is now visible on BOTH Mobile and Desktop */}
-                <PriceTicker />
+                {/* قیمت دلار و طلا مخصوص موبایل */}
+                <div className="mobile-only" style={{ padding: '8px 0', background: 'var(--navbar-bg)' }}>
+                    <PriceTicker />
+                </div>
 
+                {/* هدر کامل دسکتاپ شامل لوگو، قیمت‌ها در وسط و لینک‌ها */}
                 <div className="desktop-only">
                     <Navbar
                         dark={dark} view={view}

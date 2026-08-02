@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import strings from '../strings/strings';
+import PriceTicker from './PriceTicker';
 
 function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     const t = strings.fa;
@@ -60,6 +61,11 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                     onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
                 >
                     Nitt
+                </div>
+
+                {/* قیمت طلا و دلار دقیقاً در وسط هدر دسکتاپ (مطابق تصویر اول) */}
+                <div className="nav-center">
+                    <PriceTicker />
                 </div>
 
                 <div className="nav-right">
