@@ -21,7 +21,7 @@ body {
     --navbar-bg: rgba(242,242,247,0.78);
 
     background: var(--bg);
-    font-family: 'Vazirmatn', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: var(--label);
     transition: background 0.2s, color 0.2s;
 }
@@ -976,7 +976,7 @@ a {
     .desktop-only { display: none;  }
 }
 
-/* OPTIMIZED: Eliminate Render-Blocking Font Delays */
+/* OPTIMIZED: Instant local font display with fallback */
 @font-face {
     font-family: 'Vazirmatn';
     font-display: swap;
