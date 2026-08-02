@@ -1,26 +1,22 @@
 import { useState, useEffect } from 'react';
 import CategoryBar from '../components/CategoryBar';
 import NewsGrid from '../components/NewsGrid';
-import strings from '../strings/strings';
-import api from "../api/axiosConfig.js";
+import api from '../api/axiosConfig';
 
-function Home({ lang, onOpenArticle, searchKeyword }) {
+function Home({ onOpenArticle, searchKeyword }) {
     const [activeCategory, setActiveCategory] = useState(null);
     const [categories, setCategories] = useState([]);
 
     useEffect(() => {
         api.get('/categories')
             .then(res => setCategories(res.data))
-            .catch(err => console.error(err));
+            .catch(err => console.error('Failed to load categories:', err));
     }, []);
-
-    const t = strings[lang];
 
     return (
         <div>
             {!searchKeyword && (
                 <CategoryBar
-                    lang={lang}
                     activeCategory={activeCategory}
                     onSelectCategory={setActiveCategory}
                     categories={categories}
@@ -28,7 +24,6 @@ function Home({ lang, onOpenArticle, searchKeyword }) {
             )}
 
             <NewsGrid
-                lang={lang}
                 activeCategory={activeCategory}
                 onOpenArticle={onOpenArticle}
                 searchKeyword={searchKeyword}

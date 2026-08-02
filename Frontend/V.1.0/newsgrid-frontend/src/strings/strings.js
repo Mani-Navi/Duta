@@ -10,7 +10,7 @@ const strings = {
         loading: "در حال بارگذاری...",
         error: "خطا در دریافت اخبار",
         featuresTitle: "ویژگی‌ها",
-        featuresDesc: "NewsGrid برای یک هدف ساخته شده: کمک به شما برای تشخیص خبر معتبر از شایعه، در کمترین زمان ممکن.",
+        featuresDesc: "Nitt برای یک هدف ساخته شده: کمک به شما برای تشخیص خبر معتبر از شایعه، در کمترین زمان ممکن.",
         featureList: [
             { icon: "ti-shield-check", title: "امتیاز اعتبار زنده", desc: "هر خبر به‌محض انتشار بر اساس تعداد و اعتبار منابعی که آن را پوشش داده‌اند، امتیازدهی می‌شود." },
             { icon: "ti-layout-grid", title: "مقایسه چند منبع", desc: "در صفحه‌ی هر خبر می‌بینید دقیقاً چه رسانه‌هایی آن را پوشش داده‌اند." },
@@ -34,82 +34,25 @@ const strings = {
             { title: "نمایش", desc: "یک امتیاز ساده و رنگی به شما نشان می‌دهد چقدر می‌توانید اعتماد کنید." }
         ],
         about: "درباره ما",
-        aboutTitle: "درباره NewsGrid",
+        aboutTitle: "درباره Nitt",
         aboutDesc: "پلتفرم تجمیع اخبار فارسی با امتیاز اعتبار.",
         aboutBlocks: [
             {
                 icon: "ti-target",
                 title: "هدف",
-                desc: "NewsGrid ساخته شده تا کاربران فارسی‌زبان بتوانند در کمترین زمان ممکن، اخبار معتبر را از شایعه تشخیص دهند."
+                desc: "Nitt ساخته شده تا کاربران فارسی‌زبان بتوانند در کمترین زمان ممکن، اخبار معتبر را از شایعه تشخیص دهند."
             },
             {
                 icon: "ti-refresh",
                 title: "به‌روزرسانی خودکار",
-                desc: "اخبار هر ۵ دقیقه از منابع معتبر جمع‌آوری می‌شوند و اخبار قدیمی‌تر از ۷ روز به‌صورت خودکار حذف می‌شوند."
+                desc: "اخبار هر ۵ دقیقه از منابع معتبر جمع‌آوری می‌شوند و اخبار قدیمی‌تر از ۳ روز به‌صورت خودکار حذف می‌شوند."
             }
         ],
         aboutContactTitle: "تماس با ما",
         aboutContactDesc: "باگ پیدا کردی؟ پیشنهادی داری؟ می‌خوای منبع جدیدی اضافه بشه؟ خوشحال می‌شیم بشنویم.",
         aboutEmail: "newsgrid.feedback@gmail.com",
-        aboutEmailSubject: "بازخورد NewsGrid",
+        aboutEmailSubject: "بازخورد Nitt",
         aboutTopics: ["گزارش باگ 🐛", "پیشنهاد ویژگی ✨", "افزودن منبع 📰", "همکاری 🤝"],
-    },
-
-    en: {
-        dir: 'ltr',
-        features: "Features",
-        credibility: "Credibility Score",
-        backLabel: "News",
-        categories: ["All", "World", "Politics", "Economy", "Sports", "Technology"],
-        sourcesCoveredBy: (n) => `Covered by ${n} sources`,
-        clickToRead: "Click on any source to read the full story",
-        loading: "Loading...",
-        error: "Error loading news",
-        featuresTitle: "Features",
-        featuresDesc: "NewsGrid is built for one purpose: helping you tell real news from rumor, as fast as possible.",
-        featureList: [
-            { icon: "ti-shield-check", title: "Live credibility score", desc: "Every story is scored the moment it breaks, based on how many credible sources cover it." },
-            { icon: "ti-layout-grid", title: "Multi-source comparison", desc: "On every story page, see exactly which outlets covered it." },
-            { icon: "ti-filter", title: "Category filters", desc: "Follow world, politics, economy, sports, and technology news separately." },
-            { icon: "ti-alert-triangle", title: "Rumor alerts", desc: "When a low-score story spreads fast, we flag it before you judge it as confirmed." },
-            { icon: "ti-history", title: "Verified news archive", desc: "Save and revisit the stories published with the highest credibility scores." },
-            { icon: "ti-search", title: "Smart search", desc: "Search any topic and see results with credibility score." }
-        ],
-        credTitle: "Credibility Score",
-        credDesc: "A quick, color-coded read — without needing to read the full story.",
-        credLevels: [
-            { cls: "green", title: "Verified", desc: "Three or more credible sources have independently covered this story." },
-            { cls: "orange", title: "Developing", desc: "Only one or two sources have covered it so far." },
-            { cls: "red", title: "Unverified", desc: "No known credible source has confirmed this story. Read with caution." }
-        ],
-        algoTitle: "How the algorithm works",
-        algoDesc: "Behind every credibility score is a transparent, three-step process.",
-        steps: [
-            { title: "Collect", desc: "The story is gathered from dozens of credible sources simultaneously." },
-            { title: "Analyze", desc: "We check source overlap and each outlet's track record." },
-            { title: "Display", desc: "A simple, color-coded score shows how much you can trust this story." }
-        ],
-        about: "About",
-        aboutTitle: "About NewsGrid",
-        aboutDesc: "A Persian news aggregation platform with credibility scoring.",
-        aboutBlocks: [
-            {
-                icon: "ti-target",
-                title: "Mission",
-                desc: "NewsGrid is built to help Persian-speaking users distinguish credible news from rumors in the shortest time possible."
-            },
-            {
-                icon: "ti-refresh",
-                title: "Auto Updates",
-                desc: "News is collected every 5 minutes from trusted sources. Articles older than 7 days are automatically removed."
-            }
-        ],
-        aboutContactTitle: "Get in Touch",
-        aboutContactDesc: "Found a bug? Have a suggestion? Want to add a new source? We'd love to hear from you.",
-        aboutEmail: "newsgrid.feedback@gmail.com",
-        aboutEmailSubject: "NewsGrid Feedback",
-        aboutTopics: ["Report a bug 🐛", "Suggest a feature ✨", "Add a source 📰", "Collaborate 🤝"],
-
     }
 };
 

@@ -1,8 +1,4 @@
-import strings from '../strings/strings';
-
-function CategoryBar({ lang, activeCategory, onSelectCategory }) {
-    const t = strings[lang];
-
+function CategoryBar({ activeCategory, onSelectCategory }) {
     const CATEGORIES = [
         { label: 'همه', value: null },
         { label: 'اقتصادی', value: 'اقتصادی' },
@@ -14,33 +10,31 @@ function CategoryBar({ lang, activeCategory, onSelectCategory }) {
 
     return (
         <div className="categories" role="tablist" aria-label="دسته‌بندی اخبار">
-            {/* دکمه خبر فوری */}
             <button
-                className={`cat cat-breaking ${activeCategory === 'breaking' ? 'active-breaking' : ''}`}
+                className={`cat cat-breaking ${activeCategory === 'breaking' ? 'active' : ''}`}
                 onClick={() => onSelectCategory('breaking')}
                 role="tab"
                 aria-selected={activeCategory === 'breaking'}
-                aria-label="خبر فوری"
             >
                 <span className="pulse-dot" aria-hidden="true" />
                 خبر فوری
             </button>
 
-            {/* دکمه اختصاصی تلگرام */}
             <button
                 className={`cat ${activeCategory === 'telegram' ? 'active' : ''}`}
                 onClick={() => onSelectCategory('telegram')}
                 role="tab"
+                aria-selected={activeCategory === 'telegram'}
             >
                 کانال‌های تلگرام
             </button>
 
-            {/* دسته‌بندی‌های معمولی */}
             {CATEGORIES.map((cat, i) => (
                 <button
                     key={cat.value || i}
                     className={`cat ${activeCategory === cat.value ? 'active' : ''}`}
                     onClick={() => onSelectCategory(cat.value)}
+                    role="tab"
                     aria-selected={activeCategory === cat.value}
                 >
                     {cat.label}

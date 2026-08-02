@@ -1,7 +1,7 @@
 import strings from '../strings/strings';
 
-function About({ lang }) {
-    const t = strings[lang];
+function About() {
+    const t = strings.fa;
 
     return (
         <div className="page-content">
@@ -10,7 +10,6 @@ function About({ lang }) {
                 <p>{t.aboutDesc}</p>
             </div>
 
-            {/* درباره پروژه */}
             <div className="about-section">
                 {t.aboutBlocks.map((block, i) => (
                     <div className="feature-card" key={i} style={{ marginBottom: '12px' }}>
@@ -23,7 +22,6 @@ function About({ lang }) {
                 ))}
             </div>
 
-            {/* تماس */}
             <div className="about-contact">
                 <div className="about-contact-title">{t.aboutContactTitle}</div>
                 <p className="about-contact-desc">{t.aboutContactDesc}</p>

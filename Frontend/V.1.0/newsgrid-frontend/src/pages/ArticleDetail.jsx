@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import strings from '../strings/strings';
 import api from '../api/axiosConfig';
 
-function ArticleDetail({ lang, article }) {
-    const t = strings[lang];
+function ArticleDetail({ article }) {
+    const t = strings.fa;
     const [clusterArticles, setClusterArticles] = useState([]);
     const [copied, setCopied] = useState(false);
 
@@ -15,7 +15,7 @@ function ArticleDetail({ lang, article }) {
                 .then(res => setClusterArticles(res.data.filter(a => a.id !== article.id)))
                 .catch(() => {});
         }
-    }, [article.id]);
+    }, [article.id, article.cluster?.id]);
 
     const getBadgeClass = (score) => {
         if (score >= 80) return 'green';
@@ -24,22 +24,16 @@ function ArticleDetail({ lang, article }) {
     };
 
     const getScoreLabel = (score) => {
-        if (score >= 80) return lang === 'fa' ? 'تأیید شده' : 'Verified';
-        if (score >= 50) return lang === 'fa' ? 'در حال بررسی' : 'Developing';
-        return lang === 'fa' ? 'نامعتبر' : 'Unverified';
+        if (score >= 80) return 'تأیید شده';
+        if (score >= 50) return 'در حال بررسی';
+        return 'نامعتبر';
     };
 
     const getScoreDesc = (score) => {
         const count = article.cluster?.sourceCount ?? 1;
-        if (score >= 80) return lang === 'fa'
-            ? `این خبر توسط ${count} منبع معتبر پوشش داده شده است.`
-            : `This story has been covered by ${count} credible sources.`;
-        if (score >= 50) return lang === 'fa'
-            ? 'این خبر هنوز توسط منابع بیشتری تأیید نشده است.'
-            : 'This story has not yet been confirmed by more sources.';
-        return lang === 'fa'
-            ? 'هیچ منبع معتبری این خبر را تأیید نکرده است.'
-            : 'No credible source has confirmed this story.';
+        if (score >= 80) return `این خبر توسط ${count} منبع معتبر پوشش داده شده است.`;
+        if (score >= 50) return 'این خبر هنوز توسط منابع بیشتری تأیید نشده است.';
+        return 'هیچ منبع معتبری این خبر را تأیید نکرده است.';
     };
 
     const getScoreColor = (score) => {
@@ -51,11 +45,12 @@ function ArticleDetail({ lang, article }) {
     const formatTime = (dateStr) => {
         if (!dateStr) return '';
         const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
-        if (diff < 60) return lang === 'fa' ? `${diff} دقیقه پیش` : `${diff} minutes ago`;
+        if (diff < 1) return 'همین الان';
+        if (diff < 60) return `${diff} دقیقه پیش`;
         const hours = Math.floor(diff / 60);
-        if (hours < 24) return lang === 'fa' ? `${hours} ساعت پیش` : `${hours} hours ago`;
+        if (hours < 24) return `${hours} ساعت پیش`;
         const days = Math.floor(hours / 24);
-        return lang === 'fa' ? `${days} روز پیش` : `${days} days ago`;
+        return `${days} روز پیش`;
     };
 
     const buildRing = (score, color) => {
@@ -63,14 +58,10 @@ function ArticleDetail({ lang, article }) {
         const circ = 2 * Math.PI * r;
         const fill = (score / 100) * circ;
         return (
-            <svg width="54" height="54" viewBox="0 0 54 54"
-                 style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={cx} cy={cy} r={r} fill="none"
-                        stroke="rgba(130,130,140,0.18)" strokeWidth="4" />
-                <circle cx={cx} cy={cy} r={r} fill="none"
-                        stroke={color} strokeWidth="4"
-                        strokeDasharray={`${fill} ${circ}`}
-                        strokeLinecap="round" />
+            <svg width="54" height="54" viewBox="0 0 54 54" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(130,130,140,0.18)" strokeWidth="4" />
+                <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth="4"
+                        strokeDasharray={`${fill} ${circ}`} strokeLinecap="round" />
             </svg>
         );
     };
@@ -83,7 +74,9 @@ function ArticleDetail({ lang, article }) {
 
     const shareNative = async () => {
         if (navigator.share) {
-            await navigator.share({ title: article.title, url: shareUrl });
+            try {
+                await navigator.share({ title: article.title, url: shareUrl });
+            } catch (ignored) {}
         } else {
             await copyLink();
         }
@@ -101,11 +94,31 @@ function ArticleDetail({ lang, article }) {
     const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
     const sourceCount = article.cluster?.sourceCount ?? 1;
     const scoreColor = getScoreColor(score);
-    const category = article.source?.category;
+    const categoryName = article.source?.category?.nameFa || article.category;
     const allSources = [article, ...clusterArticles];
+
+    // Structured JSON-LD Schema for Google News
+    const newsSchema = {
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        "headline": article.title,
+        "datePublished": article.publishedAt,
+        "author": {
+            "@type": "Organization",
+            "name": article.source?.name || "Nitt"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "Nitt",
+            "url": "https://news-grid-pi.vercel.app"
+        }
+    };
 
     return (
         <div className="detail-content">
+            <script type="application/ld+json">
+                {JSON.stringify(newsSchema)}
+            </script>
 
             {article.breaking && (
                 <div className="detail-breaking">
@@ -115,10 +128,8 @@ function ArticleDetail({ lang, article }) {
             )}
 
             <div className="detail-meta">
-                {category && (
-                    <span className="detail-category">
-                        {lang === 'fa' ? category.nameFa : category.nameEn}
-                    </span>
+                {categoryName && (
+                    <span className="detail-category">{categoryName}</span>
                 )}
                 <span className="detail-time">{formatTime(article.publishedAt)}</span>
             </div>
@@ -172,31 +183,31 @@ function ArticleDetail({ lang, article }) {
                 })}
             </div>
 
-            {/* نوار share */}
+            {/* نوار اشتراک‌گذاری */}
             <div className="share-inline-bar">
                 <span className="share-inline-label">اشتراک‌گذاری</span>
                 <div className="share-inline-btns">
-                    <button className="share-inline-btn" onClick={shareNative} aria-label="بیشتر">
+                    <button className="share-inline-btn" onClick={shareNative} aria-label="اشتراک‌گذاری همه‌جانبه">
                         <div className="share-inline-icon" style={{ background: '#007AFF' }}>
                             <i className="ti ti-share" />
                         </div>
                     </button>
-                    <button className="share-inline-btn" onClick={shareToTwitter} aria-label="توییتر">
+                    <button className="share-inline-btn" onClick={shareToTwitter} aria-label="اشتراک‌گذاری در توییتر">
                         <div className="share-inline-icon" style={{ background: '#000' }}>
                             <i className="ti ti-brand-x" />
                         </div>
                     </button>
-                    <button className="share-inline-btn" onClick={shareToWhatsApp} aria-label="واتساپ">
+                    <button className="share-inline-btn" onClick={shareToWhatsApp} aria-label="اشتراک‌گذاری در واتساپ">
                         <div className="share-inline-icon" style={{ background: '#25D366' }}>
                             <i className="ti ti-brand-whatsapp" />
                         </div>
                     </button>
-                    <button className="share-inline-btn" onClick={shareToTelegram} aria-label="تلگرام">
+                    <button className="share-inline-btn" onClick={shareToTelegram} aria-label="اشتراک‌گذاری در تلگرام">
                         <div className="share-inline-icon" style={{ background: '#2AABEE' }}>
                             <i className="ti ti-brand-telegram" />
                         </div>
                     </button>
-                    <button className="share-inline-btn" onClick={copyLink} aria-label="کپی لینک">
+                    <button className="share-inline-btn" onClick={copyLink} aria-label="کپی لینک خبر">
                         <div className="share-inline-icon" style={{ background: 'var(--chip-bg)', color: copied ? '#34C759' : 'var(--label)' }}>
                             <i className={`ti ${copied ? 'ti-check' : 'ti-link'}`} />
                         </div>

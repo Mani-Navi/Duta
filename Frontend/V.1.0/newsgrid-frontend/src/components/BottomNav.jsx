@@ -41,46 +41,61 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
         <>
             {searchOpen && (
                 <div className="bottom-search" role="search">
-                    <input autoFocus type="search" value={keyword}
-                           onChange={handleSearch}
-                           placeholder="جستجو در اخبار و منابع..."
-                           className="search-input"
-                           aria-label="جستجو در اخبار" />
+                    <input
+                        autoFocus
+                        type="search"
+                        value={keyword}
+                        onChange={handleSearch}
+                        placeholder="جستجو در اخبار و منابع..."
+                        className="search-input"
+                        aria-label="جستجو در اخبار"
+                    />
                 </div>
             )}
 
             <nav className="bottom-nav" aria-label="منوی پایین">
-                <button className={`bottom-nav-item ${activeView === 'home' ? 'active' : ''}`}
-                        onClick={() => { closeSearch(); onNavigate('home'); }}
-                        aria-label="خانه" aria-current={activeView === 'home' ? 'page' : undefined}>
+                <button
+                    className={`bottom-nav-item ${activeView === 'home' ? 'active' : ''}`}
+                    onClick={() => { closeSearch(); onNavigate('home'); }}
+                    aria-label="خانه"
+                >
                     <i className="ti ti-home" aria-hidden="true" />
                     <span>خانه</span>
                 </button>
 
-                <button className={`bottom-nav-item ${activeView === 'search' ? 'active' : ''}`}
-                        onClick={toggleSearch}
-                        aria-label={searchOpen ? 'بستن جستجو' : 'جستجو'}
-                        aria-expanded={searchOpen}>
+                <button
+                    className={`bottom-nav-item ${activeView === 'search' ? 'active' : ''}`}
+                    onClick={toggleSearch}
+                    aria-label={searchOpen ? 'بستن جستجو' : 'جستجو'}
+                    aria-expanded={searchOpen}
+                >
                     <i className={`ti ${searchOpen ? 'ti-x' : 'ti-search'}`} aria-hidden="true" />
                     <span>جستجو</span>
                 </button>
 
-                <button className={`bottom-nav-item ${activeView === 'features' ? 'active' : ''}`}
-                        onClick={() => { closeSearch(); onNavigate('features'); }}
-                        aria-label="ویژگی‌ها" aria-current={activeView === 'features' ? 'page' : undefined}>
+                <button
+                    className={`bottom-nav-item ${activeView === 'features' ? 'active' : ''}`}
+                    onClick={() => { closeSearch(); onNavigate('features'); }}
+                    aria-label="ویژگی‌ها"
+                >
                     <i className="ti ti-layout-grid" aria-hidden="true" />
                     <span>ویژگی‌ها</span>
                 </button>
 
-                <button className={`bottom-nav-item ${activeView === 'about' ? 'active' : ''}`}
-                        onClick={() => { closeSearch(); onNavigate('about'); }}
-                        aria-label="درباره" aria-current={activeView === 'about' ? 'page' : undefined}>
+                <button
+                    className={`bottom-nav-item ${activeView === 'about' ? 'active' : ''}`}
+                    onClick={() => { closeSearch(); onNavigate('about'); }}
+                    aria-label="درباره ما"
+                >
                     <i className="ti ti-info-circle" aria-hidden="true" />
                     <span>درباره</span>
                 </button>
 
-                <button className="bottom-nav-item" onClick={onToggleTheme}
-                        aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}>
+                <button
+                    className="bottom-nav-item"
+                    onClick={onToggleTheme}
+                    aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}
+                >
                     <i className={`ti ${dark ? 'ti-moon' : 'ti-sun'}`} aria-hidden="true" />
                     <span>{dark ? 'تاریک' : 'روشن'}</span>
                 </button>

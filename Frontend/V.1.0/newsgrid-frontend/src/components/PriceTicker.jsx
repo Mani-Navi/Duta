@@ -1,14 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../api/axiosConfig';
 
-function PriceTicker({ lang = 'fa' }) {
+function PriceTicker() {
     const [prices, setPrices] = useState(null);
 
     useEffect(() => {
         const fetchPrices = () => {
             if (document.hidden) return;
             api.get('/prices')
-                .then(res => setPrices(res.data))
+                .then(res => {
+                    if (res.data && !res.data.error) {
+                        setPrices(res.data);
+                    }
+                })
                 .catch(() => {});
         };
 
@@ -20,13 +24,12 @@ function PriceTicker({ lang = 'fa' }) {
     if (!prices || prices.error) return null;
 
     return (
-        <div className="price-ticker-capsules" dir="rtl">
+        <div className="price-ticker-capsules" dir="rtl" aria-label="قیمت زنده ارز و طلا">
             {prices.usd && (
                 <div className="price-capsule">
                     <span className="capsule-title">دلار آمریکا</span>
                     <span className="capsule-price">{prices.usd.price}</span>
                     <span className="capsule-unit">تومان</span>
-                    <span className="capsule-badge green-badge" dir="ltr">▲ 2.84%</span>
                 </div>
             )}
             {prices.gold && (
@@ -34,7 +37,6 @@ function PriceTicker({ lang = 'fa' }) {
                     <span className="capsule-title">طلا ۱۸ عیار</span>
                     <span className="capsule-price">{prices.gold.price}</span>
                     <span className="capsule-unit">تومان/گرم</span>
-                    <span className="capsule-badge green-badge" dir="ltr">▲ 3.03%</span>
                 </div>
             )}
         </div>

@@ -1,6 +1,15 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
+import api from '../api/axiosConfig';
 
-function NewsCard({ article, lang, onOpen }) {
+function NewsCard({ article, onOpen }) {
+
+    // OPTIMIZED: Prefetch article details on hover or touch start for 0ms load latency
+    const handlePrefetch = () => {
+        const slug = article.slug || article.id;
+        if (slug) {
+            api.get(`/articles/slug/${slug}`).catch(() => {});
+        }
+    };
 
     const getBadgeClass = (score) => {
         if (score >= 80) return 'green';
@@ -12,17 +21,14 @@ function NewsCard({ article, lang, onOpen }) {
         if (!dateStr) return '';
         const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
 
-        // ── برطرف شدن باگ عدد منفی ──
-        if (diff < 1) return lang === 'fa' ? 'همین الان' : 'just now';
-
-        if (diff < 60) return lang === 'fa' ? `${diff} دقیقه پیش` : `${diff} minutes ago`;
+        if (diff < 1) return 'همین الان';
+        if (diff < 60) return `${diff} دقیقه پیش`;
         const hours = Math.floor(diff / 60);
-        if (hours < 24) return lang === 'fa' ? `${hours} ساعت پیش` : `${hours} hours ago`;
+        if (hours < 24) return `${hours} ساعت پیش`;
         const days = Math.floor(hours / 24);
-        return lang === 'fa' ? `${days} روز پیش` : `${days} days ago`;
+        return `${days} روز پیش`;
     };
 
-    // امتیاز از cluster اگه وجود داشت، وگرنه از منبع
     const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
     const sourceCount = article.cluster?.sourceCount ?? 1;
     const badgeClass = getBadgeClass(score);
@@ -33,8 +39,9 @@ function NewsCard({ article, lang, onOpen }) {
     return (
         <article
             className={`card ${isBreaking ? 'breaking' : ''}`}
-            dir={lang === 'fa' ? 'rtl' : 'ltr'}
             onClick={() => onOpen(article)}
+            onMouseEnter={handlePrefetch}
+            onTouchStart={handlePrefetch}
             role="button"
             tabIndex={0}
             aria-label={article.title}
@@ -62,7 +69,6 @@ function NewsCard({ article, lang, onOpen }) {
                 </span>
 
                 <div className="card-top-right">
-                    {/* نشان چند منبع */}
                     {sourceCount > 1 && (
                         <span className="multi-source-badge">
                             <i className="ti ti-layers-intersect" aria-hidden="true" />

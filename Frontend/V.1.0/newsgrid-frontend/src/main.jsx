@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './App.css'
 import App from './App.jsx'
+
+// Local font imports (Fast & Pre-cached)
 import '@fontsource/vazirmatn/400.css';
 import '@fontsource/vazirmatn/600.css';
 import '@fontsource/vazirmatn/700.css';

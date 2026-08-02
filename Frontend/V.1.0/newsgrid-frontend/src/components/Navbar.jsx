@@ -1,9 +1,7 @@
-import strings from '../strings/strings';
 import { useState, useEffect, useRef } from 'react';
-import PriceTicker from './PriceTicker'; // ← اضافه شدن کامپوننت قیمت دلار و طلا
+import PriceTicker from './PriceTicker';
 
 function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
-    const t = strings['fa'];
     const [searchOpen, setSearchOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
     const navRef = useRef(null);
@@ -52,37 +50,46 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <nav className="navbar" aria-label="منوی اصلی" ref={navRef}>
             <div className="nav-row">
-                {/* تغییر لوگو به Nitt */}
-                <div className="logo" onClick={() => onNavigate('home')}
-                     role="button" tabIndex={0} aria-label="Nitt - صفحه اصلی">
+                <div
+                    className="logo"
+                    onClick={() => onNavigate('home')}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Nitt - صفحه اصلی"
+                    onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
+                >
                     Nitt
                 </div>
 
-                {/* جایگاه تمیز قیمت دلار و طلا در وسط هدر */}
                 <div className="nav-center">
-                    <PriceTicker lang="fa" />
+                    <PriceTicker />
                 </div>
 
                 <div className="nav-right">
                     {!searchOpen && (
                         <div className="nav-links" role="navigation">
-                            <a onClick={() => onNavigate('features')} role="button" tabIndex={0}>{t.features}</a>
-                            <a onClick={() => onNavigate('credibility')} role="button" tabIndex={0}>{t.credibility}</a>
-                            <a onClick={() => onNavigate('about')} role="button" tabIndex={0}>{t.about}</a>
+                            <a onClick={() => onNavigate('features')} role="button" tabIndex={0}>ویژگی‌ها</a>
+                            <a onClick={() => onNavigate('credibility')} role="button" tabIndex={0}>امتیاز اعتبار</a>
+                            <a onClick={() => onNavigate('about')} role="button" tabIndex={0}>درباره ما</a>
                         </div>
                     )}
 
                     <div className="nav-tools">
                         {view !== 'detail' && (
-                            <button className="tool-btn theme-toggle" onClick={toggleSearch}
-                                    aria-label={searchOpen ? 'بستن جستجو' : 'جستجو'}
-                                    aria-expanded={searchOpen}>
+                            <button
+                                className="tool-btn theme-toggle"
+                                onClick={toggleSearch}
+                                aria-label={searchOpen ? 'بستن جستجو' : 'جستجو'}
+                                aria-expanded={searchOpen}
+                            >
                                 {searchOpen ? '✕' : '🔍'}
                             </button>
                         )}
-                        <button className={`toggle-btn ${dark ? 'is-dark' : 'is-light'}`}
-                                onClick={onToggleTheme}
-                                aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}>
+                        <button
+                            className={`toggle-btn ${dark ? 'is-dark' : 'is-light'}`}
+                            onClick={onToggleTheme}
+                            aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}
+                        >
                             {dark ? '🌙' : '☀️'}
                         </button>
                     </div>
@@ -91,11 +98,15 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
 
             {searchOpen && (
                 <div className="search-bar" role="search">
-                    <input autoFocus type="search" value={keyword}
-                           onChange={handleSearch}
-                           placeholder="جستجو در اخبار و منابع..."
-                           className="search-input"
-                           aria-label="جستجو در اخبار" />
+                    <input
+                        autoFocus
+                        type="search"
+                        value={keyword}
+                        onChange={handleSearch}
+                        placeholder="جستجو در اخبار و منابع..."
+                        className="search-input"
+                        aria-label="جستجو در اخبار"
+                    />
                 </div>
             )}
         </nav>

@@ -5,15 +5,38 @@
   <link rel="icon" type="image/svg+xml" href="/newsgrid.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
-  <meta name="description" content="NewsGrid — پلتفرم تجمیع اخبار فارسی با امتیاز اعتبار. اخبار معتبر را از شایعه تشخیص دهید." />
-  <meta name="theme-color" content="#007AFF" />
-  <title>NewsGrid</title>
 
-  <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/tabler-icons.min.css"
-          crossorigin="anonymous"
-  >
+  <!-- SEO & Branding -->
+  <title>Nitt — خبرخوان هوشمند فارسی</title>
+  <meta name="description" content="Nitt — پلتفرم تجمیع و کلسترینگ هوشمند اخبار فارسی. اخبار معتبر را از شایعه و منابع مختلف در یک نگاه تشخیص دهید." />
+  <meta name="keywords" content="خبر, خبرخوان, پلتفرم خبری, Nitt, اخبار فوری, قیمت دلار, قیمت طلا, اخبار اقتصادی, اخبار سیاسی" />
+  <meta name="theme-color" content="#007AFF" />
+
+  <!-- Open Graph / Social Media (Telegram, WhatsApp, Twitter) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Nitt" />
+  <meta property="og:title" content="Nitt — خبرخوان هوشمند فارسی" />
+  <meta property="og:description" content="پلتفرم تجمیع اخبار فارسی با سنجش اعتبار منابع و کلسترینگ هوشمند اخبار مشابه." />
+  <meta property="og:locale" content="fa_IR" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Nitt — خبرخوان هوشمند فارسی" />
+  <meta name="twitter:description" content="پلتفرم تجمیع اخبار فارسی با سنجش اعتبار منابع." />
+
+  <!-- Preconnect to Backend API domain for faster network handshake -->
+  <link rel="preconnect" href="https://newsgrid-production-16cb.up.railway.app" crossorigin />
+
+  <!-- JSON-LD Structured Data for Google News & Search Engines -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Nitt",
+      "alternateName": "NewsGrid",
+      "url": "https://news-grid-pi.vercel.app",
+      "description": "پلتفرم تجمیع و کلسترینگ هوشمند اخبار فارسی"
+    }
+  </script>
 </head>
 <body>
 <div id="root"></div>

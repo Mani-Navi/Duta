@@ -1,60 +1,73 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
-import PriceTicker from './components/PriceTicker';
 import Home from './pages/Home';
-import About from './pages/About';
-import ArticleDetail from './pages/ArticleDetail';
-import Features from './pages/Features';
-import Credibility from './pages/Credibility';
+import ErrorBoundary from './components/ErrorBoundary';
 import api from './api/axiosConfig';
 import './App.css';
 
-// ── Wrapper برای ArticleDetail — article رو از API میگیره ──
-function ArticleDetailPage({ lang }) {
+// OPTIMIZED: Lazy loading non-critical routes to shrink initial JS bundle size
+const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
+const Features = lazy(() => import('./pages/Features'));
+const Credibility = lazy(() => import('./pages/Credibility'));
+const About = lazy(() => import('./pages/About'));
+
+function ArticleDetailPage() {
     const { slug } = useParams();
     const navigate = useNavigate();
     const [article, setArticle] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        api.get(`/articles/slug/${slug}`) // ← endpoint جدید
-            .then(res => setArticle(res.data))
-            .catch(() => navigate('/'))
+        setLoading(true);
+        api.get(`/articles/slug/${slug}`)
+            .then(res => {
+                setArticle(res.data);
+                if (res.data?.title) {
+                    document.title = `${res.data.title} | Nitt`;
+                }
+            })
+            .catch(() => {
+                navigate('/', { replace: true });
+            })
             .finally(() => setLoading(false));
-    }, [slug]);
 
-    if (loading) return (
-        <div className="grid-status">
-            <div className="status-text">در حال بارگذاری...</div>
-        </div>
-    );
+        return () => {
+            document.title = 'Nitt — خبرخوان هوشمند فارسی';
+        };
+    }, [slug, navigate]);
+
+    if (loading) {
+        return (
+            <div className="grid-status">
+                <div className="status-text">در حال بارگذاری خبر...</div>
+            </div>
+        );
+    }
 
     if (!article) return null;
 
     return (
         <>
             <div className="back-bar">
-                <button className="back-btn" onClick={() => navigate(-1)}>
+                <button className="back-btn" onClick={() => navigate(-1)} aria-label="بازگشت به اخبار">
                     <i className="ti ti-chevron-right" />
-                    اخبار
+                    بازگشت به اخبار
                 </button>
             </div>
-            <ArticleDetail lang={lang} article={article} />
+            <ArticleDetail article={article} />
         </>
     );
 }
 
-// ── App اصلی ──
 function AppLayout() {
     const navigate = useNavigate();
     const location = useLocation();
-    const lang = 'fa';
     const [dark, setDark] = useState(() =>
-        window.matchMedia("(prefers-color-scheme: dark)").matches);
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+    );
     const [searchKeyword, setSearchKeyword] = useState('');
-    const scrollPositionRef = useRef(0);
     const [restoreScroll, setRestoreScroll] = useState(null);
 
     const isDetail = location.pathname.startsWith('/article/');
@@ -75,12 +88,8 @@ function AppLayout() {
         navigate(`/article/${article.slug || article.id}`);
     };
 
-    const goHome = () => {
-        navigate('/');
-    };
-
     const handleNavigate = (v) => {
-        if (v === 'home') goHome();
+        if (v === 'home') navigate('/');
         else navigate(`/${v}`);
     };
 
@@ -91,7 +100,7 @@ function AppLayout() {
                     top: restoreScroll,
                     behavior: "instant"
                 });
-            }, 100);
+            }, 50);
 
             return () => clearTimeout(timer);
         }
@@ -107,38 +116,45 @@ function AppLayout() {
     }, [dark]);
 
     return (
-        <div>
-            <div className="desktop-only">
-                <Navbar
-                    lang={lang} dark={dark} view={view}
-                    onToggleTheme={() => setDark(prev => !prev)}
-                    onNavigate={handleNavigate}
-                    onSearch={handleSearch}
-                />
-            </div>
+        <ErrorBoundary>
+            <div>
+                <div className="desktop-only">
+                    <Navbar
+                        dark={dark} view={view}
+                        onToggleTheme={() => setDark(prev => !prev)}
+                        onNavigate={handleNavigate}
+                        onSearch={handleSearch}
+                    />
+                </div>
 
-            {/* Home همیشه mount هست — فقط مخفی میشه */}
-            <div style={{ display: view === 'home' ? 'block' : 'none' }}>
-                <Home lang={lang} onOpenArticle={openArticle} searchKeyword={searchKeyword} />
-            </div>
+                <div style={{ display: view === 'home' ? 'block' : 'none' }}>
+                    <Home onOpenArticle={openArticle} searchKeyword={searchKeyword} />
+                </div>
 
-            <Routes>
-                <Route path="/" element={null} />
-                <Route path="/article/:slug" element={<ArticleDetailPage lang={lang} />} />
-                <Route path="/features" element={<Features lang={lang} />} />
-                <Route path="/credibility" element={<Credibility lang={lang} />} />
-                <Route path="/about" element={<About lang={lang} />} />
-            </Routes>
+                <Suspense fallback={
+                    <div className="grid-status">
+                        <div className="status-text">در حال بارگذاری...</div>
+                    </div>
+                }>
+                    <Routes>
+                        <Route path="/" element={null} />
+                        <Route path="/article/:slug" element={<ArticleDetailPage />} />
+                        <Route path="/features" element={<Features />} />
+                        <Route path="/credibility" element={<Credibility />} />
+                        <Route path="/about" element={<About />} />
+                    </Routes>
+                </Suspense>
 
-            <div className="mobile-only">
-                <BottomNav
-                    view={view} dark={dark}
-                    onNavigate={handleNavigate}
-                    onSearch={handleSearch}
-                    onToggleTheme={() => setDark(prev => !prev)}
-                />
+                <div className="mobile-only">
+                    <BottomNav
+                        view={view} dark={dark}
+                        onNavigate={handleNavigate}
+                        onSearch={handleSearch}
+                        onToggleTheme={() => setDark(prev => !prev)}
+                    />
+                </div>
             </div>
-        </div>
+        </ErrorBoundary>
     );
 }
 

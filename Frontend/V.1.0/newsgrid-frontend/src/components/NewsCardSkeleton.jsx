@@ -1,8 +1,6 @@
-import React from 'react';
-
 const NewsCardSkeleton = () => {
     return (
-        <div className="card skeleton-card">
+        <div className="card skeleton-card" aria-hidden="true">
             <div className="card-top">
                 <div className="skeleton-badge shimmer" />
                 <div className="skeleton-title-line shimmer" style={{ width: '40%' }} />
