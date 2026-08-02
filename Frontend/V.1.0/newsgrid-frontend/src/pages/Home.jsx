@@ -10,7 +10,7 @@ function Home({ onOpenArticle, searchKeyword }) {
     useEffect(() => {
         api.get('/categories')
             .then(res => setCategories(res.data))
-            .catch(err => console.error('Failed to load categories:', err));
+            .catch(err => console.error(err));
     }, []);
 
     return (

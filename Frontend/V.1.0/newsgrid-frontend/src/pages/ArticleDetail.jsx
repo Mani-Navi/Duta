@@ -58,10 +58,14 @@ function ArticleDetail({ article }) {
         const circ = 2 * Math.PI * r;
         const fill = (score / 100) * circ;
         return (
-            <svg width="54" height="54" viewBox="0 0 54 54" style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(130,130,140,0.18)" strokeWidth="4" />
-                <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth="4"
-                        strokeDasharray={`${fill} ${circ}`} strokeLinecap="round" />
+            <svg width="54" height="54" viewBox="0 0 54 54"
+                 style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx={cx} cy={cy} r={r} fill="none"
+                        stroke="rgba(130,130,140,0.18)" strokeWidth="4" />
+                <circle cx={cx} cy={cy} r={r} fill="none"
+                        stroke={color} strokeWidth="4"
+                        strokeDasharray={`${fill} ${circ}`}
+                        strokeLinecap="round" />
             </svg>
         );
     };
@@ -129,7 +133,9 @@ function ArticleDetail({ article }) {
 
             <div className="detail-meta">
                 {categoryName && (
-                    <span className="detail-category">{categoryName}</span>
+                    <span className="detail-category">
+                        {categoryName}
+                    </span>
                 )}
                 <span className="detail-time">{formatTime(article.publishedAt)}</span>
             </div>
@@ -183,11 +189,11 @@ function ArticleDetail({ article }) {
                 })}
             </div>
 
-            {/* نوار اشتراک‌گذاری */}
+            {/* نوار share */}
             <div className="share-inline-bar">
                 <span className="share-inline-label">اشتراک‌گذاری</span>
                 <div className="share-inline-btns">
-                    <button className="share-inline-btn" onClick={shareNative} aria-label="اشتراک‌گذاری همه‌جانبه">
+                    <button className="share-inline-btn" onClick={shareNative} aria-label="اشتراک‌گذاری بیشتر">
                         <div className="share-inline-icon" style={{ background: '#007AFF' }}>
                             <i className="ti ti-share" />
                         </div>
