@@ -72,6 +72,18 @@ public class CategoryClassifierService {
         world.put("فرانسه", 7);    world.put("آلمان", 7);    world.put("انگلیس", 7);
         world.put("پوتین", 8);     world.put("ترامپ", 8);    world.put("بایدن", 8);
         CATEGORY_KEYWORDS.put("جهانی", world);
+
+        // ── سرگرمی (سینما، سریال و گیمینگ) ──
+        Map<String, Integer> ent = new HashMap<>();
+        ent.put("فیلم", 10);      ent.put("سریال", 10);     ent.put("سینما", 10);
+        ent.put("گیم", 9);        ent.put("بازی ویدئویی", 10); ent.put("گیمینگ", 9);
+        ent.put("پلی‌استیشن", 9); ent.put("پلی استیشن", 9); ent.put("ایکس باکس", 9);
+        ent.put("ps5", 10);      ent.put("xbox", 10);      ent.put("هالیوود", 8);
+        ent.put("اکران", 8);      ent.put("بازیگر", 8);     ent.put("کارگردان", 8);
+        ent.put("انیمیشن", 8);   ent.put("انیمه", 8);      ent.put("تریلر", 8);
+        ent.put("تیزر", 7);       ent.put("جشنواره", 7);    ent.put("اسکار", 10);
+        ent.put("استیم", 8);      ent.put("گیمر", 8);       ent.put("gta", 10);
+        CATEGORY_KEYWORDS.put("سرگرمی", ent);
     }
 
     public String classify(String title) {
