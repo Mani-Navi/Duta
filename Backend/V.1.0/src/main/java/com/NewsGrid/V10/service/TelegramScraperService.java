@@ -1,5 +1,6 @@
 package com.NewsGrid.V10.service;
 
+import com.NewsGrid.V10.config.ProxyConfig;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.entity.SourceType;
@@ -8,6 +9,7 @@ import com.NewsGrid.V10.repository.SourceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -31,6 +33,7 @@ public class TelegramScraperService {
     private final ClusteringService clusteringService;
     private final SlugService slugService;
     private final CategoryClassifierService categoryClassifier;
+    private final ProxyConfig proxyConfig;
 
     private static final Set<String> BREAKING_KEYWORDS = Set.of(
             "زلزله", "سیل", "آتش‌سوزی", "انفجار", "حمله", "جنگ", "بمب", "موشک",
@@ -55,12 +58,17 @@ public class TelegramScraperService {
             String cleanUsername = source.getTelegramUsername().replace("@", "").trim();
             String url = "https://t.me/s/" + cleanUsername;
 
-            Document doc = Jsoup.connect(url)
+            Connection jsoupConn = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36")
                     .header("Accept-Language", "fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7")
-                    .timeout(10000)
-                    .get();
+                    .timeout(10000);
 
+            // OPTIMIZED: Supports optional proxy connection
+            if (proxyConfig.isEnabled()) {
+                jsoupConn.proxy(proxyConfig.getProxy());
+            }
+
+            Document doc = jsoupConn.get();
             Elements posts = doc.select(".tgme_widget_message");
             int savedCount = 0;
 

@@ -1,5 +1,6 @@
 package com.NewsGrid.V10.service;
 
+import com.NewsGrid.V10.config.ProxyConfig;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.entity.SourceType;
@@ -36,6 +37,7 @@ public class RssFetcherService {
     private final SlugService slugService;
     private final CategoryClassifierService categoryClassifier;
     private final Executor rssTaskExecutor;
+    private final ProxyConfig proxyConfig;
 
     public RssFetcherService(
             SourceRepository sourceRepository,
@@ -43,13 +45,15 @@ public class RssFetcherService {
             ClusteringService clusteringService,
             SlugService slugService,
             CategoryClassifierService categoryClassifier,
-            @Qualifier("rssTaskExecutor") Executor rssTaskExecutor) {
+            @Qualifier("rssTaskExecutor") Executor rssTaskExecutor,
+            ProxyConfig proxyConfig) {
         this.sourceRepository = sourceRepository;
         this.articleRepository = articleRepository;
         this.clusteringService = clusteringService;
         this.slugService = slugService;
         this.categoryClassifier = categoryClassifier;
         this.rssTaskExecutor = rssTaskExecutor;
+        this.proxyConfig = proxyConfig;
     }
 
     private static final Set<String> BREAKING_KEYWORDS = Set.of(
@@ -83,7 +87,6 @@ public class RssFetcherService {
 
             log.info("Starting Parallel RSS fetch cycle for {} sources...", sources.size());
 
-            // OPTIMIZED: Added 20s timeout per future using Spring Executor
             List<CompletableFuture<Void>> futures = sources.stream()
                     .map(source -> CompletableFuture.runAsync(() -> fetchSingleRssSource(source), rssTaskExecutor)
                             .orTimeout(20, TimeUnit.SECONDS)
@@ -116,7 +119,9 @@ public class RssFetcherService {
         long startTime = System.currentTimeMillis();
         try {
             URL feedUrl = new URL(source.getRssUrl());
-            HttpURLConnection conn = (HttpURLConnection) feedUrl.openConnection();
+
+            // OPTIMIZED: Supports optional proxy connection seamlessly
+            HttpURLConnection conn = (HttpURLConnection) feedUrl.openConnection(proxyConfig.getProxy());
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36");
             conn.setRequestProperty("Accept", "text/xml, application/xml, application/rss+xml, */*");
             conn.setConnectTimeout(5000);
