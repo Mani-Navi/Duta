@@ -75,7 +75,7 @@ public class CategoryClassifierService {
 
         // ── سرگرمی (سینما، سریال و گیمینگ) ──
         Map<String, Integer> ent = new HashMap<>();
-        ent.put("فیلم", 10);      ent.put("سریال", 10);     ent.put("سینما", 10);
+        ent.put("فیلم سینمایی", 10);      ent.put("سریال", 10);     ent.put("سینما", 10);
         ent.put("گیم", 9);        ent.put("بازی ویدئویی", 10); ent.put("گیمینگ", 9);
         ent.put("پلی‌استیشن", 9); ent.put("پلی استیشن", 9); ent.put("ایکس باکس", 9);
         ent.put("ps5", 10);      ent.put("xbox", 10);      ent.put("هالیوود", 8);
