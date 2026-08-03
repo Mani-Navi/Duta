@@ -9,7 +9,6 @@ import org.springframework.web.client.RestTemplate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -36,123 +35,73 @@ public class PriceService {
         }
 
         try {
-            Map<String, Object> result = fetchFromBonbast();
+            Map<String, Object> result = fetchLivePricesFromTgju();
             if (!result.isEmpty()) {
                 cachedPrices = result;
                 lastFetch = Instant.now();
                 return cachedPrices;
             }
         } catch (Exception e) {
-            log.error("PriceService fetch error: {}", e.getMessage());
+            log.warn("PriceService live fetch error: {}", e.getMessage());
         }
 
-        if (cachedPrices != null) return cachedPrices;
+        if (cachedPrices != null) {
+            return cachedPrices;
+        }
 
-        // Return fallback price if Bonbast blocks datacenter IP temporarily
-        Map<String, Object> fallback = new HashMap<>();
-        Map<String, String> usd = new HashMap<>();
-        usd.put("price", "61,200");
-        usd.put("label", "دلار");
-        fallback.put("usd", usd);
-
-        Map<String, String> gold = new HashMap<>();
-        gold.put("price", "3,450,000");
-        gold.put("label", "طلا (۱۸ عیار)");
-        fallback.put("gold", gold);
-
-        fallback.put("updatedAt", Instant.now().toString());
-        return fallback;
+        return Map.of("error", "داده‌ای در دسترس نیست");
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, Object> fetchFromBonbast() throws Exception {
-        HttpHeaders h1 = new HttpHeaders();
-        // BUGFIX: Chrome 122 full User-Agent & Accept headers to bypass Bonbast Cloudflare anti-bot
-        h1.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-        h1.set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
-        h1.set("Accept-Language", "fa,en-US;q=0.9,en;q=0.8");
-
-        ResponseEntity<String> mainResp = restTemplate.exchange(
-                "https://bonbast.com", HttpMethod.GET, new HttpEntity<>(h1), String.class);
-
-        String html = mainResp.getBody();
-
-        List<String> setCookies = mainResp.getHeaders().get("Set-Cookie");
-        StringBuilder cookieHeader = new StringBuilder();
-        if (setCookies != null) {
-            for (String c : setCookies) {
-                if (cookieHeader.length() > 0) cookieHeader.append("; ");
-                cookieHeader.append(c.split(";")[0]);
-            }
-        }
-
-        String param = extractParam(html);
-        if (param == null) return new HashMap<>();
-
-        HttpHeaders h2 = new HttpHeaders();
-        h2.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        h2.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-        h2.set("Referer", "https://bonbast.com/");
-        h2.set("X-Requested-With", "XMLHttpRequest");
-        if (cookieHeader.length() > 0) {
-            h2.set("Cookie", cookieHeader.toString());
-        }
-
-        HttpEntity<String> postEntity = new HttpEntity<>("param=" + param, h2);
-        ResponseEntity<Map> jsonResp = restTemplate.exchange(
-                "https://bonbast.com/json", HttpMethod.POST, postEntity, Map.class);
-
-        Map<String, Object> raw = jsonResp.getBody();
-        if (raw == null || raw.containsKey("reset") || raw.containsKey("rest")) {
-            return new HashMap<>();
-        }
-
-        return parseResponse(raw);
-    }
-
-    private String extractParam(String html) {
-        if (html == null) return null;
-        String[] markers = {"param: \"", "param:\"", "param: '", "param:'"};
-        for (String marker : markers) {
-            int idx = html.indexOf(marker);
-            if (idx != -1) {
-                int start = idx + marker.length();
-                char quote = marker.endsWith("\"") ? '"' : '\'';
-                int end = html.indexOf(quote, start);
-                if (end != -1) return html.substring(start, end);
-            }
-        }
-        return null;
-    }
-
-    private Map<String, Object> parseResponse(Map<String, Object> raw) {
-        Map<String, Object> result = new HashMap<>();
-        addItem(result, raw, "usd", "دلار", new String[]{"usd1", "usd"});
-        addItem(result, raw, "gold", "طلا (۱۸ عیار)", new String[]{"gol18", "gold18", "gold"});
-        result.put("updatedAt", Instant.now().toString());
-        return result;
-    }
-
-    private void addItem(Map<String, Object> result, Map<String, Object> raw,
-                         String key, String label, String[] candidates) {
-        for (String candidate : candidates) {
-            Object val = raw.get(candidate);
-            if (val != null) {
-                Map<String, String> entry = new HashMap<>();
-                entry.put("price", formatPrice(val.toString()));
-                entry.put("label", label);
-                result.put(key, entry);
-                return;
-            }
-        }
-    }
-
-    private String formatPrice(String raw) {
+    private Map<String, Object> fetchLivePricesFromTgju() {
         try {
-            long num = Long.parseLong(raw.replaceAll("[^0-9]", ""));
-            return String.format("%,d", num);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36");
+            headers.set("Accept", "application/json, text/plain, */*");
+            headers.set("Referer", "https://www.tgju.org/");
+
+            // Official TGJU Live Market Feed
+            String url = "https://call.tgju.org/ajax.json";
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+
+            Map<String, Object> raw = response.getBody();
+            if (raw == null || raw.isEmpty()) return new HashMap<>();
+
+            Map<String, Object> result = new HashMap<>();
+
+            // Extract Live Dollar Price
+            if (raw.containsKey("price_dollar_rl")) {
+                Map<String, Object> dollarData = (Map<String, Object>) raw.get("price_dollar_rl");
+                if (dollarData != null && dollarData.containsKey("p")) {
+                    String rawPrice = dollarData.get("p").toString().replaceAll("[^0-9]", "");
+                    long tomanPrice = Long.parseLong(rawPrice) / 10; // Convert Rial to Toman
+                    Map<String, String> usd = new HashMap<>();
+                    usd.put("price", String.format("%,d", tomanPrice));
+                    usd.put("label", "دلار");
+                    result.put("usd", usd);
+                }
+            }
+
+            // Extract Live 18K Gold Price
+            if (raw.containsKey("geram18")) {
+                Map<String, Object> goldData = (Map<String, Object>) raw.get("geram18");
+                if (goldData != null && goldData.containsKey("p")) {
+                    String rawPrice = goldData.get("p").toString().replaceAll("[^0-9]", "");
+                    long tomanPrice = Long.parseLong(rawPrice) / 10; // Convert Rial to Toman
+                    Map<String, String> gold = new HashMap<>();
+                    gold.put("price", String.format("%,d", tomanPrice));
+                    gold.put("label", "طلا (۱۸ عیار)");
+                    result.put("gold", gold);
+                }
+            }
+
+            result.put("updatedAt", Instant.now().toString());
+            return result;
+
         } catch (Exception e) {
-            return raw;
+            log.error("Failed to fetch live prices from TGJU: {}", e.getMessage());
+            return new HashMap<>();
         }
     }
 }
