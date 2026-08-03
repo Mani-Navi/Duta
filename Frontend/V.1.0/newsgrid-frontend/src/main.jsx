@@ -4,11 +4,8 @@ import { BrowserRouter } from 'react-router-dom'
 import './App.css'
 import App from './App.jsx'
 
-// OPTIMIZED: Local font import from node_modules (No external Google network delay)
-import '@fontsource/vazirmatn/400.css';
-import '@fontsource/vazirmatn/600.css';
-import '@fontsource/vazirmatn/700.css';
-import '@fontsource/vazirmatn/800.css';
+// Local Vazirmatn font import (v5 Fontsource)
+import '@fontsource/vazirmatn';
 import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 
 createRoot(document.getElementById('root')).render(
