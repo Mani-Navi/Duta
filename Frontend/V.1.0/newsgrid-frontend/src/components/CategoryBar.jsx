@@ -6,11 +6,11 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
         { label: 'ورزشی', value: 'ورزشی' },
         { label: 'تکنولوژی', value: 'تکنولوژی' },
         { label: 'جهانی', value: 'جهانی' },
+        { label: 'سرگرمی', value: 'سرگرمی' },
     ];
 
     return (
         <nav className="categories" aria-label="دسته‌بندی اخبار">
-            {/* دکمه خبر فوری */}
             <button
                 className={`cat cat-breaking ${activeCategory === 'breaking' ? 'active' : ''}`}
                 onClick={() => onSelectCategory('breaking')}
@@ -19,7 +19,6 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
                 خبر فوری
             </button>
 
-            {/* دکمه اختصاصی و خاص تلگرام با آیکون هواپیما */}
             <button
                 className={`cat cat-telegram ${activeCategory === 'telegram' ? 'active' : ''}`}
                 onClick={() => onSelectCategory('telegram')}
@@ -28,7 +27,6 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
                 کانال‌های تلگرام
             </button>
 
-            {/* دسته‌بندی‌های معمولی */}
             {CATEGORIES.map((cat, i) => (
                 <button
                     key={cat.value || i}
