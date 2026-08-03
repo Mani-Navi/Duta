@@ -10,16 +10,12 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
-      }
+    minify: 'esbuild',
+    esbuild: {
+      drop: ['console', 'debugger'] // OPTIMIZED: Built-in fast esbuild minification
     },
     rollupOptions: {
       output: {
-        // OPTIMIZED: Function-based manualChunks for Rolldown & Rollup compatibility
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
