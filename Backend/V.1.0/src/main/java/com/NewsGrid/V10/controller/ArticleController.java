@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.concurrent.CompletableFuture;
@@ -29,7 +28,6 @@ public class ArticleController {
     private final ArticleRepository articleRepository;
     private final CategoryClassifierService categoryClassifier;
 
-    // OPTIMIZED: Max page size safeguard to prevent memory overload (DoS protection)
     private static final int MAX_PAGE_SIZE = 100;
 
     @GetMapping("/fetch-now")
@@ -110,26 +108,28 @@ public class ArticleController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        // BUGFIX: Pass page argument correctly (3 arguments expected)
         return articleService.searchArticles(keyword, page, safeSize);
     }
 
-    // OPTIMIZED: Batch reclassification to prevent Memory Leak / OOM Crash
-    @Async
     @GetMapping("/reclassify")
     public String reclassify() {
-        int page = 0;
-        Page<Article> articlePage;
+        CompletableFuture.runAsync(() -> {
+            int page = 0;
+            Page<Article> articlePage;
 
-        do {
-            articlePage = articleRepository.findAll(PageRequest.of(page, 100));
-            articlePage.getContent().forEach(article -> {
-                article.setCategory(categoryClassifier.classify(article.getTitle(), article.getSource()));
-            });
-            articleRepository.saveAll(articlePage.getContent());
-            page++;
-        } while (articlePage.hasNext());
+            do {
+                articlePage = articleRepository.findAll(PageRequest.of(page, 100));
+                articlePage.getContent().forEach(article -> {
+                    article.setCategory(categoryClassifier.classify(article.getTitle(), article.getSource()));
+                });
+                articleRepository.saveAll(articlePage.getContent());
+                page++;
+            } while (articlePage.hasNext());
 
-        log.info("Batch reclassification of all articles completed.");
-        return "done";
+            log.info("Batch reclassification of all articles completed successfully.");
+        });
+
+        return "started";
     }
 }
