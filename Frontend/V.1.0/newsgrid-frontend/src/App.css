@@ -1358,3 +1358,40 @@ body.dark .card.telegram-news-card.breaking {
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
     animation: pulse 1.2s ease-in-out infinite;
 }
+
+/* ─── Telegram Branded Special Category Pill Style ──── */
+
+.cat-telegram {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(42, 171, 238, 0.12) !important;
+    color: #0088cc !important;
+    border: 1px solid rgba(42, 171, 238, 0.28) !important;
+    font-weight: 700 !important;
+    transition: all 0.2s ease !important;
+}
+
+.cat-telegram:hover {
+    background: rgba(42, 171, 238, 0.2) !important;
+}
+
+.cat-telegram.active {
+    background: #2AABEE !important;
+    color: #ffffff !important;
+    border-color: #2AABEE !important;
+    box-shadow: 0 4px 14px rgba(42, 171, 238, 0.35) !important;
+}
+
+.dark .cat-telegram,
+body.dark .cat-telegram {
+    background: rgba(42, 171, 238, 0.16) !important;
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.3) !important;
+}
+
+.dark .cat-telegram.active,
+body.dark .cat-telegram.active {
+    background: #2AABEE !important;
+    color: #ffffff !important;
+}

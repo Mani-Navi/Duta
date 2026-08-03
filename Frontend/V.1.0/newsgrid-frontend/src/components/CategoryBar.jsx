@@ -10,6 +10,7 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
 
     return (
         <nav className="categories" aria-label="دسته‌بندی اخبار">
+            {/* دکمه خبر فوری */}
             <button
                 className={`cat cat-breaking ${activeCategory === 'breaking' ? 'active' : ''}`}
                 onClick={() => onSelectCategory('breaking')}
@@ -18,13 +19,16 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
                 خبر فوری
             </button>
 
+            {/* دکمه اختصاصی و خاص تلگرام با آیکون هواپیما */}
             <button
-                className={`cat ${activeCategory === 'telegram' ? 'active' : ''}`}
+                className={`cat cat-telegram ${activeCategory === 'telegram' ? 'active' : ''}`}
                 onClick={() => onSelectCategory('telegram')}
             >
+                <i className="ti ti-brand-telegram" aria-hidden="true" style={{ fontSize: '15px' }} />
                 کانال‌های تلگرام
             </button>
 
+            {/* دسته‌بندی‌های معمولی */}
             {CATEGORIES.map((cat, i) => (
                 <button
                     key={cat.value || i}
