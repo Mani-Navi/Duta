@@ -126,7 +126,7 @@ function ArticleDetail({ article }) {
 
             {article.breaking && (
                 <div className="detail-breaking">
-                    <span className="pulse-dot" />
+                    <span className="pulse-dot" aria-hidden="true" />
                     خبر فوری
                 </div>
             )}

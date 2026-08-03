@@ -1331,3 +1331,30 @@ body.dark .nitt-spinner {
 body.dark .card.telegram-news-card.breaking {
     background: rgba(225, 29, 72, 0.12) !important;
 }
+
+/* ─── Ultra-Sleek Glowing Breaking News Pill Badge ─── */
+
+.detail-breaking {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #E11D48 0%, #BE123C 100%);
+    color: #ffffff !important;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 6px 14px;
+    border-radius: 99px;
+    box-shadow: 0 4px 14px rgba(225, 29, 72, 0.4);
+    letter-spacing: 0.2px;
+    width: fit-content;
+    margin-bottom: 14px;
+}
+
+.detail-breaking .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+    animation: pulse 1.2s ease-in-out infinite;
+}
