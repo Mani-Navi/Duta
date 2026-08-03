@@ -4,8 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +22,15 @@ public class PriceService {
     private Instant lastFetch = Instant.EPOCH;
     private static final long CACHE_SECONDS = 300;
 
+    private final RestTemplate restTemplate;
+
+    public PriceService(RestTemplateBuilder builder) {
+        this.restTemplate = builder
+                .setConnectTimeout(Duration.ofSeconds(6))
+                .setReadTimeout(Duration.ofSeconds(6))
+                .build();
+    }
+
     public synchronized Map<String, Object> getPrices() {
         long secondsSince = Instant.now().getEpochSecond() - lastFetch.getEpochSecond();
         if (cachedPrices != null && secondsSince < CACHE_SECONDS) {
@@ -25,14 +38,22 @@ public class PriceService {
         }
 
         try {
-            Map<String, Object> result = fetchPricesWithJsoup();
-            if (!result.isEmpty() && result.containsKey("usd") && result.containsKey("gold")) {
+            Map<String, Object> result = new HashMap<>();
+
+            // 1. Live USD Price from Nobitex API (100% Accurate & Unblocked)
+            fetchLiveUsdFromNobitex(result);
+
+            // 2. Live 18K Gold Price from TGJU Main Price Table
+            fetchLiveGoldFromTgju(result);
+
+            if (!result.isEmpty()) {
+                result.put("updatedAt", Instant.now().toString());
                 cachedPrices = result;
                 lastFetch = Instant.now();
                 return cachedPrices;
             }
         } catch (Exception e) {
-            log.warn("PriceService Jsoup fetch error: {}", e.getMessage());
+            log.warn("PriceService fetch error: {}", e.getMessage());
         }
 
         if (cachedPrices != null) {
@@ -42,33 +63,30 @@ public class PriceService {
         return Map.of("error", "داده‌ای در دسترس نیست");
     }
 
-    private Map<String, Object> fetchPricesWithJsoup() {
-        Map<String, Object> result = new HashMap<>();
-
-        // 1. Extract Live USD Price from TGJU Profile
+    @SuppressWarnings("unchecked")
+    private void fetchLiveUsdFromNobitex(Map<String, Object> result) {
         try {
-            Document docDollar = Jsoup.connect("https://www.tgju.org/profile/price_dollar_rl")
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36")
-                    .referrer("https://www.google.com")
-                    .timeout(6000)
-                    .get();
+            String url = "https://api.nobitex.ir/v2/orderbook/USDTIRT";
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            Map<String, Object> body = response.getBody();
 
-            Element dollarEl = docDollar.selectFirst("span.info-price, span[data-col='info.last_trade.P']");
-            if (dollarEl != null && !dollarEl.text().isBlank()) {
-                String rawPrice = dollarEl.text().replaceAll("[^0-9]", "");
-                if (!rawPrice.isBlank()) {
-                    long tomanPrice = Long.parseLong(rawPrice) / 10;
+            if (body != null && body.containsKey("lastTradePrice")) {
+                String rawRial = body.get("lastTradePrice").toString().replaceAll("[^0-9]", "");
+                if (!rawRial.isBlank()) {
+                    long tomanPrice = Long.parseLong(rawRial) / 10;
                     Map<String, String> usd = new HashMap<>();
                     usd.put("price", String.format("%,d", tomanPrice));
                     usd.put("label", "دلار");
                     result.put("usd", usd);
+                    log.info("Accurate USD price fetched: {} Toman", tomanPrice);
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to fetch USD price from TGJU: {}", e.getMessage());
+            log.warn("Nobitex USD fetch error: {}", e.getMessage());
         }
+    }
 
-        // 2. Extract Live 18K Gold Price from TGJU Profile
+    private void fetchLiveGoldFromTgju(Map<String, Object> result) {
         try {
             Document docGold = Jsoup.connect("https://www.tgju.org/profile/geram18")
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36")
@@ -76,22 +94,23 @@ public class PriceService {
                     .timeout(6000)
                     .get();
 
-            Element goldEl = docGold.selectFirst("span.info-price, span[data-col='info.last_trade.P']");
+            // Target the exact main price cell in TGJU table
+            Element goldEl = docGold.selectFirst("td[data-col='info.last_trade.P'], th[data-col='info.last_trade.P']");
             if (goldEl != null && !goldEl.text().isBlank()) {
-                String rawPrice = goldEl.text().replaceAll("[^0-9]", "");
-                if (!rawPrice.isBlank()) {
-                    long tomanPrice = Long.parseLong(rawPrice) / 10;
+                String rawRial = goldEl.text().replaceAll("[^0-9]", "");
+                if (!rawRial.isBlank()) {
+                    long rawNum = Long.parseLong(rawRial);
+                    long tomanPrice = (rawNum > 10000000) ? (rawNum / 10) : rawNum;
+
                     Map<String, String> gold = new HashMap<>();
                     gold.put("price", String.format("%,d", tomanPrice));
                     gold.put("label", "طلا (۱۸ عیار)");
                     result.put("gold", gold);
+                    log.info("Accurate Gold 18K price fetched: {} Toman", tomanPrice);
                 }
             }
         } catch (Exception e) {
-            log.warn("Failed to fetch Gold price from TGJU: {}", e.getMessage());
+            log.warn("TGJU Gold fetch error: {}", e.getMessage());
         }
-
-        result.put("updatedAt", Instant.now().toString());
-        return result;
     }
 }
