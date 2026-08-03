@@ -48,7 +48,8 @@ public class Article {
     @Column(length = 50)
     private String category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // BUGFIX: FetchType.EAGER prevents JSON serialization no-session error
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cluster_id")
     @JsonIgnoreProperties({"articles", "hibernateLazyInitializer"})
     private ArticleCluster cluster;
