@@ -4,8 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './App.css'
 import App from './App.jsx'
 
-// Local Vazirmatn font import (v5 Fontsource)
-import '@fontsource/vazirmatn';
+// Tabler Icons Webfont
 import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 
 createRoot(document.getElementById('root')).render(
