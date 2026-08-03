@@ -1320,3 +1320,14 @@ body.dark .nitt-spinner {
     font-weight: 600;
     color: var(--label-2);
 }
+
+/* ─── Telegram Breaking News Theme ──────────────────── */
+.card.telegram-news-card.breaking {
+    border: 1.5px solid rgba(225, 29, 72, 0.5) !important;
+    background: rgba(225, 29, 72, 0.06) !important;
+}
+
+.dark .card.telegram-news-card.breaking,
+body.dark .card.telegram-news-card.breaking {
+    background: rgba(225, 29, 72, 0.12) !important;
+}

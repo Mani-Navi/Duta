@@ -13,12 +13,22 @@ const TelegramNewsCard = ({ article, onOpen }) => {
         return date.toLocaleDateString('fa-IR');
     };
 
+    const isBreaking = article.breaking;
     const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
     const sourceCount = article.cluster?.sourceCount ?? 1;
     const badgeClass = score >= 80 ? 'green' : score >= 50 ? 'yellow' : 'red';
 
     return (
-        <article className="card telegram-news-card" onClick={() => onOpen(article)}>
+        <article className={`card telegram-news-card ${isBreaking ? 'breaking' : ''}`} onClick={() => onOpen(article)}>
+            {/* نوار خبر فوری ویژه کارت‌های تلگرام */}
+            {isBreaking && (
+                <div className="breaking-strip">
+                    <span className="pulse-dot" aria-hidden="true" />
+                    خبر فوری
+                </div>
+            )}
+
+            {/* هدر کارت تلگرامی */}
             <div className="telegram-header">
                 <div className="telegram-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
@@ -44,10 +54,12 @@ const TelegramNewsCard = ({ article, onOpen }) => {
                 </div>
             </div>
 
+            {/* تیتر خبر */}
             <div className="telegram-content">
-                <p className="telegram-text">{article.title}</p>
+                <h3 className="telegram-text">{article.title}</h3>
             </div>
 
+            {/* فوتر کارت */}
             <div
                 className="telegram-footer"
                 style={{
