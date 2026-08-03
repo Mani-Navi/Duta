@@ -10,12 +10,9 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
-    minify: 'esbuild',
-    esbuild: {
-      drop: ['console', 'debugger'] // OPTIMIZED: Built-in fast esbuild minification
-    },
     rollupOptions: {
       output: {
+        // OPTIMIZED: Clean manualChunks compatible with all Vite versions
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
