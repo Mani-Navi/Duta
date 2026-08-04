@@ -42,6 +42,9 @@ public class TelegramScraperService {
 
     @Scheduled(fixedRate = 300000)
     public void fetchRecentPosts() {
+        // ── غیرفعال‌سازی موقت تلگرام (جهت آزادکنندگی ۱۰۰٪ حافظه و CPU) ──
+        if (true) return;
+
         List<Source> telegramSources = sourceRepository.findBySourceType(SourceType.TELEGRAM);
 
         for (Source source : telegramSources) {
@@ -58,7 +61,6 @@ public class TelegramScraperService {
             String cleanUsername = source.getTelegramUsername().replace("@", "").trim();
             String url = "https://t.me/s/" + cleanUsername;
 
-            // BUGFIX: Added Accept, Referrer and redirect settings to prevent Connection refused on VPS
             Connection jsoupConn = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
                     .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
@@ -68,7 +70,6 @@ public class TelegramScraperService {
                     .ignoreHttpErrors(true)
                     .timeout(10000);
 
-            // OPTIMIZED: Supports optional proxy connection
             if (proxyConfig.isEnabled()) {
                 jsoupConn.proxy(proxyConfig.getProxy());
             }
