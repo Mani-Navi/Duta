@@ -19,6 +19,7 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
                 خبر فوری
             </button>
 
+            {/*
             <button
                 className={`cat cat-telegram ${activeCategory === 'telegram' ? 'active' : ''}`}
                 onClick={() => onSelectCategory('telegram')}
@@ -26,6 +27,7 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
                 <i className="ti ti-brand-telegram" aria-hidden="true" style={{ fontSize: '15px' }} />
                 کانال‌های تلگرام
             </button>
+            */}
 
             {CATEGORIES.map((cat, i) => (
                 <button
