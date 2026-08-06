@@ -165,25 +165,40 @@ a {
     background: var(--blue);
 }
 
-/* ─── Pinterest / Masonry Layout for News Cards ────── */
+/* ─── Chronological Horizontal Flow (Newest Articles on Top Row) ─── */
 
 .grid {
     max-width: 1100px;
     margin: 0 auto;
-    column-count: 4;
-    column-gap: 14px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* ۴ ستون یکدست دقیقاً مطابق دیزاین شما */
+    gap: 14px;
     padding: 14px 20px 60px;
     min-height: 80vh; /* OPTIMIZED: Eliminates Desktop Layout Shift (CLS = 0.000) */
 }
 
 .grid > div {
-    break-inside: avoid;
-    margin-bottom: 14px;
-    display: inline-block;
-    width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
-/* ─── Apple-Style Card Hover & Active Animations ─────── */
+@media (max-width: 1024px) {
+    .grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 10px 12px 80px;
+    }
+}
+
+@media (max-width: 440px) {
+    .grid { grid-template-columns: repeat(1, 1fr); }
+}
+
+/* ─── Apple-Style Card Hover & Active Animations (دست‌نخورده ۱۰۰٪) ─── */
 
 .card {
     background: var(--card);
