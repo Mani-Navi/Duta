@@ -1,10 +1,8 @@
 package com.NewsGrid.V10.controller;
 
 import com.NewsGrid.V10.entity.Article;
-import com.NewsGrid.V10.entity.ArticleCluster;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.entity.SourceType;
-import com.NewsGrid.V10.repository.ArticleClusterRepository;
 import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.service.*;
 import lombok.RequiredArgsConstructor;
@@ -27,8 +25,6 @@ public class ArticleController {
     private final TelegramScraperService telegramScraperService;
     private final ArticleRepository articleRepository;
     private final CategoryClassifierService categoryClassifier;
-    private final ScoringService scoringService;
-    private final ArticleClusterRepository articleClusterRepository;
 
     private static final int MAX_PAGE_SIZE = 100;
 
@@ -50,41 +46,6 @@ public class ArticleController {
             }
         });
 
-        return "started";
-    }
-
-    @GetMapping("/reclassify")
-    public String reclassify() {
-        CompletableFuture.runAsync(() -> {
-            int page = 0;
-            Page<Article> articlePage;
-
-            do {
-                articlePage = articleRepository.findAll(PageRequest.of(page, 100));
-                articlePage.getContent().forEach(article -> {
-                    article.setCategory(categoryClassifier.classify(article.getTitle(), article.getSource()));
-                });
-                articleRepository.saveAll(articlePage.getContent());
-                page++;
-            } while (articlePage.hasNext());
-
-            log.info("Batch reclassification of all articles completed successfully.");
-        });
-
-        return "started";
-    }
-
-    // UNIQUE PATH: /rescore-clusters (Bypasses old cache)
-    @GetMapping("/rescore-clusters")
-    public String rescoreClusters() {
-        CompletableFuture.runAsync(() -> {
-            List<ArticleCluster> clusters = articleClusterRepository.findAll();
-            clusters.forEach(cluster -> {
-                cluster.setCredibilityScore(scoringService.calculateClusterScore(cluster));
-            });
-            articleClusterRepository.saveAll(clusters);
-            log.info("Rescored all {} clusters with Bayesian formula.", clusters.size());
-        });
         return "started";
     }
 
@@ -113,7 +74,7 @@ public class ArticleController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        return articleService.getArticlesByCategory(name, page, safeSize );
+        return articleService.getArticlesByCategory(name, page, safeSize);
     }
 
     @GetMapping("/breaking")
@@ -124,16 +85,7 @@ public class ArticleController {
         return articleService.getBreakingArticles(page, safeSize);
     }
 
-    @GetMapping("/search")
-    public Page<Article> search(
-            @RequestParam String keyword,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        return articleService.searchArticles(keyword, page, safeSize);
-    }
-
-    @GetMapping("/{id:\\d+}")
+    @GetMapping("/{id}")
     public Article getArticleById(@PathVariable Long id) {
         return articleService.getArticleById(id);
     }
@@ -143,8 +95,39 @@ public class ArticleController {
         return articleService.getArticleBySlug(slug);
     }
 
-    @GetMapping("/{id:\\d+}/source")
+    @GetMapping("/{id}/source")
     public Source getArticleSource(@PathVariable Long id) {
         return articleService.getArticleSource(id);
+    }
+
+    @GetMapping("/search")
+    public Page<Article> search(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        // BUGFIX: Pass page argument correctly (3 arguments expected)
+        return articleService.searchArticles(keyword, page, safeSize);
+    }
+
+    @GetMapping("/reclassify")
+    public String reclassify() {
+        CompletableFuture.runAsync(() -> {
+            int page = 0;
+            Page<Article> articlePage;
+
+            do {
+                articlePage = articleRepository.findAll(PageRequest.of(page, 100));
+                articlePage.getContent().forEach(article -> {
+                    article.setCategory(categoryClassifier.classify(article.getTitle(), article.getSource()));
+                });
+                articleRepository.saveAll(articlePage.getContent());
+                page++;
+            } while (articlePage.hasNext());
+
+            log.info("Batch reclassification of all articles completed successfully.");
+        });
+
+        return "started";
     }
 }
