@@ -20,11 +20,11 @@ public class ClusteringService {
 
     private final ArticleClusterRepository clusterRepository;
     private final ArticleRepository articleRepository;
+    private final ScoringService scoringService; // ← تزریق سرویس امتیازدهی بایزین
 
     private static final double SIMILARITY_THRESHOLD = 0.25;
     private static final int CLUSTER_WINDOW_HOURS = 6;
 
-    // OPTIMIZED: Pre-compiled regex pattern for tokenization (Prevents CPU overhead)
     private static final Pattern CLEAN_PATTERN = Pattern.compile("[،.؟!٪«»()\\[\\]،:؛]");
 
     private static final Set<String> STOP_WORDS = Set.of(
@@ -73,7 +73,8 @@ public class ClusteringService {
             cluster.setRepresentativeTitle(article.getTitle());
         }
 
-        cluster.setCredibilityScore(calculateScore(cluster));
+        // OPTIMIZED: Use Bayesian ScoringService
+        cluster.setCredibilityScore(scoringService.calculateClusterScore(cluster));
         clusterRepository.save(cluster);
     }
 
@@ -89,26 +90,6 @@ public class ClusteringService {
 
         article.setCluster(cluster);
         articleRepository.save(article);
-    }
-
-    private int calculateScore(ArticleCluster cluster) {
-        List<Article> articles = articleRepository.findByCluster(cluster);
-        if (articles.isEmpty()) return 0;
-
-        int maxCredibility = articles.stream()
-                .mapToInt(a -> a.getSource() != null ? a.getSource().getCredibility() : 50)
-                .max()
-                .orElse(0);
-
-        int sourceBonus = Math.min(30, (cluster.getSourceCount() - 1) * 10);
-
-        long hoursOld = java.time.Duration.between(
-                cluster.getCreatedAt(), ZonedDateTime.now(ZoneOffset.UTC)
-        ).toHours();
-        int freshnessScore = hoursOld < 2 ? 10 : 0;
-
-        int total = (int)(maxCredibility * 0.6) + sourceBonus + freshnessScore;
-        return Math.min(100, total);
     }
 
     private double jaccardSimilarity(Set<String> a, Set<String> b) {

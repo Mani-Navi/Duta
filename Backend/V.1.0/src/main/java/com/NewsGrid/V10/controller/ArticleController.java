@@ -1,19 +1,19 @@
 package com.NewsGrid.V10.controller;
 
 import com.NewsGrid.V10.entity.Article;
+import com.NewsGrid.V10.entity.ArticleCluster;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.entity.SourceType;
+import com.NewsGrid.V10.repository.ArticleClusterRepository;
 import com.NewsGrid.V10.repository.ArticleRepository;
-import com.NewsGrid.V10.service.ArticleService;
-import com.NewsGrid.V10.service.CategoryClassifierService;
-import com.NewsGrid.V10.service.RssFetcherService;
-import com.NewsGrid.V10.service.TelegramScraperService;
+import com.NewsGrid.V10.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -27,6 +27,8 @@ public class ArticleController {
     private final TelegramScraperService telegramScraperService;
     private final ArticleRepository articleRepository;
     private final CategoryClassifierService categoryClassifier;
+    private final ScoringService scoringService;
+    private final ArticleClusterRepository articleClusterRepository;
 
     private static final int MAX_PAGE_SIZE = 100;
 
@@ -130,6 +132,20 @@ public class ArticleController {
             log.info("Batch reclassification of all articles completed successfully.");
         });
 
+        return "started";
+    }
+
+    // Temporary endpoint to recalculate scores for existing clusters with Bayesian formula
+    @GetMapping("/rescore")
+    public String rescore() {
+        CompletableFuture.runAsync(() -> {
+            List<ArticleCluster> clusters = articleClusterRepository.findAll();
+            clusters.forEach(cluster -> {
+                cluster.setCredibilityScore(scoringService.calculateClusterScore(cluster));
+            });
+            articleClusterRepository.saveAll(clusters);
+            log.info("Rescored all {} clusters with Bayesian formula.", clusters.size());
+        });
         return "started";
     }
 }
