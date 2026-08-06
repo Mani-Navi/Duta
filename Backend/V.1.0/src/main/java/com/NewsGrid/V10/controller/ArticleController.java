@@ -53,7 +53,6 @@ public class ArticleController {
         return "started";
     }
 
-    // BUGFIX: Static routes /reclassify and /rescore must be placed ABOVE /{id}
     @GetMapping("/reclassify")
     public String reclassify() {
         CompletableFuture.runAsync(() -> {
@@ -108,7 +107,7 @@ public class ArticleController {
     }
 
     @GetMapping("/category")
-    public Page<Article> getgetByCategory(
+    public Page<Article> getByCategory(
             @RequestParam String name,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -133,8 +132,8 @@ public class ArticleController {
         return articleService.searchArticles(keyword, page, safeSize);
     }
 
-    // Wildcard paths placed at the end to prevent path collision
-    @GetMapping("/{id}")
+    // BUGFIX: Added regex constraint {id:\d+} to force numeric matching only (Prevents String path collision)
+    @GetMapping("/{id:\\d+}")
     public Article getArticleById(@PathVariable Long id) {
         return articleService.getArticleById(id);
     }
@@ -144,7 +143,7 @@ public class ArticleController {
         return articleService.getArticleBySlug(slug);
     }
 
-    @GetMapping("/{id}/source")
+    @GetMapping("/{id:\\d+}/source")
     public Source getArticleSource(@PathVariable Long id) {
         return articleService.getArticleSource(id);
     }
