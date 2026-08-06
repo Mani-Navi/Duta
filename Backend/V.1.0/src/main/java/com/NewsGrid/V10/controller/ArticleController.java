@@ -74,8 +74,9 @@ public class ArticleController {
         return "started";
     }
 
-    @GetMapping("/rescore")
-    public String rescore() {
+    // UNIQUE PATH: /rescore-clusters (Bypasses old cache)
+    @GetMapping("/rescore-clusters")
+    public String rescoreClusters() {
         CompletableFuture.runAsync(() -> {
             List<ArticleCluster> clusters = articleClusterRepository.findAll();
             clusters.forEach(cluster -> {
@@ -112,7 +113,7 @@ public class ArticleController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        return articleService.getArticlesByCategory(name, page, safeSize);
+        return articleService.getArticlesByCategory(name, page, safeSize );
     }
 
     @GetMapping("/breaking")
@@ -132,7 +133,6 @@ public class ArticleController {
         return articleService.searchArticles(keyword, page, safeSize);
     }
 
-    // BUGFIX: Added regex constraint {id:\d+} to force numeric matching only (Prevents String path collision)
     @GetMapping("/{id:\\d+}")
     public Article getArticleById(@PathVariable Long id) {
         return articleService.getArticleById(id);
