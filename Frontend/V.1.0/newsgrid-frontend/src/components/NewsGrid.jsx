@@ -8,7 +8,6 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000;
 const CACHE_KEY = 'nitt_initial_articles_cache';
 
 function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
-    // Initialize state
     const [articles, setArticles] = useState(() => {
         if (!activeCategory && !searchKeyword) {
             try {
@@ -27,11 +26,24 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [columnCount, setColumnCount] = useState(() => (window.innerWidth <= 440 ? 1 : window.innerWidth <= 768 ? 2 : window.innerWidth <= 1024 ? 3 : 4));
 
     const observer = useRef(null);
     const latestIdRef = useRef(null);
 
-    // OPTIMIZED: Always clear articles on ANY category switch (including 'all' / null) to show Skeleton Loader
+    // Dynamic column count listener on resize
+    useEffect(() => {
+        const handleResize = () => {
+            const w = window.innerWidth;
+            if (w <= 440) setColumnCount(1);
+            else if (w <= 768) setColumnCount(2);
+            else if (w <= 1024) setColumnCount(3);
+            else setColumnCount(4);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     useEffect(() => {
         setArticles([]);
         setPage(0);
@@ -97,7 +109,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
 
         } catch (err) {
             console.error("Error fetching articles:", err);
-            setError("خطا در دریافت اخبار. لطفاً اتصال شبکه را بررسی کنید.");
+            setError("خطا در دریافت اخبار");
         } finally {
             setLoading(false);
         }
@@ -150,17 +162,21 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         if (node) observer.current.observe(node);
     }, [loading, hasMore]);
 
-    if (error && articles.length === 0) {
-        return (
-            <div className="retry-container">
-                <div className="status-text error">{error}</div>
-                <button className="retry-btn" onClick={loadNewArticles}>
-                    <i className="ti ti-refresh" />
-                    تلاش مجدد
-                </button>
-            </div>
-        );
-    }
+    // OPTIMIZED: Distribute articles into columns in Round-Robin order for RTL Masonry
+    const columns = Array.from({ length: columnCount }, () => []);
+    articles.forEach((article, index) => {
+        columns[index % columnCount].push({ article, index });
+    });
+
+    if (error && articles.length === 0) return (
+        <div className="retry-container">
+            <div className="status-text error">{error}</div>
+            <button className="retry-btn" onClick={loadNewArticles}>
+                <i className="ti ti-refresh" />
+                تلاش مجدد
+            </button>
+        </div>
+    );
 
     return (
         <>
@@ -171,28 +187,33 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                 </div>
             )}
 
-            <div className="grid">
-                {articles.map((article, index) => {
-                    const isLast = index === articles.length - 1;
-                    const isTelegram = article.source?.sourceType === 'TELEGRAM';
+            {/* RTL Chronological Masonry Grid */}
+            <div className="masonry-grid" dir="rtl">
+                {columns.map((colArticles, colIdx) => (
+                    <div key={colIdx} className="masonry-col">
+                        {colArticles.map(({ article, index }) => {
+                            const isLast = index === articles.length - 1;
+                            const isTelegram = article.source?.sourceType === 'TELEGRAM';
 
-                    return (
-                        <div key={article.id || index} ref={isLast ? lastCardRef : null}>
-                            {isTelegram ? (
-                                <TelegramNewsCard article={article} onOpen={onOpenArticle} />
-                            ) : (
-                                <NewsCard article={article} onOpen={onOpenArticle} />
-                            )}
-                        </div>
-                    );
-                })}
+                            return (
+                                <div key={article.id || index} ref={isLast ? lastCardRef : null}>
+                                    {isTelegram ? (
+                                        <TelegramNewsCard article={article} onOpen={onOpenArticle} />
+                                    ) : (
+                                        <NewsCard article={article} onOpen={onOpenArticle} />
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                ))}
 
                 {loading && articles.length === 0 && (
                     <>
-                        <NewsCardSkeleton />
-                        <NewsCardSkeleton />
-                        <NewsCardSkeleton />
-                        <NewsCardSkeleton />
+                        <div className="masonry-col"><NewsCardSkeleton /><NewsCardSkeleton /></div>
+                        <div className="masonry-col"><NewsCardSkeleton /><NewsCardSkeleton /></div>
+                        <div className="masonry-col"><NewsCardSkeleton /><NewsCardSkeleton /></div>
+                        <div className="masonry-col"><NewsCardSkeleton /><NewsCardSkeleton /></div>
                     </>
                 )}
             </div>

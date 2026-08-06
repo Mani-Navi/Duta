@@ -164,41 +164,25 @@ a {
     color: #fff;
     background: var(--blue);
 }
-
-/* ─── Chronological Horizontal Flow (Newest Articles on Top Row) ─── */
+/* ─── Pinterest / Masonry Layout for News Cards ────── */
 
 .grid {
     max-width: 1100px;
     margin: 0 auto;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* ۴ ستون یکدست دقیقاً مطابق دیزاین شما */
-    gap: 14px;
+    column-count: 4;
+    column-gap: 14px;
     padding: 14px 20px 60px;
     min-height: 80vh; /* OPTIMIZED: Eliminates Desktop Layout Shift (CLS = 0.000) */
 }
 
 .grid > div {
-    display: flex;
-    flex-direction: column;
+    break-inside: avoid;
+    margin-bottom: 14px;
+    display: inline-block;
+    width: 100%;
 }
 
-@media (max-width: 1024px) {
-    .grid { grid-template-columns: repeat(3, 1fr); }
-}
-
-@media (max-width: 768px) {
-    .grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-        padding: 10px 12px 80px;
-    }
-}
-
-@media (max-width: 440px) {
-    .grid { grid-template-columns: repeat(1, 1fr); }
-}
-
-/* ─── Apple-Style Card Hover & Active Animations (دست‌نخورده ۱۰۰٪) ─── */
+/* ─── Apple-Style Card Hover & Active Animations ─────── */
 
 .card {
     background: var(--card);
@@ -1457,4 +1441,35 @@ body.dark .cat-telegram {
 body.dark .cat-telegram.active {
     background: #2AABEE !important;
     color: #ffffff !important;
+}
+
+/* ─── RTL Chronological Masonry Layout ─────────────── */
+
+.masonry-grid {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 14px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 14px 20px 60px;
+    min-height: 80vh; /* Eliminates Layout Shift */
+}
+
+.masonry-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .masonry-grid {
+        gap: 10px;
+        padding: 10px 12px 80px;
+    }
+    .masonry-col {
+        gap: 10px;
+    }
 }
