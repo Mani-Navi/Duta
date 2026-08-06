@@ -53,67 +53,7 @@ public class ArticleController {
         return "started";
     }
 
-    @GetMapping
-    public Page<Article> getAllArticles(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        return articleService.getAllArticles(page, safeSize);
-    }
-
-    @GetMapping("/telegram")
-    public Page<Article> getTelegramArticles(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        return articleRepository.findBySourceSourceTypeOrderByPublishedAtDesc(
-                SourceType.TELEGRAM,
-                PageRequest.of(page, safeSize)
-        );
-    }
-
-    @GetMapping("/category")
-    public Page<Article> getByCategory(
-            @RequestParam String name,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        return articleService.getArticlesByCategory(name, page, safeSize);
-    }
-
-    @GetMapping("/breaking")
-    public Page<Article> getBreaking(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        return articleService.getBreakingArticles(page, safeSize);
-    }
-
-    @GetMapping("/{id}")
-    public Article getArticleById(@PathVariable Long id) {
-        return articleService.getArticleById(id);
-    }
-
-    @GetMapping("/slug/{slug}")
-    public Article getArticleBySlug(@PathVariable String slug) {
-        return articleService.getArticleBySlug(slug);
-    }
-
-    @GetMapping("/{id}/source")
-    public Source getArticleSource(@PathVariable Long id) {
-        return articleService.getArticleSource(id);
-    }
-
-    @GetMapping("/search")
-    public Page<Article> search(
-            @RequestParam String keyword,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        // BUGFIX: Pass page argument correctly (3 arguments expected)
-        return articleService.searchArticles(keyword, page, safeSize);
-    }
-
+    // BUGFIX: Static routes /reclassify and /rescore must be placed ABOVE /{id}
     @GetMapping("/reclassify")
     public String reclassify() {
         CompletableFuture.runAsync(() -> {
@@ -135,7 +75,6 @@ public class ArticleController {
         return "started";
     }
 
-    // Temporary endpoint to recalculate scores for existing clusters with Bayesian formula
     @GetMapping("/rescore")
     public String rescore() {
         CompletableFuture.runAsync(() -> {
@@ -147,5 +86,66 @@ public class ArticleController {
             log.info("Rescored all {} clusters with Bayesian formula.", clusters.size());
         });
         return "started";
+    }
+
+    @GetMapping
+    public Page<Article> getAllArticles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        return articleService.getAllArticles(page, safeSize);
+    }
+
+    @GetMapping("/telegram")
+    public Page<Article> getTelegramArticles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        return articleRepository.findBySourceSourceTypeOrderByPublishedAtDesc(
+                SourceType.TELEGRAM,
+                PageRequest.of(page, safeSize)
+        );
+    }
+
+    @GetMapping("/category")
+    public Page<Article> getgetByCategory(
+            @RequestParam String name,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        return articleService.getArticlesByCategory(name, page, safeSize);
+    }
+
+    @GetMapping("/breaking")
+    public Page<Article> getBreaking(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        return articleService.getBreakingArticles(page, safeSize);
+    }
+
+    @GetMapping("/search")
+    public Page<Article> search(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        return articleService.searchArticles(keyword, page, safeSize);
+    }
+
+    // Wildcard paths placed at the end to prevent path collision
+    @GetMapping("/{id}")
+    public Article getArticleById(@PathVariable Long id) {
+        return articleService.getArticleById(id);
+    }
+
+    @GetMapping("/slug/{slug}")
+    public Article getArticleBySlug(@PathVariable String slug) {
+        return articleService.getArticleBySlug(slug);
+    }
+
+    @GetMapping("/{id}/source")
+    public Source getArticleSource(@PathVariable Long id) {
+        return articleService.getArticleSource(id);
     }
 }
