@@ -39,11 +39,10 @@ function ArticleDetailPage() {
         };
     }, [slug, navigate]);
 
-    // OPTIMIZED: Brand Duta Animated Eye Logo during article click loading
     if (loading) {
         return (
             <div className="nitt-loading-box">
-                <DutaLogo />
+                <DutaLogo loading={true} />
                 <span className="nitt-loading-text">در حال تحلیل و بارگذاری خبر...</span>
             </div>
         );
@@ -123,10 +122,39 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
+                {/* 1. Mobile Corner Header with Animated Duta Eye Logo */}
+                <header className="mobile-only mobile-header">
+                    <div className="nav-row">
+                        <div
+                            className="logo"
+                            dir="ltr"
+                            onClick={() => handleNavigate('home')}
+                            role="button"
+                            tabIndex={0}
+                            aria-label="Duta - صفحه اصلی"
+                        >
+                            <DutaLogo />
+                            <span className="logo-text">Duta</span>
+                        </div>
+
+                        <div className="nav-tools">
+                            <button
+                                className={`toggle-btn ${dark ? 'is-dark' : 'is-light'}`}
+                                onClick={() => setDark(prev => !prev)}
+                                aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}
+                            >
+                                {dark ? '🌙' : '☀️'}
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                {/* 2. Price Ticker for Mobile */}
                 <div className="mobile-only" style={{ padding: '8px 0', background: 'var(--navbar-bg)' }}>
                     <PriceTicker />
                 </div>
 
+                {/* 3. Desktop Header */}
                 <div className="desktop-only">
                     <Navbar
                         dark={dark} view={view}
