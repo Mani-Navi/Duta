@@ -5,6 +5,7 @@ import BottomNav from './components/BottomNav';
 import PriceTicker from './components/PriceTicker';
 import Home from './pages/Home';
 import ErrorBoundary from './components/ErrorBoundary';
+import DutaLogo from './components/DutaLogo';
 import api from './api/axiosConfig';
 import './App.css';
 
@@ -25,7 +26,7 @@ function ArticleDetailPage() {
             .then(res => {
                 setArticle(res.data);
                 if (res.data?.title) {
-                    document.title = `${res.data.title} | Nitt`;
+                    document.title = `${res.data.title} | Duta`;
                 }
             })
             .catch(() => {
@@ -34,16 +35,16 @@ function ArticleDetailPage() {
             .finally(() => setLoading(false));
 
         return () => {
-            document.title = 'Nitt — خبرخوان هوشمند فارسی';
+            document.title = 'Duta — دو نگاه، یک حقیقت';
         };
     }, [slug, navigate]);
 
-    // OPTIMIZED: GPU-Accelerated Nitt Spinner Loading Animation
+    // OPTIMIZED: Brand Duta Animated Eye Logo during article click loading
     if (loading) {
         return (
             <div className="nitt-loading-box">
-                <div className="nitt-spinner" aria-hidden="true" />
-                <span className="nitt-loading-text">در حال بارگذاری خبر...</span>
+                <DutaLogo />
+                <span className="nitt-loading-text">در حال تحلیل و بارگذاری خبر...</span>
             </div>
         );
     }
@@ -142,7 +143,7 @@ function AppLayout() {
 
                     <Suspense fallback={
                         <div className="nitt-loading-box">
-                            <div className="nitt-spinner" aria-hidden="true" />
+                            <DutaLogo />
                             <span className="nitt-loading-text">در حال بارگذاری...</span>
                         </div>
                     }>
@@ -157,7 +158,7 @@ function AppLayout() {
                 </main>
 
                 <footer className="footer-note" style={{ padding: '20px', textAlign: 'center', opacity: 0.7 }} role="contentinfo">
-                    تمامی حقوق برای Nitt محفوظ است © {new Date().getFullYear()}
+                    تمامی حقوق برای Duta محفوظ است © {new Date().getFullYear()}
                 </footer>
 
                 <div className="mobile-only">
