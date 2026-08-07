@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import strings from '../strings/strings';
 import PriceTicker from './PriceTicker';
+import DutaLogo from './DutaLogo';
 
 function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     const t = strings.fa;
@@ -52,21 +53,20 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <header className="navbar" ref={navRef}>
             <div className="nav-row">
-                {/* LTR Logo Alignment: Nitt on Left | Divider | News in Bites on Right */}
+                {/* Duta Animated Logo: Animated Eye Dot + Duta | دو نگاه، یک حقیقت */}
                 <div
                     className="logo"
                     dir="ltr"
                     onClick={() => onNavigate('home')}
                     role="button"
                     tabIndex={0}
-                    aria-label="Nitt - News in Bites"
+                    aria-label="Duta — می‌بیند. می‌سنجد. می‌گوید."
                     onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
                 >
-                    <span className="logo-text">
-                        N<span className="logo-dot">i</span>tt
-                    </span>
+                    <DutaLogo />
+                    <span className="logo-text">Duta</span>
                     <span className="logo-divider" aria-hidden="true" />
-                    <span className="logo-sub">News in Bites</span>
+                    <span className="logo-sub" dir="rtl">دو نگاه، یک حقیقت</span>
                 </div>
 
                 <div className="nav-center">
