@@ -2,39 +2,31 @@ import React from 'react';
 
 function DutaLogo({ breaking = false }) {
     return (
-        <div className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''}`} aria-label="Duta - لوگو اصلی">
+        <div className={`duta-circle-eye-wrap ${breaking ? 'is-breaking' : ''}`} aria-label="Duta - لوگو اصلی">
             <svg
-                width="36"
-                height="36"
+                width="34"
+                height="34"
                 viewBox="0 0 32 32"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className="duta-eye-svg"
+                className="duta-circle-eye-svg"
             >
-                {/* پلک بالای درشت */}
-                <path
-                    d="M 3 16 C 9 6, 23 6, 29 16"
-                    stroke="currentColor"
-                    strokeWidth="3.2"
-                    strokeLinecap="round"
-                    className="eye-lid eye-lid-top"
-                />
-
-                {/* پلک پایین درشت */}
-                <path
-                    d="M 3 16 C 9 26, 23 26, 29 16"
-                    stroke="currentColor"
-                    strokeWidth="3.2"
-                    strokeLinecap="round"
-                    className="eye-lid eye-lid-bottom"
-                />
-
-                {/* مردمک درشت سیاه و سفید */}
+                {/* دایره بیرونی چشم هندسی */}
                 <circle
                     cx="16"
                     cy="16"
-                    r="6.5"
-                    className="eye-pupil"
+                    r="11"
+                    stroke="currentColor"
+                    strokeWidth="2.8"
+                    className="circle-eye-ring"
+                />
+
+                {/* مردمک دایره‌ای داخلی */}
+                <circle
+                    cx="16"
+                    cy="16"
+                    r="4.8"
+                    className="circle-eye-pupil"
                 />
             </svg>
         </div>
