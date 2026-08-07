@@ -1476,60 +1476,69 @@ body.dark .cat-telegram.active {
     }
 }
 
-/* ─── Minimal Geometric Circle-Eye Animation (Pinterest Style) ─── */
+/* ─── Restored Almond Eye Logo Animation ────────────── */
 
-.duta-circle-eye-wrap {
+.duta-eye-wrap {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    color: var(--label);
+    width: 32px;
+    height: 32px;
     flex-shrink: 0;
     cursor: pointer;
 }
 
-.duta-circle-eye-svg {
+.duta-eye-svg {
     width: 100%;
     height: 100%;
-    transform-origin: center;
-    animation: geometricBlink 6s infinite ease-in-out;
 }
 
-.circle-eye-pupil {
-    fill: var(--label);
-    transform-origin: center;
-    animation: pupilGlance 6s infinite ease-in-out;
+.eye-lid {
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+    animation: eyeLidMorph 8s infinite ease-in-out;
 }
 
-/* انیمیشن پلک زدن فشرده دایره‌ای (Squash Blink) */
-@keyframes geometricBlink {
-    0%, 65%, 100% {
-        transform: scaleY(1) scaleX(1);
+.eye-pupil {
+    fill: var(--turquoise) !important;
+    transition: fill 0.3s ease;
+    animation: eyePupilLook 8s infinite ease-in-out;
+    transform-origin: center;
+}
+
+/* حالت خبر فوری */
+.duta-eye-wrap.is-breaking .eye-pupil {
+    fill: var(--red) !important;
+    filter: drop-shadow(0 0 6px rgba(168, 41, 43, 0.8));
+}
+
+/* انیمیشن باز شدن چشم و پلک‌زدن */
+@keyframes eyeLidMorph {
+    0%, 70%, 100% {
+        opacity: 0.2;
+        stroke-dasharray: 0 100;
     }
-    68% {
-        transform: scaleY(0.12) scaleX(1.1); /* پلک زدن دایره‌ای */
+    75%, 92% {
+        opacity: 1;
+        stroke-dasharray: 100 0;
     }
-    72% {
-        transform: scaleY(1) scaleX(1);
+    95% {
+        opacity: 0.1; /* پلک زدن */
+    }
+}
+
+/* انیمیشن نگاه به چپ و راست مردمک فیروزه‌ای */
+@keyframes eyePupilLook {
+    0%, 70%, 100% {
+        transform: translate(0, 0) scale(1);
     }
     75% {
-        transform: scaleY(0.12) scaleX(1.1); /* پلک زدن دوتایی */
+        transform: translate(-3.5px, 0) scale(0.92);
     }
-    78% {
-        transform: scaleY(1) scaleX(1);
+    82% {
+        transform: translate(3.5px, 0) scale(0.92);
     }
-}
-
-/* انیمیشن نگاه به چپ و راست مردمک */
-@keyframes pupilGlance {
-    0%, 60%, 100% {
-        transform: translate(0, 0);
-    }
-    20%, 35% {
-        transform: translate(-3.5px, 0); /* نگاه به چپ */
-    }
-    40%, 55% {
-        transform: translate(3.5px, 0); /* نگاه به راست */
+    90% {
+        transform: translate(0, 0) scale(0.85);
     }
 }
