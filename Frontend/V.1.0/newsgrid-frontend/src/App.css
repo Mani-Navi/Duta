@@ -53,7 +53,7 @@ a {
     background: var(--navbar-bg);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     backdrop-filter: blur(20px) saturate(180%);
-    border-bottom: 0.5px solid var(--separator);
+    border-bottom: none !important;
     min-height: 52px; /* OPTIMIZED: Eliminates Header CLS */
 }
 
