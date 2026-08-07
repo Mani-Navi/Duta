@@ -2,38 +2,38 @@ import React from 'react';
 
 function DutaLogo({ breaking = false }) {
     return (
-        <div className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''}`} aria-hidden="true">
+        <div className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''}`} aria-label="Duta - لوگو اصلی">
             <svg
-                width="28"
-                height="28"
+                width="36"
+                height="36"
                 viewBox="0 0 32 32"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
                 className="duta-eye-svg"
             >
-                {/* پلک بالای چشم انتزاعی */}
+                {/* پلک بالای درشت */}
                 <path
-                    d="M 4 16 C 10 7, 22 7, 28 16"
+                    d="M 3 16 C 9 6, 23 6, 29 16"
                     stroke="currentColor"
-                    strokeWidth="2.5"
+                    strokeWidth="3.2"
                     strokeLinecap="round"
                     className="eye-lid eye-lid-top"
                 />
 
-                {/* پلک پایین چشم انتزاعی */}
+                {/* پلک پایین درشت */}
                 <path
-                    d="M 4 16 C 10 25, 22 25, 28 16"
+                    d="M 3 16 C 9 26, 23 26, 29 16"
                     stroke="currentColor"
-                    strokeWidth="2.5"
+                    strokeWidth="3.2"
                     strokeLinecap="round"
                     className="eye-lid eye-lid-bottom"
                 />
 
-                {/* عنبیه و مردمک هوشمند Duta (نقطه لاجوردی / فیروزه‌ای) */}
+                {/* مردمک درشت سیاه و سفید */}
                 <circle
                     cx="16"
                     cy="16"
-                    r="5"
+                    r="6.5"
                     className="eye-pupil"
                 />
             </svg>

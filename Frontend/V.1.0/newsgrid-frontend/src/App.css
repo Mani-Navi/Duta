@@ -1476,16 +1476,17 @@ body.dark .cat-telegram.active {
     }
 }
 
-/* ─── Duta Abstract Eye Logo Animation ──────────────── */
+/* ─── Minimalist Large Black/White Duta Eye Logo ───── */
 
 .duta-eye-wrap {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    color: var(--blue);
+    width: 36px;
+    height: 36px;
+    color: var(--label); /* Black in light mode, White in dark mode */
     flex-shrink: 0;
+    cursor: pointer;
 }
 
 .duta-eye-svg {
@@ -1493,56 +1494,48 @@ body.dark .cat-telegram.active {
     height: 100%;
 }
 
+.eye-pupil {
+    fill: var(--label); /* Solid Black or White pupil matching theme */
+}
+
+/* انیمیشن زنده تبدیل نقطه به چشم درشت */
 .eye-lid {
     opacity: 0;
     transition: opacity 0.3s ease;
-    animation: eyeLidMorph 9s infinite ease-in-out;
+    animation: eyeLidMorph 8s infinite ease-in-out;
 }
 
 .eye-pupil {
-    fill: var(--blue);
     transition: fill 0.3s ease;
-    animation: eyePupilLook 9s infinite ease-in-out;
+    animation: eyePupilLook 8s infinite ease-in-out;
     transform-origin: center;
 }
 
-/* حالت خبر فوری برای چشم Duta */
-.duta-eye-wrap.is-breaking .eye-pupil {
-    fill: var(--red) !important;
-    filter: drop-shadow(0 0 6px rgba(168, 41, 43, 0.8));
-}
-
-/* انیمیشن تبدیل نقطه به چشم انتزاعی و پلک زدن (هر ۹ ثانیه یک‌بار) */
 @keyframes eyeLidMorph {
     0%, 70%, 100% {
         opacity: 0;
         stroke-dasharray: 0 100;
     }
     75%, 92% {
-        opacity: 0.9;
+        opacity: 1;
         stroke-dasharray: 100 0;
     }
     95% {
-        opacity: 0; /* پلک زدن */
+        opacity: 0;
     }
 }
 
-/* انیمیشن نگاه به چپ و نگاه به راست مردمک فیروزه‌ای */
 @keyframes eyePupilLook {
     0%, 70%, 100% {
         transform: translate(0, 0) scale(1);
-        fill: var(--blue);
     }
     75% {
-        transform: translate(-3px, 0) scale(0.9);
-        fill: var(--turquoise);
+        transform: translate(-3.5px, 0) scale(0.92);
     }
     82% {
-        transform: translate(3px, 0) scale(0.9);
-        fill: var(--turquoise);
+        transform: translate(3.5px, 0) scale(0.92);
     }
     90% {
         transform: translate(0, 0) scale(0.85);
-        fill: var(--blue);
     }
 }
