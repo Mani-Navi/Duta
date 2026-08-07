@@ -1476,14 +1476,14 @@ body.dark .cat-telegram.active {
     }
 }
 
-/* ─── Restored Almond Eye Logo Animation ────────────── */
+/* ─── Larger Almond Eye Logo ────────────────────────── */
 
 .duta-eye-wrap {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
     flex-shrink: 0;
     cursor: pointer;
 }
@@ -1494,7 +1494,7 @@ body.dark .cat-telegram.active {
 }
 
 .eye-lid {
-    opacity: 0.9;
+    opacity: 0.95;
     transition: opacity 0.3s ease;
     animation: eyeLidMorph 8s infinite ease-in-out;
 }
@@ -1506,16 +1506,14 @@ body.dark .cat-telegram.active {
     transform-origin: center;
 }
 
-/* حالت خبر فوری */
 .duta-eye-wrap.is-breaking .eye-pupil {
     fill: var(--red) !important;
     filter: drop-shadow(0 0 6px rgba(168, 41, 43, 0.8));
 }
 
-/* انیمیشن باز شدن چشم و پلک‌زدن */
 @keyframes eyeLidMorph {
     0%, 70%, 100% {
-        opacity: 0.2;
+        opacity: 0.25;
         stroke-dasharray: 0 100;
     }
     75%, 92% {
@@ -1523,11 +1521,10 @@ body.dark .cat-telegram.active {
         stroke-dasharray: 100 0;
     }
     95% {
-        opacity: 0.1; /* پلک زدن */
+        opacity: 0.15;
     }
 }
 
-/* انیمیشن نگاه به چپ و راست مردمک فیروزه‌ای */
 @keyframes eyePupilLook {
     0%, 70%, 100% {
         transform: translate(0, 0) scale(1);
