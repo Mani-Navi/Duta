@@ -1,8 +1,8 @@
 import React from 'react';
 
-function DutaLogo({ breaking = false }) {
+function DutaLogo({ breaking = false, loading = false }) {
     return (
-        <div className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''}`} aria-label="Duta - لوگو اصلی">
+        <div className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''} ${loading ? 'is-loading' : ''}`} aria-label="Duta - لوگو اصلی">
             <svg
                 width="38"
                 height="38"
@@ -11,7 +11,6 @@ function DutaLogo({ breaking = false }) {
                 xmlns="http://www.w3.org/2000/svg"
                 className="duta-eye-svg"
             >
-                {/* پلک بالای بادامی درشت */}
                 <path
                     d="M 3 16 C 9 6, 23 6, 29 16"
                     stroke="var(--blue)"
@@ -20,7 +19,6 @@ function DutaLogo({ breaking = false }) {
                     className="eye-lid eye-lid-top"
                 />
 
-                {/* پلک پایین بادامی درشت */}
                 <path
                     d="M 3 16 C 9 26, 23 26, 29 16"
                     stroke="var(--blue)"
@@ -29,7 +27,6 @@ function DutaLogo({ breaking = false }) {
                     className="eye-lid eye-lid-bottom"
                 />
 
-                {/* تنها مردمک فیروزه‌ای درشت مرکز */}
                 <circle
                     cx="16"
                     cy="16"

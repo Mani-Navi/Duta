@@ -1476,7 +1476,7 @@ body.dark .cat-telegram.active {
     }
 }
 
-/* ─── Bug-Free Almond Eye Logo Animation (Zero Artifact Dots) ─── */
+/* ─── Duta Eye Animations (Header Relaxed 8s vs Active Loading 1s) ─── */
 
 .duta-eye-wrap {
     display: inline-flex;
@@ -1493,6 +1493,7 @@ body.dark .cat-telegram.active {
     height: 100%;
 }
 
+/* ۱. انیمیشن آرام و باوقار ۸ ثانیه‌ای لوگوی هدر بالای سایت */
 .eye-lid {
     opacity: 0;
     transition: all 0.3s ease;
@@ -1507,12 +1508,22 @@ body.dark .cat-telegram.active {
     transform-origin: center;
 }
 
+/* ۲. انیمیشن فوق‌العاده سریع و زنده ۱ ثانیه‌ای مخصوص لودینگ خبر (is-loading) */
+.duta-eye-wrap.is-loading .eye-lid {
+    opacity: 0.95 !important;
+    animation: fastEyeBlink 1.0s infinite ease-in-out !important;
+}
+
+.duta-eye-wrap.is-loading .eye-pupil {
+    animation: fastPupilGlance 1.0s infinite ease-in-out !important;
+}
+
 .duta-eye-wrap.is-breaking .eye-pupil {
     fill: var(--red) !important;
     filter: drop-shadow(0 0 6px rgba(168, 41, 43, 0.8));
 }
 
-/* BUGFIX: Clean opacity & scale morphing eliminates the tiny SVG dot artifact on the left */
+/* کی‌فریم‌های انیمیشن آرام هدر (۸ ثانیه) */
 @keyframes eyeLidMorph {
     0%, 65%, 100% {
         opacity: 0;
@@ -1523,7 +1534,7 @@ body.dark .cat-telegram.active {
         transform: scale(1);
     }
     95% {
-        opacity: 0; /* پلک زدن */
+        opacity: 0;
     }
 }
 
@@ -1539,5 +1550,29 @@ body.dark .cat-telegram.active {
     }
     90% {
         transform: translate(0, 0) scale(0.85);
+    }
+}
+
+/* کی‌فریم‌های انیمیشن پویای لودینگ خبر (۱ ثانیه) */
+@keyframes fastEyeBlink {
+    0%, 100% {
+        opacity: 0.95;
+        transform: scaleY(1);
+    }
+    50% {
+        opacity: 0.2;
+        transform: scaleY(0.2);
+    }
+}
+
+@keyframes fastPupilGlance {
+    0%, 100% {
+        transform: translate(0, 0);
+    }
+    25% {
+        transform: translate(-3.5px, 0);
+    }
+    75% {
+        transform: translate(3.5px, 0);
     }
 }

@@ -143,7 +143,7 @@ function AppLayout() {
 
                     <Suspense fallback={
                         <div className="nitt-loading-box">
-                            <DutaLogo />
+                            <DutaLogo loading={true} />
                             <span className="nitt-loading-text">در حال بارگذاری...</span>
                         </div>
                     }>
