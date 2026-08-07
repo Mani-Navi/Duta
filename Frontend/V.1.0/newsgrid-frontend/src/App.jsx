@@ -122,35 +122,15 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
-                {/* 1. Mobile Corner Header with Animated Duta Eye Logo */}
-                <header className="mobile-only mobile-header">
-                    <div className="nav-row">
-                        <div
-                            className="logo"
-                            dir="ltr"
-                            onClick={() => handleNavigate('home')}
-                            role="button"
-                            tabIndex={0}
-                            aria-label="Duta - صفحه اصلی"
-                        >
-                            <DutaLogo />
-                            <span className="logo-text">Duta</span>
-                        </div>
-
-                        <div className="nav-tools">
-                            <button
-                                className={`toggle-btn ${dark ? 'is-dark' : 'is-light'}`}
-                                onClick={() => setDark(prev => !prev)}
-                                aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}
-                            >
-                                {dark ? '🌙' : '☀️'}
-                            </button>
-                        </div>
+                {/* 1. Ultra-Minimal Centered Mobile Header with Duta Eye Only */}
+                <header className="mobile-only mobile-header-centered">
+                    <div onClick={() => handleNavigate('home')} role="button" tabIndex={0} aria-label="Duta - خانه">
+                        <DutaLogo />
                     </div>
                 </header>
 
                 {/* 2. Price Ticker for Mobile */}
-                <div className="mobile-only" style={{ padding: '8px 0', background: 'var(--navbar-bg)' }}>
+                <div className="mobile-only" style={{ padding: '6px 0', background: 'var(--navbar-bg)' }}>
                     <PriceTicker />
                 </div>
 

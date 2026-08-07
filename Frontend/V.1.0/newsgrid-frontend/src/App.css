@@ -1589,3 +1589,21 @@ body.dark .cat-telegram.active {
         border-bottom: 0.5px solid var(--separator);
     }
 }
+
+/* ─── Minimal Centered Mobile Header with Duta Eye ────── */
+@media (max-width: 768px) {
+    .mobile-header-centered {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: var(--navbar-bg);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border-bottom: 0.5px solid var(--separator);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 0;
+        width: 100%;
+    }
+}
