@@ -31,7 +31,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     const observer = useRef(null);
     const latestIdRef = useRef(null);
 
-    // Dynamic column count listener on resize
     useEffect(() => {
         const handleResize = () => {
             const w = window.innerWidth;
@@ -162,7 +161,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         if (node) observer.current.observe(node);
     }, [loading, hasMore]);
 
-    // OPTIMIZED: Distribute articles into columns in Round-Robin order for RTL Masonry
+    // Distribute articles into columns
     const columns = Array.from({ length: columnCount }, () => []);
     articles.forEach((article, index) => {
         columns[index % columnCount].push({ article, index });
@@ -187,34 +186,35 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                 </div>
             )}
 
-            {/* RTL Chronological Masonry Grid */}
             <div className="masonry-grid" dir="rtl">
-                {columns.map((colArticles, colIdx) => (
-                    <div key={colIdx} className="masonry-col">
-                        {colArticles.map(({ article, index }) => {
-                            const isLast = index === articles.length - 1;
-                            const isTelegram = article.source?.sourceType === 'TELEGRAM';
+                {/* OPTIMIZED: Render full-page viewport skeleton cards matching exact columns */}
+                {loading && articles.length === 0 ? (
+                    Array.from({ length: columnCount }).map((_, colIdx) => (
+                        <div key={colIdx} className="masonry-col">
+                            <NewsCardSkeleton />
+                            <NewsCardSkeleton />
+                            <NewsCardSkeleton />
+                        </div>
+                    ))
+                ) : (
+                    columns.map((colArticles, colIdx) => (
+                        <div key={colIdx} className="masonry-col">
+                            {colArticles.map(({ article, index }) => {
+                                const isLast = index === articles.length - 1;
+                                const isTelegram = article.source?.sourceType === 'TELEGRAM';
 
-                            return (
-                                <div key={article.id || index} ref={isLast ? lastCardRef : null}>
-                                    {isTelegram ? (
-                                        <TelegramNewsCard article={article} onOpen={onOpenArticle} />
-                                    ) : (
-                                        <NewsCard article={article} onOpen={onOpenArticle} />
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                ))}
-
-                {loading && articles.length === 0 && (
-                    <>
-                        <div className="masonry-col"><NewsCardSkeleton /><NewsCardSkeleton /></div>
-                        <div className="masonry-col"><NewsCardSkeleton /><NewsCardSkeleton /></div>
-                        <div className="masonry-col"><NewsCardSkeleton /><NewsCardSkeleton /></div>
-                        <div className="masonry-col"><NewsCardSkeleton /><NewsCardSkeleton /></div>
-                    </>
+                                return (
+                                    <div key={article.id || index} ref={isLast ? lastCardRef : null}>
+                                        {isTelegram ? (
+                                            <TelegramNewsCard article={article} onOpen={onOpenArticle} />
+                                        ) : (
+                                            <NewsCard article={article} onOpen={onOpenArticle} />
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ))
                 )}
             </div>
 
