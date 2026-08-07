@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import strings from '../strings/strings';
 import PriceTicker from './PriceTicker';
-import DutaLogo from './DutaLogo';
+import DutaLogo from './DutaLogo.jsx';
 
 function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     const t = strings.fa;
