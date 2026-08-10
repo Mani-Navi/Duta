@@ -1512,13 +1512,13 @@ body.dark .cat-telegram.active {
     opacity: 0;
     transition: all 0.3s ease;
     transform-origin: center;
-    animation: eyeLidMorph 180s infinite ease-in-out;
+    animation: eyeLidMorph 8s infinite ease-in-out;
 }
 
 .eye-pupil {
     fill: var(--turquoise) !important;
     transition: fill 0.3s ease;
-    animation: eyePupilLook 180s infinite ease-in-out;
+    animation: eyePupilLook 8s infinite ease-in-out;
     transform-origin: center;
 }
 /* ─── Welcome Animation: EXACTLY identical in style to Header Eye Motion ─── */
