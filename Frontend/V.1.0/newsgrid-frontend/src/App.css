@@ -1621,14 +1621,3 @@ body.dark .cat-telegram.active {
         width: 100%;
     }
 }
-
-/* ─── Initial Page Load Welcome Animation (Instant 0ms Trigger) ─── */
-
-.duta-eye-wrap.is-welcome .eye-lid {
-    opacity: 0.95 !important;
-    animation: eyeLidMorph 1.2s infinite ease-in-out !important;
-}
-
-.duta-eye-wrap.is-welcome .eye-pupil {
-    animation: eyePupilLook 1.2s infinite ease-in-out !important;
-}
