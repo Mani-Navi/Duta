@@ -11,7 +11,7 @@ function DutaLogo({ breaking = false, loading = false }) {
 
     return (
         <div
-            className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''} ${loading ? 'is-loading' : ''} ${welcome ? 'eye-lid' : ''}`}
+            className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''} ${loading ? 'is-loading' : ''}`}
             aria-label="Duta - لوگو"
         >
             <svg
