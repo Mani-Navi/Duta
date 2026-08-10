@@ -17,16 +17,17 @@ const About = lazy(() => import('./pages/About'));
 function ArticleDetailPage() {
     const { slug } = useParams();
     const navigate = useNavigate();
-    const location = useLocation(); // BUGFIX: Added missing useLocation hook here!
+    const location = useLocation();
 
-    // Detect breaking news status from navigation state immediately (0ms)
     const isBreakingInit = location.state?.breaking || false;
 
     const [article, setArticle] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        setArticle(null);
         setLoading(true);
+
         api.get(`/articles/slug/${slug}`)
             .then(res => {
                 setArticle(res.data);
@@ -129,16 +130,29 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
+                {/* 1. Mobile Header with Full Brand Combo: Eye + Duta | دو نگاه، یک حقیقت */}
                 <header className="mobile-only mobile-header-centered">
-                    <div onClick={() => handleNavigate('home')} role="button" tabIndex={0} aria-label="Duta - خانه">
+                    <div
+                        className="logo"
+                        dir="ltr"
+                        onClick={() => handleNavigate('home')}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Duta - دو نگاه، یک حقیقت"
+                    >
                         <DutaLogo />
+                        <span className="logo-text">Duta</span>
+                        <span className="logo-divider" aria-hidden="true" />
+                        <span className="logo-sub" dir="rtl">دو نگاه، یک حقیقت</span>
                     </div>
                 </header>
 
+                {/* 2. Price Ticker for Mobile */}
                 <div className="mobile-only" style={{ padding: '6px 0', background: 'var(--navbar-bg)' }}>
                     <PriceTicker />
                 </div>
 
+                {/* 3. Desktop Header */}
                 <div className="desktop-only">
                     <Navbar
                         dark={dark} view={view}

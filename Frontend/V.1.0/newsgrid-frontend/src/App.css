@@ -1638,7 +1638,7 @@ body.dark .cat-telegram.active {
     }
 }
 
-/* ─── Minimal Centered Mobile Header with Duta Eye ────── */
+/* ─── Centered Mobile Full Brand Header ──────────────── */
 @media (max-width: 768px) {
     .mobile-header-centered {
         position: sticky;
@@ -1647,15 +1647,13 @@ body.dark .cat-telegram.active {
         background: var(--navbar-bg);
         backdrop-filter: blur(20px) saturate(180%);
         -webkit-backdrop-filter: blur(20px) saturate(180%);
-        border-bottom:0.5px solid var(--separator);
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 8px 0;
+        padding: 10px 16px;
         width: 100%;
     }
 }
-
 /* ─── Official Duta Wordmark with Blue 'D' Letter ───── */
 
 .about-title-heading {
