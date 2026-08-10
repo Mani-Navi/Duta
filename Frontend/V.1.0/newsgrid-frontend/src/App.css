@@ -1626,9 +1626,9 @@ body.dark .cat-telegram.active {
 
 .duta-eye-wrap.is-welcome .eye-lid {
     opacity: 0.95 !important;
-    animation: fastEyeBlink 1.2s ease-in-out !important;
+    animation: eyeLidMorph 1.2s infinite ease-in-out !important;
 }
 
 .duta-eye-wrap.is-welcome .eye-pupil {
-    animation: fastPupilGlance 1.2s ease-in-out !important;
+    animation: eyePupilLook 1.2s infinite ease-in-out !important;
 }
