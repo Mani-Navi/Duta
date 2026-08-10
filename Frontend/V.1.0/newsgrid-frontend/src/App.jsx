@@ -14,23 +14,6 @@ const Features = lazy(() => import('./pages/Features'));
 const Credibility = lazy(() => import('./pages/Credibility'));
 const About = lazy(() => import('./pages/About'));
 
-// OPTIMIZED: Full-bleed 32x32 SVG Favicon renderer (3x Larger & Bold)
-const updateFavicon = (pupilColor = '#1a1a1a', dColor = '#1a1a1a') => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-      <path d="M 2 2 H 18 C 25.7 2 30 8.3 30 16 C 30 23.7 25.7 30 18 30 H 2 Z" fill="${dColor}" />
-      <path d="M 5 16 C 10 9, 20 9, 25 16 C 20 23, 10 23, 5 16 Z" fill="#FFFFFF" />
-      <circle cx="15" cy="16" r="4.2" fill="${pupilColor}" />
-    </svg>`;
-    const encoded = `data:image/svg+xml;base64,${btoa(svg)}`;
-    let link = document.querySelector("link[rel*='icon']");
-    if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.head.appendChild(link);
-    }
-    link.href = encoded;
-};
-
 function ArticleDetailPage() {
     const { slug } = useParams();
     const navigate = useNavigate();
