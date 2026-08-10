@@ -1512,7 +1512,7 @@ body.dark .cat-telegram.active {
     opacity: 0;
     transition: all 0.3s ease;
     transform-origin: center;
-    animation: eyeLidMorph 8s infinite ease-in-out;
+    animation: eyeLidMorph 180s infinite ease-in-out;
 }
 
 .eye-pupil {
