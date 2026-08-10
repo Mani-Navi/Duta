@@ -17,18 +17,11 @@ const About = lazy(() => import('./pages/About'));
 function ArticleDetailPage() {
     const { slug } = useParams();
     const navigate = useNavigate();
-    const location = useLocation();
-
-    // OPTIMIZED: Detect breaking news status from navigation state immediately (0ms)
-    const isBreakingInit = location.state?.breaking || false;
-
     const [article, setArticle] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setArticle(null);
         setLoading(true);
-
         api.get(`/articles/slug/${slug}`)
             .then(res => {
                 setArticle(res.data);
@@ -46,11 +39,10 @@ function ArticleDetailPage() {
         };
     }, [slug, navigate]);
 
-    // Fiery Red pupil for Breaking News loading state
     if (loading) {
         return (
             <div className="nitt-loading-box">
-                <DutaLogo loading={true} breaking={isBreakingInit} />
+                <DutaLogo loading={true} />
                 <span className="nitt-loading-text">در حال تحلیل و بارگذاری خبر...</span>
             </div>
         );
@@ -92,13 +84,10 @@ function AppLayout() {
         if (keyword) navigate('/');
     };
 
-    // OPTIMIZED: Pass article.breaking state to router location state for immediate red eye loading
     const openArticle = (article) => {
         setRestoreScroll(window.scrollY);
         setSearchKeyword('');
-        navigate(`/article/${article.slug || article.id}`, {
-            state: { breaking: article.breaking }
-        });
+        navigate(`/article/${article.slug || article.id}`);
     };
 
     const handleNavigate = (v) => {
@@ -133,10 +122,19 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
-                <div className="mobile-only" style={{ padding: '8px 0', background: 'var(--navbar-bg)' }}>
+                {/* 1. Ultra-Minimal Centered Mobile Header with Duta Eye Only */}
+                <header className="mobile-only mobile-header-centered">
+                    <div onClick={() => handleNavigate('home')} role="button" tabIndex={0} aria-label="Duta - خانه">
+                        <DutaLogo />
+                    </div>
+                </header>
+
+                {/* 2. Price Ticker for Mobile */}
+                <div className="mobile-only" style={{ padding: '6px 0', background: 'var(--navbar-bg)' }}>
                     <PriceTicker />
                 </div>
 
+                {/* 3. Desktop Header */}
                 <div className="desktop-only">
                     <Navbar
                         dark={dark} view={view}
