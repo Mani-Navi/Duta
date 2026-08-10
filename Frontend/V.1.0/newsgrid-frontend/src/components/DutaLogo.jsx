@@ -1,8 +1,19 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 function DutaLogo({ breaking = false, loading = false }) {
+    const [welcome, setWelcome] = useState(true);
+
+    // Initial Welcome Animation on Page Load / Refresh
+    useEffect(() => {
+        const timer = setTimeout(() => setWelcome(false), 2000);
+        return () => clearTimeout(timer);
+    }, []);
+
     return (
-        <div className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''} ${loading ? 'is-loading' : ''}`} aria-label="Duta - لوگو اصلی">
+        <div
+            className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''} ${loading ? 'is-loading' : ''} ${welcome ? 'is-welcome' : ''}`}
+            aria-label="Duta - لوگو"
+        >
             <svg
                 width="38"
                 height="38"
