@@ -1521,15 +1521,6 @@ body.dark .cat-telegram.active {
     animation: eyePupilLook 180s infinite ease-in-out;
     transform-origin: center;
 }
-/* ─── Welcome Animation: EXACTLY identical in style to Header Eye Motion ─── */
-.duta-eye-wrap.is-welcome .eye-lid {
-    animation: eyeLidMorphWelcome 2.5s ease-in-out !important;
-}
-
-.duta-eye-wrap.is-welcome .eye-pupil {
-    animation: eyePupilLookWelcome 2.5s ease-in-out !important;
-}
-
 /* ۲. انیمیشن فوق‌العاده سریع و زنده ۱ ثانیه‌ای مخصوص لودینگ خبر (is-loading) */
 .duta-eye-wrap.is-loading .eye-lid {
     opacity: 0.95 !important;
@@ -1597,35 +1588,6 @@ body.dark .cat-telegram.active {
     }
     75% {
         transform: translate(3.5px, 0);
-    }
-}
-/* کی‌فریم‌های انیمیشن خوش‌آمدگویی ورود به سایت (دقیقاً هم‌حرکت با هدر در ۲.۵ ثانیه) */
-@keyframes eyeLidMorphWelcome {
-    0% {
-        opacity: 0;
-        transform: scale(0.2);
-    }
-    25%, 80% {
-        opacity: 0.95;
-        transform: scale(1);
-    }
-    95%, 100% {
-        opacity: 0;
-    }
-}
-
-@keyframes eyePupilLookWelcome {
-    0% {
-        transform: translate(0, 0) scale(1);
-    }
-    30% {
-        transform: translate(-3.5px, 0) scale(0.92); /* نگاه به چپ */
-    }
-    65% {
-        transform: translate(3.5px, 0) scale(0.92);  /* نگاه به راست */
-    }
-    85%, 100% {
-        transform: translate(0, 0) scale(1);
     }
 }
 
