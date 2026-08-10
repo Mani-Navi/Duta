@@ -17,10 +17,13 @@ const About = lazy(() => import('./pages/About'));
 function ArticleDetailPage() {
     const { slug } = useParams();
     const navigate = useNavigate();
+    const location = useLocation(); // BUGFIX: Added missing useLocation hook here!
+
+    // Detect breaking news status from navigation state immediately (0ms)
+    const isBreakingInit = location.state?.breaking || false;
+
     const [article, setArticle] = useState(null);
     const [loading, setLoading] = useState(true);
-    // OPTIMIZED: Detect breaking news status from navigation state immediately (0ms)
-    const isBreakingInit = location.state?.breaking || false;
 
     useEffect(() => {
         setLoading(true);
@@ -86,7 +89,6 @@ function AppLayout() {
         if (keyword) navigate('/');
     };
 
-    // OPTIMIZED: Pass article.breaking state to router location state for immediate red eye loading
     const openArticle = (article) => {
         setRestoreScroll(window.scrollY);
         setSearchKeyword('');
@@ -127,19 +129,16 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
-                {/* 1. Ultra-Minimal Centered Mobile Header with Duta Eye Only */}
                 <header className="mobile-only mobile-header-centered">
                     <div onClick={() => handleNavigate('home')} role="button" tabIndex={0} aria-label="Duta - خانه">
                         <DutaLogo />
                     </div>
                 </header>
 
-                {/* 2. Price Ticker for Mobile */}
                 <div className="mobile-only" style={{ padding: '6px 0', background: 'var(--navbar-bg)' }}>
                     <PriceTicker />
                 </div>
 
-                {/* 3. Desktop Header */}
                 <div className="desktop-only">
                     <Navbar
                         dark={dark} view={view}
