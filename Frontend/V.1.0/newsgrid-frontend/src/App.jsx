@@ -14,12 +14,12 @@ const Features = lazy(() => import('./pages/Features'));
 const Credibility = lazy(() => import('./pages/Credibility'));
 const About = lazy(() => import('./pages/About'));
 
-// Helper function to animate the new D + Eye Favicon with base color #1a1a1a
+// OPTIMIZED: Full-bleed 32x32 SVG Favicon renderer (3x Larger & Bold)
 const updateFavicon = (pupilColor = '#1a1a1a', dColor = '#1a1a1a') => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-      <path d="M 96 64 L 256 64 C 362 64, 448 150, 448 256 C 448 362, 362 448, 256 448 L 96 448 Z" fill="${dColor}" />
-      <path d="M 128 256 C 192 160, 320 160, 384 256 C 320 352, 192 352, 128 256 Z" fill="#FFFFFF" />
-      <circle cx="256" cy="256" r="56" fill="${pupilColor}" />
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+      <path d="M 2 2 H 18 C 25.7 2 30 8.3 30 16 C 30 23.7 25.7 30 18 30 H 2 Z" fill="${dColor}" />
+      <path d="M 5 16 C 10 9, 20 9, 25 16 C 20 23, 10 23, 5 16 Z" fill="#FFFFFF" />
+      <circle cx="15" cy="16" r="4.2" fill="${pupilColor}" />
     </svg>`;
     const encoded = `data:image/svg+xml;base64,${btoa(svg)}`;
     let link = document.querySelector("link[rel*='icon']");
@@ -117,19 +117,24 @@ function AppLayout() {
         }
     };
 
-    // Favicon Mouse Hover (MouseEnter / MouseLeave) Event Listener with #1a1a1a base color
+    // OPTIMIZED: Responsive Mouse Move Favicon Red Eye Pulse Trigger
     useEffect(() => {
-        const handleMouseEnter = () => updateFavicon('#A8292B', '#1a1a1a'); // Red pupil on Mouse Hover
-        const handleMouseLeave = () => updateFavicon('#1a1a1a', '#1a1a1a'); // Base color #1a1a1a
+        let timeoutId = null;
 
-        window.addEventListener('mouseenter', handleMouseEnter);
-        window.addEventListener('mouseleave', handleMouseLeave);
+        const handleMouseMove = () => {
+            updateFavicon('#A8292B', '#1a1a1a'); // Red pupil on mouse move
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                updateFavicon('#1a1a1a', '#1a1a1a'); // Reset to base color after 1.5s
+            }, 1500);
+        };
 
+        window.addEventListener('mousemove', handleMouseMove);
         updateFavicon('#1a1a1a', '#1a1a1a'); // Initial #1a1a1a
 
         return () => {
-            window.removeEventListener('mouseenter', handleMouseEnter);
-            window.removeEventListener('mouseleave', handleMouseLeave);
+            window.removeEventListener('mousemove', handleMouseMove);
+            if (timeoutId) clearTimeout(timeoutId);
         };
     }, []);
 
