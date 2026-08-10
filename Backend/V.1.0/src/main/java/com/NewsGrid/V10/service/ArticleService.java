@@ -3,8 +3,9 @@ package com.NewsGrid.V10.service;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.repository.ArticleRepository;
-import com.NewsGrid.V10.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -16,17 +17,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class ArticleService {
 
     private final ArticleRepository articleRepository;
-    private final CategoryRepository categoryRepository;
 
+    // OPTIMIZED: Cache first page of representative articles for 0ms ultra-fast response
+    @Cacheable(value = "articles", key = "#page + '-' + #size")
     public Page<Article> getAllArticles(int page, int size) {
         return articleRepository.findRepresentativeArticles(PageRequest.of(page, size));
     }
 
+    @Cacheable(value = "articles", key = "'cat-' + #categoryName + '-' + #page + '-' + #size")
     public Page<Article> getArticlesByCategory(String categoryName, int page, int size) {
         return articleRepository.findRepresentativeByCategory(
                 categoryName, PageRequest.of(page, size));
     }
 
+    @Cacheable(value = "articles", key = "'breaking-' + #page + '-' + #size")
     public Page<Article> getBreakingArticles(int page, int size) {
         return articleRepository.findRepresentativeBreaking(PageRequest.of(page, size));
     }
@@ -47,5 +51,11 @@ public class ArticleService {
 
     public Page<Article> searchArticles(String keyword, int page, int size) {
         return articleRepository.searchByKeyword(keyword, PageRequest.of(page, size));
+    }
+
+    // Evict articles cache when new news is scraped
+    @CacheEvict(value = "articles", allEntries = true)
+    public void evictArticlesCache() {
+        // Automatically cleared by Spring
     }
 }
