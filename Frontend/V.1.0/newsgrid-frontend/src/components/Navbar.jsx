@@ -53,16 +53,20 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <header className="navbar" ref={navRef}>
             <div className="nav-row">
-                {/* Minimal Black & White Eye Logo Only */}
+                {/* Duta Luxury Integrated Brand Header: Eye Logo + Duta | دو نگاه، یک حقیقت */}
                 <div
                     className="logo"
+                    dir="ltr"
                     onClick={() => onNavigate('home')}
                     role="button"
                     tabIndex={0}
-                    aria-label="Duta - صفحه اصلی"
+                    aria-label="Duta - دو نگاه، یک حقیقت"
                     onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
                 >
                     <DutaLogo />
+                    <span className="logo-text">Duta</span>
+                    <span className="logo-divider" aria-hidden="true" />
+                    <span className="logo-sub" dir="rtl">دو نگاه، یک حقیقت</span>
                 </div>
 
                 <div className="nav-center">
