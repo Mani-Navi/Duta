@@ -19,6 +19,8 @@ function ArticleDetailPage() {
     const navigate = useNavigate();
     const [article, setArticle] = useState(null);
     const [loading, setLoading] = useState(true);
+    // OPTIMIZED: Detect breaking news status from navigation state immediately (0ms)
+    const isBreakingInit = location.state?.breaking || false;
 
     useEffect(() => {
         setLoading(true);
@@ -42,7 +44,7 @@ function ArticleDetailPage() {
     if (loading) {
         return (
             <div className="nitt-loading-box">
-                <DutaLogo loading={true} />
+                <DutaLogo loading={true} breaking={isBreakingInit} />
                 <span className="nitt-loading-text">در حال تحلیل و بارگذاری خبر...</span>
             </div>
         );
@@ -84,10 +86,13 @@ function AppLayout() {
         if (keyword) navigate('/');
     };
 
+    // OPTIMIZED: Pass article.breaking state to router location state for immediate red eye loading
     const openArticle = (article) => {
         setRestoreScroll(window.scrollY);
         setSearchKeyword('');
-        navigate(`/article/${article.slug || article.id}`);
+        navigate(`/article/${article.slug || article.id}`, {
+            state: { breaking: article.breaking }
+        });
     };
 
     const handleNavigate = (v) => {
