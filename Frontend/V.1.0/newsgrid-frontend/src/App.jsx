@@ -130,6 +130,38 @@ function AppLayout() {
         document.body.classList.toggle('dark', dark);
     }, [dark]);
 
+    // Helper function to animate browser tab Favicon dynamically
+    const updateFavicon = (color = '#68A7B4') => {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="${color}"/></svg>`;
+        const encoded = `data:image/svg+xml;base64,${btoa(svg)}`;
+        let link = document.querySelector("link[rel*='icon']");
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.head.appendChild(link);
+        }
+        link.href = encoded;
+    };
+
+// Inside AppLayout component:
+    useEffect(() => {
+        // Turn Favicon RED when mouse enters window or tab becomes focused
+        const handleFocus = () => updateFavicon('#A8292B');  // Persian Red on Hover/Focus
+        const handleBlur = () => updateFavicon('#68A7B4');   // Turquoise default
+
+        window.addEventListener('focus', handleFocus);
+        window.addEventListener('blur', handleBlur);
+        window.addEventListener('mouseenter', handleFocus);
+
+        updateFavicon('#68A7B4'); // Initial Turquoise Dot
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('blur', handleBlur);
+            window.removeEventListener('mouseenter', handleFocus);
+        };
+    }, []);
+
     return (
         <ErrorBoundary>
             <div>
