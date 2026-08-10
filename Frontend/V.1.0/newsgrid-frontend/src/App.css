@@ -1507,16 +1507,15 @@ body.dark .cat-telegram.active {
     height: 100%;
 }
 
-/* ۱. انیمیشن آرام و باوقار ۸ ثانیه‌ای لوگوی هدر بالای سایت */
-/* ۱. انیمیشن باوقار هدر بالای سایت (تکرار هر ۳ دقیقه / ۱۸۰ ثانیه) */
-.duta-eye-wrap:not(.is-loading) .eye-lid {
+/* ۱. انیمیشن آرام و باوقار 180 ثانیه‌ای لوگوی هدر بالای سایت */
+.eye-lid {
     opacity: 0;
     transition: all 0.3s ease;
     transform-origin: center;
     animation: eyeLidMorph 180s infinite ease-in-out;
 }
 
-.duta-eye-wrap:not(.is-loading) .eye-pupil {
+.eye-pupil {
     fill: var(--turquoise) !important;
     transition: fill 0.3s ease;
     animation: eyePupilLook 180s infinite ease-in-out;
@@ -1540,30 +1539,30 @@ body.dark .cat-telegram.active {
 
 /* کی‌فریم‌های انیمیشن آرام هدر (180 ثانیه) */
 @keyframes eyeLidMorph {
-    0%, 95%, 100% {
+    0%, 65%, 100% {
         opacity: 0;
         transform: scale(0.2);
     }
-    96.5%, 98.5% {
+    72%, 92% {
         opacity: 0.95;
         transform: scale(1);
     }
-    99% {
+    95% {
         opacity: 0;
     }
 }
 
 @keyframes eyePupilLook {
-    0%, 95%, 100% {
+    0%, 65%, 100% {
         transform: translate(0, 0) scale(1);
     }
-    96.5% {
+    72% {
         transform: translate(-3.5px, 0) scale(0.92);
     }
-    98% {
+    82% {
         transform: translate(3.5px, 0) scale(0.92);
     }
-    99% {
+    90% {
         transform: translate(0, 0) scale(0.85);
     }
 }
