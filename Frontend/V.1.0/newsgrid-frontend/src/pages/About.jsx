@@ -6,11 +6,11 @@ function About() {
     return (
         <div className="page-content">
             <div className="page-header">
-                {/* ترکیب شیک عبارت «درباره» و لوگوی رسمی Nitt */}
+                {/* تایپوگرافی رسمی Duta با حرف D آبی‌رنگ متمایز */}
                 <h1 className="about-title-heading">
                     درباره{' '}
-                    <span className="logo-text-inline" dir="ltr" aria-label="Nitt">
-                        N<span className="logo-dot">i</span>tt
+                    <span className="about-brand-wordmark" dir="ltr" aria-label="Duta">
+                        <span className="wordmark-blue">D</span>uta
                     </span>
                 </h1>
 

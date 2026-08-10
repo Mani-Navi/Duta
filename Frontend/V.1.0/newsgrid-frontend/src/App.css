@@ -1621,3 +1621,30 @@ body.dark .cat-telegram.active {
         width: 100%;
     }
 }
+
+/* ─── Official Duta Wordmark with Blue 'D' Letter ───── */
+
+.about-title-heading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 12px;
+    color: var(--label);
+}
+
+.about-brand-wordmark {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--label) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1;
+}
+
+/* حرف D آبی برندی متمایز */
+.wordmark-blue {
+    color: var(--blue) !important;
+}
