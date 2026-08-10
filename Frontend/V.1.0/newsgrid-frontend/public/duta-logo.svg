@@ -1,4 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
-    <!-- Duta Turquoise Pure Circle Dot -->
-    <circle cx="256" cy="256" r="96" fill="#68A7B4" />
+    <!-- Duta Capital Letter 'D' Outer Block -->
+    <path d="M 96 64 L 256 64 C 362 64, 448 150, 448 256 C 448 362, 362 448, 256 448 L 96 448 Z" fill="#1a1a1a" />
+
+    <!-- Inner White Almond Eye Cutout -->
+    <path d="M 128 256 C 192 160, 320 160, 384 256 C 320 352, 192 352, 128 256 Z" fill="#FFFFFF" />
+
+    <!-- Center Pupil Dot -->
+    <circle cx="256" cy="256" r="56" fill="#1a1a1a" />
 </svg>

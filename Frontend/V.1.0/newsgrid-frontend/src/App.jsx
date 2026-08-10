@@ -14,9 +14,13 @@ const Features = lazy(() => import('./pages/Features'));
 const Credibility = lazy(() => import('./pages/Credibility'));
 const About = lazy(() => import('./pages/About'));
 
-// Helper function modifying ONLY browser tab Favicon icon
-const updateFavicon = (color = '#68A7B4') => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="${color}"/></svg>`;
+// Helper function to animate the new D + Eye Favicon with base color #1a1a1a
+const updateFavicon = (pupilColor = '#1a1a1a', dColor = '#1a1a1a') => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+      <path d="M 96 64 L 256 64 C 362 64, 448 150, 448 256 C 448 362, 362 448, 256 448 L 96 448 Z" fill="${dColor}" />
+      <path d="M 128 256 C 192 160, 320 160, 384 256 C 320 352, 192 352, 128 256 Z" fill="#FFFFFF" />
+      <circle cx="256" cy="256" r="56" fill="${pupilColor}" />
+    </svg>`;
     const encoded = `data:image/svg+xml;base64,${btoa(svg)}`;
     let link = document.querySelector("link[rel*='icon']");
     if (!link) {
@@ -113,15 +117,15 @@ function AppLayout() {
         }
     };
 
-    // Favicon Mouse Hover (MouseEnter / MouseLeave) Event Listener
+    // Favicon Mouse Hover (MouseEnter / MouseLeave) Event Listener with #1a1a1a base color
     useEffect(() => {
-        const handleMouseEnter = () => updateFavicon('#A8292B'); // Red on Mouse Hover
-        const handleMouseLeave = () => updateFavicon('#68A7B4'); // Turquoise default
+        const handleMouseEnter = () => updateFavicon('#A8292B', '#1a1a1a'); // Red pupil on Mouse Hover
+        const handleMouseLeave = () => updateFavicon('#1a1a1a', '#1a1a1a'); // Base color #1a1a1a
 
         window.addEventListener('mouseenter', handleMouseEnter);
         window.addEventListener('mouseleave', handleMouseLeave);
 
-        updateFavicon('#68A7B4'); // Initial Turquoise Dot
+        updateFavicon('#1a1a1a', '#1a1a1a'); // Initial #1a1a1a
 
         return () => {
             window.removeEventListener('mouseenter', handleMouseEnter);
