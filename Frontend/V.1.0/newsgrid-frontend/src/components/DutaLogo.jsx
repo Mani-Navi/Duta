@@ -3,17 +3,14 @@ import React, { useEffect, useState } from 'react';
 function DutaLogo({ breaking = false, loading = false }) {
     const [welcome, setWelcome] = useState(true);
 
-    // Initial Welcome Animation on Page Load / Refresh
+    // Welcome animation duration matching header style (2.5 seconds)
     useEffect(() => {
-        const timer = setTimeout(() => setWelcome(false), 2000);
+        const timer = setTimeout(() => setWelcome(false), 2500);
         return () => clearTimeout(timer);
     }, []);
 
     return (
-        <div
-            className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''} ${loading ? 'is-loading' : ''}`}
-            aria-label="Duta - لوگو"
-        >
+        <div className={`duta-eye-wrap ${breaking ? 'is-breaking' : ''} ${loading ? 'is-loading' : ''} ${welcome ? 'is-welcome' : ''}`} aria-label="Duta - لوگو">
             <svg
                 width="38"
                 height="38"
