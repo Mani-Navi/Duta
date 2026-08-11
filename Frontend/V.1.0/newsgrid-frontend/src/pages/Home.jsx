@@ -14,7 +14,7 @@ function Home({ onOpenArticle, searchKeyword }) {
     }, []);
 
     return (
-        <main aria-label="صفحه اصلی اخبار Nitt">
+        <main aria-label="صفحه اصلی اخبار Duta">
             {!searchKeyword && (
                 <CategoryBar
                     activeCategory={activeCategory}

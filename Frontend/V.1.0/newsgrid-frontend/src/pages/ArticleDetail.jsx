@@ -109,11 +109,11 @@ function ArticleDetail({ article }) {
         "datePublished": article.publishedAt,
         "author": {
             "@type": "Organization",
-            "name": article.source?.name || "Nitt"
+            "name": article.source?.name || "Duta"
         },
         "publisher": {
             "@type": "Organization",
-            "name": "Nitt",
+            "name": "Duta",
             "url": "https://news-grid-pi.vercel.app"
         }
     };
