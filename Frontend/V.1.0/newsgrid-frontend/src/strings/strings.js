@@ -50,7 +50,7 @@ const strings = {
         ],
         aboutContactTitle: "تماس با ما",
         aboutContactDesc: "باگ پیدا کردی؟ پیشنهادی داری؟ می‌خوای منبع جدیدی اضافه بشه؟ خوشحال می‌شیم بشنویم.",
-        aboutEmail: "newsgrid.feedback@gmail.com",
+        aboutEmail: "info@duta.ir",
         aboutEmailSubject: "بازخورد Duta",
         aboutTopics: ["گزارش باگ 🐛", "پیشنهاد ویژگی ✨", "افزودن منبع 📰", "همکاری 🤝"],
     }
