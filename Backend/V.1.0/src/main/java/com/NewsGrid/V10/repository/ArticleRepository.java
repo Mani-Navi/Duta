@@ -134,4 +134,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
                 @Param("lastPublishedAt") ZonedDateTime lastPublishedAt,
                 @Param("lastId") Long lastId,
                 @Param("limit") int limit);
+
+        List<Article> findTop1000ByOrderByPublishedAtDesc();
 }

@@ -3,6 +3,7 @@ package com.NewsGrid.V10.service;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.repository.ArticleRepository;
+import com.NewsGrid.V10.Dto.SeoArticleDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -57,5 +58,19 @@ public class ArticleService {
     @CacheEvict(value = "articles", allEntries = true)
     public void evictArticlesCache() {
         // Automatically cleared by Spring
+    }
+
+    public SeoArticleDto getSeoDataBySlug(String slug) {
+        Article article = articleRepository.findBySlug(slug)
+                .orElseThrow(() -> new RuntimeException("خبر یافت نشد"));
+
+        return SeoArticleDto.builder()
+                .title(article.getTitle())
+                .description(article.getTitle()) // فعلاً چون متن نداریم، تیتر را قرار می‌دهیم
+                .sourceName(article.getSource().getName())
+                .category(article.getCategory())
+                .publishedAt(article.getPublishedAt().toString())
+                .url(article.getUrl())
+                .build();
     }
 }

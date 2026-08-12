@@ -5,6 +5,7 @@ import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.entity.SourceType;
 import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.service.*;
+import com.NewsGrid.V10.Dto.SeoArticleDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -129,5 +130,37 @@ public class ArticleController {
         });
 
         return "started";
+    }
+
+    // ۱. اندپوینت مخصوص سرویس Prerender
+    @GetMapping("/seo/{slug}")
+    public SeoArticleDto getSeoArticle(@PathVariable String slug) {
+        return articleService.getSeoDataBySlug(slug);
+    }
+
+    // ۲. اندپوینت تولید سایت‌مپ خبر (Google News Sitemap)
+    @GetMapping(value = "/sitemap.xml", produces = "application/xml")
+    public String getNewsSitemap() {
+        List<Article> recentArticles = articleRepository.findTop1000ByOrderByPublishedAtDesc();
+        StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" ");
+        xml.append("xmlns:news=\"http://www.google.com/schemas/sitemap-news/0.9\">\n");
+
+        for (Article a : recentArticles) {
+            xml.append("  <url>\n");
+            xml.append("    <loc>http://109.122.250.5/article/").append(a.getSlug()).append("</loc>\n");
+            xml.append("    <news:news>\n");
+            xml.append("      <news:publication>\n");
+            xml.append("        <news:name>Duta News</news:name>\n");
+            xml.append("        <news:language>fa</news:language>\n");
+            xml.append("      </news:publication>\n");
+            xml.append("      <news:publication_date>").append(a.getPublishedAt().toInstant()).append("</news:publication_date>\n");
+            xml.append("      <news:title>").append(a.getTitle().replace("&", "&amp;")).append("</news:title>\n");
+            xml.append("    </news:news>\n");
+            xml.append("  </url>\n");
+        }
+        xml.append("</urlset>");
+        return xml.toString();
     }
 }

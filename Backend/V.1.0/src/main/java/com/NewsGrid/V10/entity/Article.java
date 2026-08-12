@@ -14,6 +14,7 @@ import java.time.ZonedDateTime;
 @Table(name = "articles", indexes = {
         @Index(name = "idx_article_url", columnList = "url", unique = true),
         @Index(name = "idx_article_published_at", columnList = "publishedAt DESC"),
+        @Index(name = "idx_article_slug", columnList = "slug"),
         @Index(name = "idx_article_breaking", columnList = "breaking"),
         @Index(name = "idx_article_category", columnList = "category")
 })
