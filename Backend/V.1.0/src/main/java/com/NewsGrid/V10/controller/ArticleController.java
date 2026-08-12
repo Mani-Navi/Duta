@@ -138,7 +138,7 @@ public class ArticleController {
         return articleService.getSeoDataBySlug(slug);
     }
 
-    // ۲. اندپوینت تولید سایت‌مپ خبر (Google News Sitemap)
+    // اندپوینت تولید سایت‌مپ خبر گوگل (Google News Sitemap)
     @GetMapping(value = "/sitemap.xml", produces = "application/xml")
     public String getNewsSitemap() {
         List<Article> recentArticles = articleRepository.findTop1000ByOrderByPublishedAtDesc();
@@ -148,15 +148,16 @@ public class ArticleController {
         xml.append("xmlns:news=\"http://www.google.com/schemas/sitemap-news/0.9\">\n");
 
         for (Article a : recentArticles) {
+            String slug = a.getSlug() != null ? a.getSlug() : String.valueOf(a.getId());
             xml.append("  <url>\n");
-            xml.append("    <loc>http://109.122.250.5/article/").append(a.getSlug()).append("</loc>\n");
+            xml.append("    <loc>https://duta.ir/article/").append(slug).append("</loc>\n");
             xml.append("    <news:news>\n");
             xml.append("      <news:publication>\n");
-            xml.append("        <news:name>Duta News</news:name>\n");
+            xml.append("        <news:name>Duta</news:name>\n");
             xml.append("        <news:language>fa</news:language>\n");
             xml.append("      </news:publication>\n");
             xml.append("      <news:publication_date>").append(a.getPublishedAt().toInstant()).append("</news:publication_date>\n");
-            xml.append("      <news:title>").append(a.getTitle().replace("&", "&amp;")).append("</news:title>\n");
+            xml.append("      <news:title>").append(a.getTitle().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")).append("</news:title>\n");
             xml.append("    </news:news>\n");
             xml.append("  </url>\n");
         }
