@@ -1,12 +1,22 @@
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 
 function AdCard() {
+    useEffect(() => {
+        // اجرای مجدد لودر مدیااد به محض رندر شدن کامپوننت
+        try {
+            if (window._mediaad && typeof window._mediaad.load === 'function') {
+                window._mediaad.load();
+            }
+        } catch (e) {
+            console.error("Mediaad load error:", e);
+        }
+    }, []);
+
     return (
         <article className="card ad-wrapper">
-            {/* AD_INJECTION_START: Container for Mediaad Ad */}
+            {/* کانتینر اصلی تبلیغ */}
             <div id="mediaad-p7aP3"></div>
 
-            {/* نمایش برچسب اسپانسر با استایل برند Duta */}
             <div style={{
                 marginTop: '12px',
                 fontSize: '10px',
@@ -17,7 +27,6 @@ function AdCard() {
             }}>
                 اسپانسر دوتا
             </div>
-            {/* AD_INJECTION_END */}
         </article>
     );
 }
