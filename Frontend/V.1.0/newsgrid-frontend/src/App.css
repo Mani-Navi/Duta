@@ -1681,48 +1681,58 @@ body.dark .cat-telegram.active {
     color: var(--blue) !important;
 }
 
-/* AD_INJECTION_START: Force Mediaad to match Duta Design System */
+/* AD_INJECTION_START: Dynamic Ad Card Styling */
 
-/* تست برای دیدن محتوای تزریقی مدیااد */
+/* کانتینر اصلی تبلیغ در داخل کارت */
 #mediaad-p7aP3 {
-    min-height: 100px !important;
     width: 100% !important;
-    border: 1px solid transparent; /* اجبار به رندر شدن */
-}
-
-/* اگر مدیااد داخلش iframe می‌سازد */
-#mediaad-p7aP3 iframe {
-    visibility: visible !important;
+    height: auto !important; /* اجبار به ارتفاع خودکار */
     display: block !important;
+    overflow: visible !important; /* اجازه خروج محتوا برای محاسبه درست ارتفاع */
 }
 
+/* هماهنگ کردن فونت و استایل لینک‌ها */
 #mediaad-p7aP3 a {
     font-family: 'Vazirmatn', sans-serif !important;
+    text-decoration: none !important;
+    display: block !important;
+    height: auto !important;
 }
 
-/* هماهنگ کردن فونت و رنگ تیتر تبلیغ با کارت‌های دوتا */
+/* تنظیم تیتر تبلیغ به صورت داینامیک */
 #mediaad-p7aP3 .mediaad-title {
     font-size: 14px !important;
     font-weight: 600 !important;
     color: var(--label) !important;
     line-height: 1.6 !important;
     margin-bottom: 10px !important;
-    display: block !important;
+    height: auto !important; /* ارتفاع بر اساس متن */
+    display: -webkit-box !important; /* پشتیبانی از کوتاه کردن متن در صورت نیاز */
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
 }
 
-/* هماهنگ کردن لبه‌های تصویر تبلیغ */
+/* تنظیم تصویر تبلیغ برای پر کردن عرض و حفظ نسبت ابعاد */
 #mediaad-p7aP3 img {
     border-radius: 12px !important;
     width: 100% !important;
     height: auto !important;
-    object-fit: cover !important;
+    display: block !important;
+    object-fit: contain !important; /* جلوگیری از کش آمدن تصویر */
 }
 
-/* مخفی کردن متن‌های اضافه مدیااد در صورت وجود */
-#mediaad-p7aP3 .mediaad-description {
-    font-size: 12px !important;
-    color: var(--label-3) !important;
-    margin-top: 5px !important;
+/* استایل کانتینر بیرونی (Card) */
+.ad-wrapper {
+    height: auto !important;
+    min-height: 0 !important; /* حذف حداقل ارتفاع قبلی */
+    display: block !important;
+    background: var(--card);
+    transition: all 0.3s ease;
+}
+
+/* فوت کوزه‌گری: اگر تبلیغ لود نشد و دایو خالی بود، کارت را کلاً مخفی کن تا فضای زشت باقی نماند */
+.ad-wrapper:has(#mediaad-p7aP3:empty) {
+    display: none !important;
 }
 
 /* AD_INJECTION_END */
