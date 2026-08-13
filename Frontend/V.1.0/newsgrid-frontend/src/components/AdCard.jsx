@@ -25,7 +25,7 @@ function AdCard() {
                 textAlign: 'left',
                 opacity: 0.8
             }}>
-                اسپانسر دوتا
+                اسپانسر
             </div>
         </article>
     );
