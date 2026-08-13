@@ -1680,3 +1680,42 @@ body.dark .cat-telegram.active {
 .wordmark-blue {
     color: var(--blue) !important;
 }
+
+/* AD_INJECTION_START: Force Mediaad to match Duta Design System */
+
+/* حذف حاشیه‌ها و استایل‌های پیش‌فرض مدیااد */
+#mediaad-p7aP3 {
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+#mediaad-p7aP3 a {
+    font-family: 'Vazirmatn', sans-serif !important;
+}
+
+/* هماهنگ کردن فونت و رنگ تیتر تبلیغ با کارت‌های دوتا */
+#mediaad-p7aP3 .mediaad-title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--label) !important;
+    line-height: 1.6 !important;
+    margin-bottom: 10px !important;
+    display: block !important;
+}
+
+/* هماهنگ کردن لبه‌های تصویر تبلیغ */
+#mediaad-p7aP3 img {
+    border-radius: 12px !important;
+    width: 100% !important;
+    height: auto !important;
+    object-fit: cover !important;
+}
+
+/* مخفی کردن متن‌های اضافه مدیااد در صورت وجود */
+#mediaad-p7aP3 .mediaad-description {
+    font-size: 12px !important;
+    color: var(--label-3) !important;
+    margin-top: 5px !important;
+}
+
+/* AD_INJECTION_END */

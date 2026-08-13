@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import NewsCard from './NewsCard';
 import TelegramNewsCard from './TelegramNewsCard';
+import AdCard from './AdCard'; // AD_INJECTION_START: Import Ad component
 import NewsCardSkeleton from './NewsCardSkeleton';
 import api from '../api/axiosConfig';
 
@@ -161,11 +162,24 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         if (node) observer.current.observe(node);
     }, [loading, hasMore]);
 
-    // Distribute articles into columns
-    const columns = Array.from({ length: columnCount }, () => []);
+    // AD_INJECTION_START: Unified list logic for Ads & Articles
+    const AD_INTERVAL = 6; // هر 6 خبر یک تبلیغ
+    const itemsWithAds = [];
+    let adCounter = 0;
+
     articles.forEach((article, index) => {
-        columns[index % columnCount].push({ article, index });
+        itemsWithAds.push({ type: 'news', data: article });
+        // تزریق تبلیغ بعد از هر بازه مشخص
+        if ((index + 1) % AD_INTERVAL === 0) {
+            itemsWithAds.push({ type: 'ad', id: `ad-slot-${adCounter++}` });
+        }
     });
+
+    const columns = Array.from({ length: columnCount }, () => []);
+    itemsWithAds.forEach((item, vIndex) => {
+        columns[vIndex % columnCount].push(item);
+    });
+    // AD_INJECTION_END
 
     if (error && articles.length === 0) return (
         <div className="retry-container">
@@ -187,7 +201,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
             )}
 
             <div className="masonry-grid" dir="rtl">
-                {/* OPTIMIZED: Render full-page viewport skeleton cards matching exact columns */}
                 {loading && articles.length === 0 ? (
                     Array.from({ length: columnCount }).map((_, colIdx) => (
                         <div key={colIdx} className="masonry-col">
@@ -197,14 +210,21 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                         </div>
                     ))
                 ) : (
-                    columns.map((colArticles, colIdx) => (
+                    columns.map((colItems, colIdx) => (
                         <div key={colIdx} className="masonry-col">
-                            {colArticles.map(({ article, index }) => {
-                                const isLast = index === articles.length - 1;
+                            {colItems.map((item, index) => {
+                                // AD_INJECTION_START: Conditional Rendering for Ad vs News
+                                if (item.type === 'ad') {
+                                    return <AdCard key={item.id} />;
+                                }
+
+                                const article = item.data;
+                                // تعیین آخرین کارت واقعی برای فعال‌سازی Infinite Scroll
+                                const isLastInGlobal = articles.indexOf(article) === articles.length - 1;
                                 const isTelegram = article.source?.sourceType === 'TELEGRAM';
 
                                 return (
-                                    <div key={article.id || index} ref={isLast ? lastCardRef : null}>
+                                    <div key={article.id} ref={isLastInGlobal ? lastCardRef : null}>
                                         {isTelegram ? (
                                             <TelegramNewsCard article={article} onOpen={onOpenArticle} />
                                         ) : (
@@ -212,6 +232,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                                         )}
                                     </div>
                                 );
+                                // AD_INJECTION_END
                             })}
                         </div>
                     ))
