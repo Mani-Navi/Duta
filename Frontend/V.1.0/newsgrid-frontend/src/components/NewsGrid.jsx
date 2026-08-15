@@ -163,7 +163,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     }, [loading, hasMore]);
 
     // AD_INJECTION_START: Unified list logic for Ads & Articles
-    const AD_INTERVAL = 6; // هر 6 خبر یک تبلیغ
+    const AD_INTERVAL = 7; // هر 7 خبر یک تبلیغ
     const itemsWithAds = [];
     let adCounter = 0;
 
