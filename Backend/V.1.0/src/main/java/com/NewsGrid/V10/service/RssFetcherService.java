@@ -4,13 +4,14 @@ import com.NewsGrid.V10.config.ProxyConfig;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.entity.SourceType;
+import com.NewsGrid.V10.logging.DutaLogger; // اضافه شد
+import com.NewsGrid.V10.logging.LogEvent;   // اضافه شد
 import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.repository.SourceRepository;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -26,10 +27,13 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-@Slf4j
 @Service
 public class RssFetcherService {
+
+    // جایگزینی @Slf4j با لاگر اختصاصی Duta
+    private static final DutaLogger logger = DutaLogger.of(RssFetcherService.class);
 
     private final SourceRepository sourceRepository;
     private final ArticleRepository articleRepository;
@@ -79,48 +83,61 @@ public class RssFetcherService {
 
     @Scheduled(fixedRate = 300000)
     public void fetchAllSources() {
+        var cycleTimer = logger.startTimer();
         try {
             List<Source> sources = sourceRepository.findAll().stream()
                     .filter(s -> (s.getSourceType() == null || s.getSourceType() == SourceType.RSS))
                     .filter(s -> s.getRssUrl() != null && !s.getRssUrl().contains("t.me/"))
                     .toList();
 
-            log.info("Starting Parallel RSS fetch cycle for {} sources...", sources.size());
+            logger.info(LogEvent.FETCH_CYCLE_START, "Starting Parallel RSS fetch cycle", "sources_count", sources.size());
+
+            AtomicInteger successCount = new AtomicInteger(0);
 
             List<CompletableFuture<Void>> futures = sources.stream()
-                    .map(source -> CompletableFuture.runAsync(() -> fetchSingleRssSource(source), rssTaskExecutor)
+                    .map(source -> CompletableFuture.runAsync(() -> {
+                                fetchSingleRssSource(source);
+                                successCount.incrementAndGet();
+                            }, rssTaskExecutor)
                             .orTimeout(20, TimeUnit.SECONDS)
                             .exceptionally(ex -> {
-                                log.warn("RSS fetch timed out or failed for {}: {}", source.getName(), ex.getMessage());
+                                logger.warn(LogEvent.FETCH_FAILED, "RSS fetch timed out or failed",
+                                        "source", source.getName(), "error", ex.getMessage());
                                 return null;
                             }))
                     .toList();
 
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-            log.info("Parallel RSS fetch cycle completed successfully.");
+
+            logger.info(LogEvent.FETCH_CYCLE_END, "Parallel RSS fetch cycle completed",
+                    "duration_ms", cycleTimer.stop(),
+                    "successful_sources", successCount.get(),
+                    "total_sources", sources.size());
 
         } catch (Throwable t) {
-            log.error("Global RSS fetch cycle error: {}", t.getMessage());
+            logger.error(LogEvent.FETCH_FAILED, "Global RSS fetch cycle error", t);
         }
     }
 
     @Scheduled(cron = "0 0 3 * * ?")
     public void cleanupOldArticles() {
+        var timer = logger.startTimer();
         try {
             ZonedDateTime cutoff = ZonedDateTime.now(ZoneOffset.UTC).minusDays(3);
             articleRepository.deleteByPublishedAtBefore(cutoff);
-            log.info("Old articles cleanup (older than 3 days) completed. Cutoff: {}", cutoff);
+            logger.info(LogEvent.ARTICLES_CLEANUP, "Old articles cleanup completed",
+                    "cutoff_date", cutoff, "duration_ms", timer.stop());
         } catch (Exception e) {
-            log.error("Error during daily article cleanup: {}", e.getMessage());
+            logger.error(LogEvent.DB_ERROR, "Error during daily article cleanup", e);
         }
     }
 
     private void fetchSingleRssSource(Source source) {
-        long startTime = System.currentTimeMillis();
+        var fetchTimer = logger.startTimer();
+        logger.debug(LogEvent.FETCH_START, "Fetching single RSS source", "source", source.getName());
+
         try {
             URL feedUrl = new URL(source.getRssUrl());
-
-            // OPTIMIZED: Supports optional proxy connection seamlessly
             HttpURLConnection conn = (HttpURLConnection) feedUrl.openConnection(proxyConfig.getProxy());
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36");
             conn.setRequestProperty("Accept", "text/xml, application/xml, application/rss+xml, */*");
@@ -129,6 +146,7 @@ public class RssFetcherService {
 
             SyndFeed feed = new SyndFeedInput().build(new XmlReader(conn));
             int savedCount = 0;
+            int duplicateCount = 0;
 
             for (SyndEntry entry : feed.getEntries()) {
                 try {
@@ -150,7 +168,11 @@ public class RssFetcherService {
 
                         articleRepository.save(article);
                         clusteringService.clusterArticle(article);
+
+                        logger.debug(LogEvent.ARTICLE_SAVED, "New article saved", "title", article.getTitle());
                         savedCount++;
+                    } else {
+                        duplicateCount++;
                     }
                 } catch (Throwable ignored) {}
             }
@@ -158,11 +180,15 @@ public class RssFetcherService {
             source.setLastFetchedAt(ZonedDateTime.now(ZoneOffset.UTC));
             sourceRepository.save(source);
 
-            double elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
-            log.info("RSS {}: {} new articles saved in {}s.", source.getName(), savedCount, String.format("%.1f", elapsedSeconds));
+            logger.info(LogEvent.FETCH_COMPLETE, "RSS Source processed",
+                    "source", source.getName(),
+                    "new_articles", savedCount,
+                    "duplicates", duplicateCount,
+                    "duration_ms", fetchTimer.stop());
 
         } catch (Throwable t) {
-            log.warn("Failed to fetch RSS for {} - Error: {}", source.getName(), t.getMessage());
+            logger.warn(LogEvent.FETCH_FAILED, "Failed to fetch RSS source",
+                    "source", source.getName(), "error", t.getMessage(), "duration_ms", fetchTimer.stop());
         }
     }
 
