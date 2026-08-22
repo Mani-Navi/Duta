@@ -78,6 +78,16 @@ function AppLayout() {
     const [searchKeyword, setSearchKeyword] = useState('');
     const [restoreScroll, setRestoreScroll] = useState(null);
 
+    // --- ANALYTICS_START: Route Change Tracking ---
+    useEffect(() => {
+        if (window.gtag) {
+            window.gtag('config', 'G-5ZTGQ5ZVBJ', {
+                page_path: location.pathname + location.search,
+            });
+        }
+    }, [location]);
+    // --- ANALYTICS_END ---
+
     const isDetail = location.pathname.startsWith('/article/');
     const view = isDetail ? 'detail'
         : location.pathname === '/features' ? 'features'
@@ -130,7 +140,6 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
-                {/* 1. Mobile Header with Full Brand Combo: Eye + Duta | دو نگاه، یک حقیقت */}
                 <header className="mobile-only mobile-header-centered">
                     <div
                         className="logo"
@@ -147,12 +156,10 @@ function AppLayout() {
                     </div>
                 </header>
 
-                {/* 2. Price Ticker for Mobile */}
                 <div className="mobile-only" style={{ padding: '6px 0', background: 'var(--navbar-bg)' }}>
                     <PriceTicker />
                 </div>
 
-                {/* 3. Desktop Header */}
                 <div className="desktop-only">
                     <Navbar
                         dark={dark} view={view}

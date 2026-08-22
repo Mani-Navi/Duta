@@ -1,28 +1,22 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import NewsCard from './NewsCard';
 import TelegramNewsCard from './TelegramNewsCard';
-import AdCard from './AdCard';
 import NewsCardSkeleton from './NewsCardSkeleton';
 import api from '../api/axiosConfig';
 
-const AUTO_REFRESH_MS = 5 * 60 * 1000;
-const CACHE_KEY = 'nitt_initial_articles_cache';
-
 function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     const [articles, setArticles] = useState([]);
-    const [newCount, setNewCount] = useState(0);
     const [loading, setLoading] = useState(false);
-    const [isFetchingMore, setIsFetchingMore] = useState(false); // گارد برای اسکرول
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [error, setError] = useState(null);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [columnCount, setColumnCount] = useState(() => (window.innerWidth <= 440 ? 1 : window.innerWidth <= 768 ? 2 : window.innerWidth <= 1024 ? 3 : 4));
 
     const observer = useRef(null);
-    const abortControllerRef = useRef(null); // برای لغو درخواست‌های قبلی
-    const latestIdRef = useRef(null);
+    const abortControllerRef = useRef(null);
 
-    // ۱. بهینه‌سازی ریسپانسیو
+    // ۱. ریسپانسیو ستون‌ها
     useEffect(() => {
         const handleResize = () => {
             const w = window.innerWidth;
@@ -33,7 +27,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         return () => window.removeEventListener('resize', handleResize);
     }, [columnCount]);
 
-    // ۲. متد فچ با قابلیت لغو (Abort)
+    // ۲. متد دریافت اخبار با قابلیت لغو درخواست قبلی (رفع کندی سوییچ)
     const fetchArticles = useCallback(async (pageNum, isInitial = false) => {
         if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
@@ -61,18 +55,12 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                 const combined = pageNum === 0 ? newItems : [...prev, ...newItems];
                 const uniqueMap = new Map();
                 combined.forEach(item => uniqueMap.set(item.id, item));
-                const list = Array.from(uniqueMap.values());
-
-                if (list.length > 0) {
-                    latestIdRef.current = Math.max(...list.map(a => Number(a.id)).filter(Boolean));
-                }
-                return list;
+                return Array.from(uniqueMap.values());
             });
 
             setHasMore(Array.isArray(data) ? false : !data.last);
         } catch (err) {
             if (err.name !== 'CanceledError') {
-                console.error("Fetch error:", err);
                 setError("خطا در دریافت اخبار");
             }
         } finally {
@@ -81,14 +69,13 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         }
     }, [activeCategory, searchKeyword]);
 
-    // ۳. تغییر کتگوری یا جستجو
     useEffect(() => {
         setPage(0);
         setHasMore(true);
         fetchArticles(0, true);
     }, [activeCategory, searchKeyword, fetchArticles]);
 
-    // ۴. اسکرول بی‌نهایت بهینه
+    // ۳. اسکرول بی‌نهایت ضد باگ
     const lastCardRef = useCallback(node => {
         if (loading || isFetchingMore) return;
         if (observer.current) observer.current.disconnect();
@@ -104,22 +91,11 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         if (node) observer.current.observe(node);
     }, [loading, isFetchingMore, hasMore, fetchArticles]);
 
-    // ۵. منطق توزیع در ستون‌ها (تزریق تبلیغ هوشمند)
+    // ۴. توزیع فوق سریع در ستون‌ها (حذف کامل منطق تبلیغات)
     const columns = useMemo(() => {
         const cols = Array.from({ length: columnCount }, () => []);
-        const AD_INTERVAL = 10;
-        let virtualIndex = 0;
-
         articles.forEach((article, index) => {
-            // اضافه کردن خبر
-            cols[virtualIndex % columnCount].push({ type: 'news', data: article });
-            virtualIndex++;
-
-            // تزریق تبلیغ
-            if ((index + 1) % AD_INTERVAL === 0) {
-                cols[virtualIndex % columnCount].push({ type: 'ad', id: `ad-pos-${index}` });
-                virtualIndex++;
-            }
+            cols[index % columnCount].push(article);
         });
         return cols;
     }, [articles, columnCount]);
@@ -137,21 +113,20 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                 {loading ? (
                     Array.from({ length: columnCount }).map((_, i) => (
                         <div key={i} className="masonry-col">
-                            <NewsCardSkeleton /><NewsCardSkeleton />
+                            <NewsCardSkeleton /><NewsCardSkeleton /><NewsCardSkeleton />
                         </div>
                     ))
                 ) : (
                     columns.map((colItems, colIdx) => (
                         <div key={colIdx} className="masonry-col">
-                            {colItems.map((item, idx) => {
-                                if (item.type === 'ad') return <AdCard key={item.id} />;
-
+                            {colItems.map((article, idx) => {
+                                // محاسبه اینکه آیا این آخرین کارت در کل گرید است
                                 const isLast = colIdx === (columnCount - 1) && idx === (colItems.length - 1);
                                 return (
-                                    <div key={item.data.id} ref={isLast ? lastCardRef : null}>
-                                        {item.data.source?.sourceType === 'TELEGRAM' ?
-                                            <TelegramNewsCard article={item.data} onOpen={onOpenArticle} /> :
-                                            <NewsCard article={item.data} onOpen={onOpenArticle} />
+                                    <div key={article.id} ref={isLast ? lastCardRef : null}>
+                                        {article.source?.sourceType === 'TELEGRAM' ?
+                                            <TelegramNewsCard article={article} onOpen={onOpenArticle} /> :
+                                            <NewsCard article={article} onOpen={onOpenArticle} />
                                         }
                                     </div>
                                 );
@@ -160,7 +135,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                     ))
                 )}
             </div>
-            {isFetchingMore && <div className="grid-status"><div className="status-text">در حال بارگذاری...</div></div>}
+            {isFetchingMore && <div className="grid-status"><div className="status-text">در حال بارگذاری اخبار بیشتر...</div></div>}
         </>
     );
 }
