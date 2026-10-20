@@ -5,15 +5,9 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
     const [keyword, setKeyword] = useState('');
     const debounceRef = useRef(null);
 
-    useEffect(() => {
-        if (!searchOpen) return;
-        const handlePopState = () => closeSearch();
-        window.history.pushState(null, '', window.location.href);
-        window.addEventListener('popstate', handlePopState);
-        return () => window.removeEventListener('popstate', handlePopState);
-    }, [searchOpen]);
-
+    // BUGFIX: حذف popstate تداخلی که با دکمه بازگشت مرورگر از صفحه خبر تداخل داشت
     const closeSearch = () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
         setSearchOpen(false);
         setKeyword('');
         onSearch('');
@@ -32,14 +26,18 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
 
     const toggleSearch = () => {
         if (searchOpen) closeSearch();
-        else setSearchOpen(true);
+        else {
+            setSearchOpen(true);
+            if (view !== 'home') onNavigate('home');
+        }
     };
 
-    const activeView = searchOpen ? 'search' : view;
+    const activeView = (searchOpen && view === 'home') ? 'search' : view;
 
     return (
         <>
-            {searchOpen && (
+            {/* BUGFIX: مخفی شدن باکس سرچ شناور موبایل هنگام ورود به صفحه جزئیات خبر */}
+            {searchOpen && view !== 'detail' && (
                 <div className="bottom-search" role="search">
                     <input
                         autoFocus

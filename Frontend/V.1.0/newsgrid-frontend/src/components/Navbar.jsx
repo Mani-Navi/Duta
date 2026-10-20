@@ -20,15 +20,18 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
 
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (searchOpen && navRef.current && !navRef.current.contains(e.target)) {
+            // BUGFIX: فقط زمانی با کلیک بیرون سرچ را ببند که کاربر هنوز عبارتی تایپ نکرده باشد
+            // تا هنگام کلیک روی کارت‌های نتایج جستجو، لیست نتایج قبل از باز شدن خبر پاک نشود
+            if (searchOpen && !keyword.trim() && navRef.current && !navRef.current.contains(e.target)) {
                 closeSearch();
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [searchOpen]);
+    }, [searchOpen, keyword]);
 
     const closeSearch = () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
         setSearchOpen(false);
         setKeyword('');
         onSearch('');
@@ -57,11 +60,11 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                 <div
                     className="logo"
                     dir="ltr"
-                    onClick={() => onNavigate('home')}
+                    onClick={() => { closeSearch(); onNavigate('home'); }}
                     role="button"
                     tabIndex={0}
                     aria-label="Duta - دو نگاه، یک حقیقت"
-                    onKeyDown={(e) => e.key === 'Enter' && onNavigate('home')}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { closeSearch(); onNavigate('home'); } }}
                 >
                     <DutaLogo />
                     <span className="logo-text">Duta</span>
@@ -104,7 +107,8 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                 </div>
             </div>
 
-            {searchOpen && (
+            {/* BUGFIX: مخفی کردن اینپوت سرچ هنگام مشاهده صفحه جزئیات خبر */}
+            {searchOpen && view !== 'detail' && (
                 <div className="search-bar" role="search">
                     <label htmlFor="search-input" className="sr-only">جستجو در اخبار</label>
                     <input
