@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
@@ -25,25 +25,41 @@ function ArticleDetailPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let isMounted = true;
         setArticle(null);
         setLoading(true);
 
-        api.get(`/articles/slug/${slug}`)
+        // BUGFIX 1: پشتیبانی همزمان از Slug و ID عددی + Encode کردن حروف فارسی
+        const isNumericId = /^\d+$/.test(slug);
+        const endpoint = isNumericId
+            ? `/articles/${slug}`
+            : `/articles/slug/${encodeURIComponent(slug)}`;
+
+        api.get(endpoint)
             .then(res => {
+                if (!isMounted) return;
                 setArticle(res.data);
                 if (res.data?.title) {
                     document.title = `${res.data.title} | Duta`;
                 }
             })
-            .catch(() => {
-                navigate('/', { replace: true });
+            .catch(async () => {
+                // Fallback: اگر با اسلاگ پیدا نشد ولی از طریق state مقاله را داریم، نمایش بده
+                if (isMounted && location.state?.articleData) {
+                    setArticle(location.state.articleData);
+                } else if (isMounted) {
+                    navigate('/', { replace: true });
+                }
             })
-            .finally(() => setLoading(false));
+            .finally(() => {
+                if (isMounted) setLoading(false);
+            });
 
         return () => {
+            isMounted = false;
             document.title = 'Duta — دو نگاه، یک حقیقت';
         };
-    }, [slug, navigate]);
+    }, [slug, navigate, location.state]);
 
     if (loading) {
         return (
@@ -95,28 +111,38 @@ function AppLayout() {
                 : location.pathname === '/about' ? 'about'
                     : 'home';
 
-    const handleSearch = (keyword) => {
-        setSearchKeyword(keyword);
-        if (keyword) navigate('/');
-    };
-
-    const openArticle = (article) => {
-        setRestoreScroll(window.scrollY);
-        setSearchKeyword('');
-        navigate(`/article/${article.slug || article.id}`, {
-            state: { breaking: article.breaking }
+    // BUGFIX 2: تثبیت رفرنس تابع سرچ با useCallback و جلوگیری از ریدایرکت ناخواسته به صفحه اصلی
+    const handleSearch = useCallback((keyword) => {
+        setSearchKeyword(prev => {
+            if (prev !== keyword && keyword) {
+                navigate('/');
+            }
+            return keyword;
         });
-    };
+    }, [navigate]);
 
-    const handleNavigate = (v) => {
+    // BUGFIX 3: عدم پاک کردن ناگهانی استیت سرچ در لحظه کلیک و ارسال دیتای خبر به عنوان پشتیبان
+    const openArticle = useCallback((article) => {
+        setRestoreScroll(window.scrollY);
+        const targetSlug = article.slug || article.id;
+        navigate(`/article/${targetSlug}`, {
+            state: {
+                breaking: article.breaking,
+                articleData: article
+            }
+        });
+    }, [navigate]);
+
+    const handleNavigate = useCallback((v) => {
         if (v === 'home') {
             setRestoreScroll(0);
+            setSearchKeyword('');
             window.scrollTo(0, 0);
             navigate('/');
         } else {
             navigate(`/${v}`);
         }
-    };
+    }, [navigate]);
 
     useEffect(() => {
         if (location.pathname === '/') {
