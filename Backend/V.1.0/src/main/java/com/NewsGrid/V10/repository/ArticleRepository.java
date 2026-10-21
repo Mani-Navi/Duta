@@ -99,20 +99,38 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
                 nativeQuery = true)
         Page<Article> findRepresentativeBreaking(Pageable pageable);
 
+        // FIXED: Whole-word boundary matching in Persian/English + Cluster deduplication
         @Query(value = """
         SELECT a.* FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id
         WHERE (
-            LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-            OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            a.title ~* ('(^|[^آ-یa-zA-Z0-9])' || :keyword || '($|[^آ-یa-zA-Z0-9])')
+            OR s.name ~* ('(^|[^آ-یa-zA-Z0-9])' || :keyword || '($|[^آ-یa-zA-Z0-9])')
+        )
+        AND (
+            a.cluster_id IS NULL
+            OR a.id = (
+                SELECT a2.id FROM articles a2
+                LEFT JOIN sources s2 ON a2.source_id = s2.id
+                WHERE a2.cluster_id = a.cluster_id
+                ORDER BY s2.credibility DESC, a2.published_at DESC
+                LIMIT 1
+            )
         )
         ORDER BY a.published_at DESC
         """,
-                countQuery = "SELECT COUNT(*) FROM articles a LEFT JOIN sources s ON a.source_id = s.id WHERE LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%'))",
+                countQuery = """
+        SELECT COUNT(DISTINCT COALESCE(a.cluster_id, a.id))
+        FROM articles a
+        LEFT JOIN sources s ON a.source_id = s.id
+        WHERE (
+            a.title ~* ('(^|[^آ-یa-zA-Z0-9])' || :keyword || '($|[^آ-یa-zA-Z0-9])')
+            OR s.name ~* ('(^|[^آ-یa-zA-Z0-9])' || :keyword || '($|[^آ-یa-zA-Z0-9])')
+        )
+        """,
                 nativeQuery = true)
         Page<Article> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-        // OPTIMIZED: Keyset / Cursor-based Pagination for ultra-fast deep pagination
         @Query(value = """
         SELECT a.* FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id

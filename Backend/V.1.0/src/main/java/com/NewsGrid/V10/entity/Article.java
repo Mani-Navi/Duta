@@ -16,7 +16,9 @@ import java.time.ZonedDateTime;
         @Index(name = "idx_article_published_at", columnList = "publishedAt DESC"),
         @Index(name = "idx_article_slug", columnList = "slug"),
         @Index(name = "idx_article_breaking", columnList = "breaking"),
-        @Index(name = "idx_article_category", columnList = "category")
+        @Index(name = "idx_article_category", columnList = "category"),
+        @Index(name = "idx_article_cluster_id", columnList = "cluster_id"),
+        @Index(name = "idx_article_source_id", columnList = "source_id")
 })
 @Getter
 @Setter
@@ -30,6 +32,9 @@ public class Article {
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String title;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     @Column(nullable = false, unique = true, columnDefinition = "TEXT")
     private String url;
@@ -49,7 +54,6 @@ public class Article {
     @Column(length = 50)
     private String category;
 
-    // BUGFIX: FetchType.EAGER prevents JSON serialization no-session error
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cluster_id")
     @JsonIgnoreProperties({"articles", "hibernateLazyInitializer"})

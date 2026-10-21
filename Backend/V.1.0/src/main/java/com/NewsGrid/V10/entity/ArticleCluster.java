@@ -13,7 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "article_clusters")
+@Table(name = "article_clusters", indexes = {
+        @Index(name = "idx_cluster_created_at", columnList = "createdAt DESC")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -36,7 +38,6 @@ public class ArticleCluster {
     private ZonedDateTime createdAt;
     private ZonedDateTime updatedAt;
 
-    // OPTIMIZED: Prevent JSON Circular Dependency and N+1 SELECT issue during serialization
     @OneToMany(mappedBy = "cluster", fetch = FetchType.LAZY)
     @JsonIgnoreProperties({"cluster"})
     private List<Article> articles = new ArrayList<>();
