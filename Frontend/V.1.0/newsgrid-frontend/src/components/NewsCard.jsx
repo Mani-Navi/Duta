@@ -1,14 +1,6 @@
 import { memo } from 'react';
-import api from '../api/axiosConfig';
 
 function NewsCard({ article, onOpen }) {
-
-    const handlePrefetch = () => {
-        const slug = article.slug || article.id;
-        if (slug) {
-            api.get(`/articles/slug/${slug}`).catch(() => {});
-        }
-    };
 
     const getBadgeClass = (score) => {
         if (score >= 80) return 'green';
@@ -39,8 +31,6 @@ function NewsCard({ article, onOpen }) {
         <article
             className={`card ${isBreaking ? 'breaking' : ''}`}
             onClick={() => onOpen(article)}
-            onMouseEnter={handlePrefetch}
-            onTouchStart={handlePrefetch}
             role="button"
             tabIndex={0}
             aria-label={article.title}

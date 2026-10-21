@@ -1,17 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import CategoryBar from '../components/CategoryBar';
 import NewsGrid from '../components/NewsGrid';
-import api from '../api/axiosConfig';
 
 function Home({ onOpenArticle, searchKeyword }) {
     const [activeCategory, setActiveCategory] = useState(null);
-    const [categories, setCategories] = useState([]);
-
-    useEffect(() => {
-        api.get('/categories')
-            .then(res => setCategories(res.data))
-            .catch(err => console.error(err));
-    }, []);
 
     return (
         <main aria-label="صفحه اصلی اخبار Duta">
@@ -19,7 +11,6 @@ function Home({ onOpenArticle, searchKeyword }) {
                 <CategoryBar
                     activeCategory={activeCategory}
                     onSelectCategory={setActiveCategory}
-                    categories={categories}
                 />
             )}
 
