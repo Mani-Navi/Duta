@@ -6,20 +6,26 @@ import org.springframework.stereotype.Service;
 @Service
 public class SlugService {
 
-    public String generateSlug(String title, ArticleRepository articleRepository) {
-        if (title == null || title.isBlank()) return "article";
+    public synchronized String generateSlug(String title, ArticleRepository articleRepository) {
+        if (title == null || title.isBlank()) return "article-" + System.currentTimeMillis();
 
         String slug = title
-                .replaceAll("[،؛؟!٪«»()\\[\\]،:.؛،\"'،،]", "")
+                .replace('ي', 'ی')
+                .replace('ك', 'ک')
+                .replace('\u200C', '-')
+                .replaceAll("[،؛؟!٪«»()\\[\\]،:.؛\"'،،]", "")
                 .replaceAll("[^\\p{L}\\p{N}\\s-]", "")
                 .trim()
                 .replaceAll("\\s+", "-")
-                .replaceAll("-+", "-");
+                .replaceAll("-+", "-")
+                .replaceAll("^-|-$", "");
 
         if (slug.length() > 80) {
-            slug = slug.substring(0, 80);
+            int lastDash = slug.substring(0, 80).lastIndexOf('-');
+            slug = (lastDash > 20) ? slug.substring(0, lastDash) : slug.substring(0, 80);
         }
 
+        slug = slug.replaceAll("^-|-$", "");
         if (slug.isBlank()) slug = "article";
 
         String base = slug;

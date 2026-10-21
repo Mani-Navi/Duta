@@ -6,12 +6,7 @@ import com.NewsGrid.V10.repository.ArticleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,81 +14,68 @@ public class ScoringService {
 
     private final ArticleRepository articleRepository;
 
-    // وزن‌های اصلی الگوریتم بایزین
-    private static final double W_SOURCE   = 0.50;
-    private static final double W_COVERAGE = 0.35;
-    private static final double W_FRESH    = 0.15;
-
     /**
      * محاسبه هوشمند امتیاز نهایی کلستر اخبار (بین ۰ تا ۱۰۰)
+     * بر پایه میانگین وزنی اعتبار منابع (Credibility²) + پاداش تایید چندمنبعی مستقل
      */
     public int calculateClusterScore(ArticleCluster cluster) {
         List<Article> articles = articleRepository.findByCluster(cluster);
         if (articles.isEmpty()) return 0;
 
-        double sourceQuality = calculateSourceQuality(articles);
-        double coverage      = calculateCoverageScore(articles);
-        double freshness     = calculateFreshnessScore(cluster.getCreatedAt());
+        double baseSourceQuality = calculateSourceQuality(articles);
 
-        double total = (sourceQuality * W_SOURCE)
-                + (coverage      * W_COVERAGE)
-                + (freshness     * W_FRESH);
+        // شمارش تعداد منابع خبری یکتا (جلوگیری از شمارش تکراری یک منبع واحد)
+        long uniqueSources = articles.stream()
+                .filter(a -> a.getSource() != null && a.getSource().getId() != null)
+                .map(a -> a.getSource().getId())
+                .distinct()
+                .count();
 
-        return (int) Math.min(100, Math.round(total));
+        if (uniqueSources <= 1) {
+            return (int) Math.min(100, Math.round(baseSourceQuality));
+        }
+
+        // پاداش تایید توسط منابع مستقل متعدد (Multi-Source Verification Boost)
+        double verificationBoost = calculateVerificationBoost(uniqueSources, articles);
+        double finalScore = baseSourceQuality + verificationBoost;
+
+        return (int) Math.min(100, Math.round(finalScore));
     }
 
-    // ── ۱. Source Quality (وزن ۵۰٪ با فرمول Credibility²) ─────────
+    // ── ۱. کیفیت پایه منابع با فرمول وزنی Credibility² ─────────
     private double calculateSourceQuality(List<Article> articles) {
         double weightedSum = 0;
         double totalWeight = 0;
 
         for (Article a : articles) {
-            if (a.getSource() == null) continue;
+            if (a.getSource() == null || a.getSource().getCredibility() == null) continue;
             double cred   = a.getSource().getCredibility();
-            double weight = cred * cred; // Credibility²
+            double weight = cred * cred;
             weightedSum  += cred * weight;
             totalWeight  += weight;
         }
 
-        if (totalWeight == 0) return 0;
+        if (totalWeight == 0) return 50;
         return weightedSum / totalWeight;
     }
 
-    // ── ۲. Coverage Score (وزن ۳۵٪ با ضریب تنوع کتگوری) ───────────
-    private double calculateCoverageScore(List<Article> articles) {
-        int count = articles.size();
+    // ── ۲. پاداش تایید مستقل بر اساس تعداد منابع یکتا ───────────
+    private double calculateVerificationBoost(long uniqueSources, List<Article> articles) {
+        double rawBoost;
+        if      (uniqueSources == 2) rawBoost =  4.0;
+        else if (uniqueSources == 3) rawBoost =  8.0;
+        else if (uniqueSources == 4) rawBoost = 11.0;
+        else                         rawBoost = 14.0;
 
-        double rawScore;
-        if      (count == 1) rawScore =   0;
-        else if (count == 2) rawScore =  40;
-        else if (count == 3) rawScore =  65;
-        else if (count == 4) rawScore =  82;
-        else if (count == 5) rawScore =  92;
-        else                 rawScore = 100;
+        // اگر حداقل ۲ منبع مستقل با اعتبار بالای ۷۵ خبر را تایید کرده باشند، ضریب کامل می‌گیرد
+        long highCredSources = articles.stream()
+                .filter(a -> a.getSource() != null && a.getSource().getId() != null)
+                .filter(a -> a.getSource().getCredibility() != null && a.getSource().getCredibility() >= 75)
+                .map(a -> a.getSource().getId())
+                .distinct()
+                .count();
 
-        Set<String> categories = articles.stream()
-                .filter(a -> a.getCategory() != null)
-                .map(Article::getCategory)
-                .collect(Collectors.toSet());
-
-        double diversityMultiplier;
-        if      (categories.size() >= 3) diversityMultiplier = 1.00;
-        else if (categories.size() == 2) diversityMultiplier = 0.95;
-        else                             diversityMultiplier = 0.85;
-
-        return rawScore * diversityMultiplier;
-    }
-
-    // ── ۳. Freshness Score (وزن ۱۵٪ با افت زمانی UTC) ─────────────
-    private double calculateFreshnessScore(ZonedDateTime createdAt) {
-        if (createdAt == null) return 0;
-        long hours = Duration.between(createdAt, ZonedDateTime.now(ZoneOffset.UTC)).toHours();
-
-        if      (hours < 1)  return 100;
-        else if (hours < 3)  return  80;
-        else if (hours < 6)  return  60;
-        else if (hours < 12) return  40;
-        else if (hours < 24) return  20;
-        else                 return   0;
+        double trustMultiplier = (highCredSources >= 2) ? 1.0 : (highCredSources == 1 ? 0.85 : 0.6);
+        return rawBoost * trustMultiplier;
     }
 }
