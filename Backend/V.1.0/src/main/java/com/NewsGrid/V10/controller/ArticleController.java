@@ -1,19 +1,28 @@
 package com.NewsGrid.V10.controller;
 
+import com.NewsGrid.V10.Dto.SeoArticleDto;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.entity.SourceType;
 import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.service.*;
-import com.NewsGrid.V10.Dto.SeoArticleDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @RestController
@@ -27,10 +36,22 @@ public class ArticleController {
     private final ArticleRepository articleRepository;
     private final CategoryClassifierService categoryClassifier;
 
-    private static final int MAX_PAGE_SIZE = 100;
+    @Value("${jwt.secret}")
+    private String adminSecret;
 
-    @GetMapping("/fetch-now")
-    public String fetchNow() {
+    private static final int MAX_PAGE_SIZE = 100;
+    private final AtomicBoolean isReclassifying = new AtomicBoolean(false);
+
+    @RequestMapping(value = "/fetch-now", method = {RequestMethod.GET, RequestMethod.POST})
+    public ResponseEntity<Map<String, String>> fetchNow(
+            @RequestHeader(value = "X-Admin-Key", required = false) String headerKey,
+            @RequestParam(value = "key", required = false) String paramKey) {
+
+        if (!isAuthorizedAdmin(headerKey, paramKey)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "دسترسی غیرمجاز"));
+        }
+
         CompletableFuture.runAsync(() -> {
             try {
                 log.info("Manual fetch triggered: Fetching RSS sources...");
@@ -47,25 +68,25 @@ public class ArticleController {
             }
         });
 
-        return "started";
+        return ResponseEntity.ok(Map.of("status", "started"));
     }
 
     @GetMapping
     public Page<Article> getAllArticles(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        return articleService.getAllArticles(page, safeSize);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        return articleService.getAllArticles(Math.max(page, 0), safeSize);
     }
 
     @GetMapping("/telegram")
     public Page<Article> getTelegramArticles(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         return articleRepository.findBySourceSourceTypeOrderByPublishedAtDesc(
                 SourceType.TELEGRAM,
-                PageRequest.of(page, safeSize)
+                PageRequest.of(Math.max(page, 0), safeSize)
         );
     }
 
@@ -74,16 +95,16 @@ public class ArticleController {
             @RequestParam String name,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        return articleService.getArticlesByCategory(name, page, safeSize);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        return articleService.getArticlesByCategory(name, Math.max(page, 0), safeSize);
     }
 
     @GetMapping("/breaking")
     public Page<Article> getBreaking(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        return articleService.getBreakingArticles(page, safeSize);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        return articleService.getBreakingArticles(Math.max(page, 0), safeSize);
     }
 
     @GetMapping("/{id}")
@@ -106,40 +127,55 @@ public class ArticleController {
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        int safeSize = Math.min(size, MAX_PAGE_SIZE);
-        // BUGFIX: Pass page argument correctly (3 arguments expected)
-        return articleService.searchArticles(keyword, page, safeSize);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        return articleService.searchArticles(keyword, Math.max(page, 0), safeSize);
     }
 
-    @GetMapping("/reclassify")
-    public String reclassify() {
+    @RequestMapping(value = "/reclassify", method = {RequestMethod.GET, RequestMethod.POST})
+    public ResponseEntity<Map<String, String>> reclassify(
+            @RequestHeader(value = "X-Admin-Key", required = false) String headerKey,
+            @RequestParam(value = "key", required = false) String paramKey) {
+
+        if (!isAuthorizedAdmin(headerKey, paramKey)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "دسترسی غیرمجاز"));
+        }
+
+        if (!isReclassifying.compareAndSet(false, true)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("status", "already_running"));
+        }
+
         CompletableFuture.runAsync(() -> {
-            int page = 0;
-            Page<Article> articlePage;
+            try {
+                int page = 0;
+                Page<Article> articlePage;
 
-            do {
-                articlePage = articleRepository.findAll(PageRequest.of(page, 100));
-                articlePage.getContent().forEach(article -> {
-                    article.setCategory(categoryClassifier.classify(article.getTitle(), article.getSource()));
-                });
-                articleRepository.saveAll(articlePage.getContent());
-                page++;
-            } while (articlePage.hasNext());
+                do {
+                    articlePage = articleRepository.findAll(PageRequest.of(page, 100));
+                    articlePage.getContent().forEach(article ->
+                            article.setCategory(categoryClassifier.classify(article.getTitle(), article.getSource()))
+                    );
+                    articleRepository.saveAll(articlePage.getContent());
+                    page++;
+                } while (articlePage.hasNext());
 
-            log.info("Batch reclassification of all articles completed successfully.");
+                articleService.evictArticlesCache();
+                log.info("Batch reclassification of all articles completed successfully.");
+            } finally {
+                isReclassifying.set(false);
+            }
         });
 
-        return "started";
+        return ResponseEntity.ok(Map.of("status", "started"));
     }
 
-    // ۱. اندپوینت مخصوص سرویس Prerender
     @GetMapping("/seo/{slug}")
     public SeoArticleDto getSeoArticle(@PathVariable String slug) {
         return articleService.getSeoDataBySlug(slug);
     }
 
-    // اندپوینت تولید سایت‌مپ خبر گوگل (Google News Sitemap)
-    @GetMapping(value = "/sitemap.xml", produces = "application/xml")
+    @GetMapping(value = "/sitemap.xml", produces = "application/xml;charset=UTF-8")
     public String getNewsSitemap() {
         List<Article> recentArticles = articleRepository.findTop1000ByOrderByPublishedAtDesc();
         StringBuilder xml = new StringBuilder();
@@ -148,20 +184,39 @@ public class ArticleController {
         xml.append("xmlns:news=\"http://www.google.com/schemas/sitemap-news/0.9\">\n");
 
         for (Article a : recentArticles) {
-            String slug = a.getSlug() != null ? a.getSlug() : String.valueOf(a.getId());
+            String rawSlug = (a.getSlug() != null && !a.getSlug().isBlank())
+                    ? a.getSlug()
+                    : String.valueOf(a.getId());
+            String encodedSlug = URLEncoder.encode(rawSlug, StandardCharsets.UTF_8);
+            ZonedDateTime pubDate = a.getPublishedAt() != null ? a.getPublishedAt() : ZonedDateTime.now(ZoneOffset.UTC);
+
             xml.append("  <url>\n");
-            xml.append("    <loc>https://duta.ir/article/").append(slug).append("</loc>\n");
+            xml.append("    <loc>https://duta.ir/article/").append(escapeXml(encodedSlug)).append("</loc>\n");
             xml.append("    <news:news>\n");
             xml.append("      <news:publication>\n");
             xml.append("        <news:name>Duta</news:name>\n");
             xml.append("        <news:language>fa</news:language>\n");
             xml.append("      </news:publication>\n");
-            xml.append("      <news:publication_date>").append(a.getPublishedAt().toInstant()).append("</news:publication_date>\n");
-            xml.append("      <news:title>").append(a.getTitle().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")).append("</news:title>\n");
+            xml.append("      <news:publication_date>").append(pubDate.toInstant()).append("</news:publication_date>\n");
+            xml.append("      <news:title>").append(escapeXml(a.getTitle())).append("</news:title>\n");
             xml.append("    </news:news>\n");
             xml.append("  </url>\n");
         }
         xml.append("</urlset>");
         return xml.toString();
+    }
+
+    private boolean isAuthorizedAdmin(String headerKey, String paramKey) {
+        if (adminSecret == null || adminSecret.isBlank()) return false;
+        return adminSecret.equals(headerKey) || adminSecret.equals(paramKey);
+    }
+
+    private String escapeXml(String input) {
+        if (input == null) return "";
+        return input.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
     }
 }

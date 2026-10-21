@@ -14,10 +14,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
-        log.warn("Runtime exception caught: {}", ex.getMessage());
+        String msg = ex.getMessage() != null ? ex.getMessage() : "خطای درخواست";
+        log.warn("Runtime exception caught: {}", msg);
+
+        HttpStatus status = msg.contains("یافت نشد")
+                ? HttpStatus.NOT_FOUND
+                : HttpStatus.BAD_REQUEST;
+
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", ex.getMessage()));
+                .status(status)
+                .body(Map.of("error", msg));
     }
 
     @ExceptionHandler(Exception.class)
