@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap');
-
 * {
     box-sizing: border-box;
     margin: 0;
@@ -53,8 +51,8 @@ a {
     background: var(--navbar-bg);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     backdrop-filter: blur(20px) saturate(180%);
-    border-bottom:0.5px solid var(--separator);;
-    min-height: 52px; /* OPTIMIZED: Eliminates Header CLS */
+    border-bottom: 0.5px solid var(--separator);
+    min-height: 52px;
 }
 
 .nav-row {
@@ -72,8 +70,9 @@ a {
     gap: 10px;
     cursor: pointer;
     user-select: none;
-    height: 36px;
+    height: 32px;
 }
+
 .logo-text {
     font-size: 26px;
     font-weight: 800;
@@ -83,6 +82,10 @@ a {
     line-height: 1;
     display: flex;
     align-items: center;
+}
+
+.logo-dot {
+    color: var(--blue) !important;
 }
 
 .logo-divider {
@@ -95,7 +98,7 @@ a {
 .logo-sub {
     font-size: 12px;
     font-weight: 700;
-    color: var(--label-2) !important;
+    color: var(--label) !important;
     letter-spacing: 0.2px;
     white-space: nowrap;
     line-height: 1;
@@ -109,6 +112,7 @@ a {
     .logo-sub { font-size: 10.5px; }
     .logo-divider { height: 15px; }
 }
+
 .nav-right {
     display: flex;
     align-items: center;
@@ -126,19 +130,6 @@ a {
 }
 
 .nav-links a:hover { color: var(--label); }
-
-.back-btn {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    font-size: 15px;
-    color: var(--blue);
-    font-weight: 500;
-    background: none;
-    border: none;
-    font-family: inherit;
-    cursor: pointer;
-}
 
 .nav-tools {
     display: flex;
@@ -174,7 +165,6 @@ a {
 }
 
 /* ─── Seamless Categories Bar Without Scrollbar ────── */
-
 .categories {
     max-width: 1100px;
     margin: 0 auto;
@@ -183,13 +173,10 @@ a {
     gap: 8px;
     overflow-x: auto;
     min-height: 48px;
-
-    /* مخفی کردن اسکرول‌بار در تمام مرورگرها (Firefox & Edge) */
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
 
-/* مخفی کردن اسکرول‌بار در Chrome, Safari & Opera */
 .categories::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;
@@ -214,26 +201,8 @@ a {
     color: #fff;
     background: var(--blue);
 }
-/* ─── Pinterest / Masonry Layout for News Cards ────── */
-
-.grid {
-    max-width: 1100px;
-    margin: 0 auto;
-    column-count: 4;
-    column-gap: 14px;
-    padding: 14px 20px 60px;
-    min-height: 80vh; /* OPTIMIZED: Eliminates Desktop Layout Shift (CLS = 0.000) */
-}
-
-.grid > div {
-    break-inside: avoid;
-    margin-bottom: 14px;
-    display: inline-block;
-    width: 100%;
-}
 
 /* ─── Apple-Style Card Hover & Active Animations ─────── */
-
 .card {
     background: var(--card);
     border-radius: 18px;
@@ -249,14 +218,12 @@ a {
     contain-intrinsic-size: 140px;
 }
 
-/* انیمیشن Hover در حالت لایت */
 .card:hover {
     transform: translateY(-4px) scale(1.008);
     box-shadow: 0 12px 28px -6px rgba(0, 122, 255, 0.12), 0 8px 12px -6px rgba(0, 0, 0, 0.06);
     border-color: rgba(0, 122, 255, 0.22);
 }
 
-/* انیمیشن Hover در حالت دارک */
 .dark .card:hover,
 body.dark .card:hover {
     transform: translateY(-4px) scale(1.008);
@@ -264,33 +231,14 @@ body.dark .card:hover {
     border-color: rgba(0, 122, 255, 0.35);
 }
 
-/* حس لمس دکمه موقع کلیک کردن روی کارت */
 .card:active {
     transform: translateY(-1px) scale(0.99);
     transition: transform 0.1s ease;
 }
 
-/* انیمیشن ویژه کارت‌های تلگرامی در حالت Hover */
 .card.telegram-news-card:hover {
     border-color: #2AABEE !important;
     box-shadow: 0 12px 28px -6px rgba(42, 171, 238, 0.28) !important;
-}
-
-@media (max-width: 1024px) {
-    .grid { column-count: 3; }
-}
-
-@media (max-width: 768px) {
-    .grid {
-        column-count: 2;
-        column-gap: 10px;
-        padding: 10px 12px 80px;
-    }
-    .grid > div { margin-bottom: 10px; }
-}
-
-@media (max-width: 440px) {
-    .grid { column-count: 1; }
 }
 
 .source-label {
@@ -385,7 +333,19 @@ body.dark .card:hover {
     font-weight: 800;
     color: var(--label);
     line-height: 1.6;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
+}
+
+.detail-description {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--label-2);
+    line-height: 1.8;
+    margin-bottom: 22px;
+    padding: 14px 16px;
+    background: var(--card);
+    border-radius: 14px;
+    border-right: 3px solid var(--blue);
 }
 
 .group-card {
@@ -623,44 +583,6 @@ body.dark .card:hover {
     .cred-grid, .steps { grid-template-columns: 1fr; }
 }
 
-.theme-toggle-btn { background: none; border: none; cursor: pointer; padding: 0; }
-
-.toggle-track {
-    width: 48px;
-    height: 26px;
-    border-radius: 13px;
-    background: #E5E5EA;
-    position: relative;
-    transition: background 0.3s;
-    display: flex;
-    align-items: center;
-    padding: 2px;
-}
-
-.toggle-track.dark {
-    background: #1C1C1E;
-    border: 1px solid rgba(255,255,255,0.15);
-}
-
-.toggle-thumb {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.3s;
-    color: #FF9500;
-}
-
-.toggle-track.dark .toggle-thumb {
-    transform: translateX(22px);
-    background: #2C2C2E;
-    color: #FFD60A;
-}
-
 .toggle-btn {
     width: 36px;
     height: 36px;
@@ -699,47 +621,6 @@ body.dark .card:hover {
 
 .search-input::placeholder { color: var(--label-3); }
 
-/* ─── Price Ticker ─────────────────────────────────────── */
-.price-ticker {
-    width: 100%;
-    background: var(--navbar-bg);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
-    border-bottom: 0.5px solid var(--separator);
-    height: 36px;
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-}
-
-.ticker-inner {
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    width: 100%;
-    justify-content: space-around;
-}
-
-.ticker-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 0 16px;
-    white-space: nowrap;
-}
-
-.ticker-item:last-child { border-left: none; }
-.ticker-symbol { font-size: 13px; line-height: 1; }
-.ticker-label { font-size: 11px; font-weight: 500; color: var(--label-2); }
-.ticker-price { font-size: 12px; font-weight: 600; color: var(--label); font-variant-numeric: tabular-nums; letter-spacing: -0.2px; }
-.ticker-unit { font-size: 10px; color: var(--label-3); font-weight: 400; }
-
-@media (max-width: 480px) {
-    .ticker-label { display: none; }
-    .ticker-item { padding: 0 10px; gap: 4px; }
-    .ticker-price { font-size: 11px; }
-}
-
 /* ─── Back Bar ─────────────────────────────────────── */
 .back-bar {
     max-width: 640px;
@@ -770,7 +651,7 @@ body.dark .card:hover {
 }
 
 @media (max-width: 720px) {
-    .about-section { grid-template-columns: 1fr; }
+    .about-section { flex-direction: column; }
 }
 
 .about-contact {
@@ -880,7 +761,7 @@ body.dark .card:hover {
 
     .bottom-search .search-input { background: var(--chip-bg); }
 
-    .grid, .detail-content, .page-content { padding-bottom: 90px; }
+    .masonry-grid, .detail-content, .page-content { padding-bottom: 90px; }
 }
 
 .mobile-only  { display: none; }
@@ -891,19 +772,7 @@ body.dark .card:hover {
     .desktop-only { display: none;  }
 }
 
-/* OPTIMIZED: Instant local font display */
-@font-face {
-    font-family: 'Vazirmatn';
-    font-display: swap;
-}
-
 /* ─── Source Badge ──────────────────────────────────── */
-.src-group {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-}
-
 .src-badge {
     width: 22px;
     height: 22px;
@@ -942,11 +811,9 @@ body.dark .card:hover {
     50%       { opacity: 0.35; transform: scale(0.65); }
 }
 
-/* ─── Unified Pinkish-Red Tinted Theme for ALL Breaking Cards ─── */
-
 .card.breaking {
     border: 1.5px solid rgba(225, 29, 72, 0.45) !important;
-    background: rgba(225, 29, 72, 0.07) !important; /* پس‌زمینه قرمز کم‌رنگ یکدست */
+    background: rgba(225, 29, 72, 0.07) !important;
 }
 
 .dark .card.breaking,
@@ -955,7 +822,6 @@ body.dark .card.breaking {
     background: rgba(225, 29, 72, 0.12) !important;
 }
 
-/* انیمیشن درخشش هاله قرمز هنگام رفتن موس روی کارت فوری */
 .card.breaking:hover {
     border-color: rgba(225, 29, 72, 0.7) !important;
     box-shadow: 0 12px 28px -6px rgba(225, 29, 72, 0.32), 0 8px 12px -6px rgba(0, 0, 0, 0.08) !important;
@@ -1021,11 +887,6 @@ body.dark .card.breaking:hover {
     overflow: hidden;
 }
 
-.card.telegram-news-card:hover {
-    border-color: #2AABEE !important;
-    box-shadow: 0 6px 18px rgba(42, 171, 238, 0.2);
-}
-
 .telegram-header {
     display: flex;
     align-items: center;
@@ -1067,15 +928,13 @@ body.dark .card.breaking:hover {
 
 .view-in-telegram:hover { text-decoration: underline; }
 
-/* ─── Ultra-Smooth Hardware-Accelerated Shimmer Animation ─── */
-
+/* ─── Shimmer Skeleton Animation ─── */
 .skeleton-card {
     pointer-events: none;
     min-height: 130px;
     background: var(--card) !important;
 }
 
-/* Light Mode Shimmer */
 body:not(.dark) .shimmer {
     background-image: linear-gradient(90deg, #e5e5ea 0%, #ffffff 50%, #e5e5ea 100%) !important;
     background-size: 200% 100% !important;
@@ -1083,7 +942,6 @@ body:not(.dark) .shimmer {
     animation: shimmerMove 1.3s infinite linear !important;
 }
 
-/* Dark Mode Shimmer */
 .dark .shimmer,
 body.dark .shimmer {
     background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.04) 100%) !important;
@@ -1093,29 +951,14 @@ body.dark .shimmer {
 }
 
 @keyframes shimmerMove {
-    0% {
-        background-position: -250px 0;
-    }
-    100% {
-        background-position: 250px 0;
-    }
+    0% { background-position: -250px 0; }
+    100% { background-position: 250px 0; }
 }
 
-.skeleton-badge {
-    width: 20px;
-    height: 20px;
-    border-radius: 6px;
-}
+.skeleton-badge { width: 20px; height: 20px; border-radius: 6px; }
+.skeleton-title-line { height: 14px; border-radius: 6px; }
+.skeleton-time { width: 70px; height: 12px; }
 
-.skeleton-title-line {
-    height: 14px;
-    border-radius: 6px;
-}
-
-.skeleton-time {
-    width: 70px;
-    height: 12px;
-}
 /* ─── Inline Share Bar ──────────────────────────────── */
 .share-inline-bar {
     margin: 20px 0 4px;
@@ -1154,6 +997,8 @@ body.dark .shimmer {
     color: #ffffff;
     font-size: 13px;
     font-weight: 700;
+    font-family: inherit;
+    border: none;
     padding: 10px 20px;
     border-radius: 99px;
     display: flex;
@@ -1218,7 +1063,6 @@ body.dark .price-chip {
     .chip-unit { font-size: 9.5px; }
 }
 
-/* ─── Glassmorphism Gold & Dollar Price Chips ──────── */
 .price-chip.usd {
     background: rgba(16, 185, 129, 0.1);
     border: 1px solid rgba(16, 185, 129, 0.28);
@@ -1267,7 +1111,7 @@ body.dark .price-chip.gold .chip-label { color: #facc15; }
     border: 0;
 }
 
-/* ─── Retry Container & Button Guaranteed Styles ─── */
+/* ─── Retry Container & Button ─── */
 .retry-container {
     display: flex;
     flex-direction: column;
@@ -1301,87 +1145,7 @@ body.dark .price-chip.gold .chip-label { color: #facc15; }
     box-shadow: 0 6px 20px rgba(0, 122, 255, 0.45);
 }
 
-/* ─── Perfect Baseline Alignment for Nitt Logo & Subtitle ─── */
-
-.logo {
-    display: flex;
-    align-items: center; /* تراز تراز افقی دقیق در مرکز خط */
-    gap: 10px;
-    cursor: pointer;
-    user-select: none;
-    height: 32px;
-}
-
-.logo-text {
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: -0.6px;
-    color: var(--label) !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    line-height: 1; /* حذف فاصله خطی بالا/پایین فونت */
-    display: flex;
-    align-items: center;
-}
-
-.logo-dot {
-    color: var(--blue) !important;
-}
-
-.logo-divider {
-    width: 1px;
-    height: 18px;
-    background: var(--separator);
-    flex-shrink: 0;
-}
-
-.logo-sub {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--label) !important;
-    letter-spacing: 0.2px;
-    white-space: nowrap;
-    line-height: 1; /* هم‌خط شدن کامل با Nitt */
-    display: flex;
-    align-items: center;
-}
-
-@media (max-width: 480px) {
-    .logo-text { font-size: 22px; }
-    .logo-sub { font-size: 10.5px; }
-    .logo-divider { height: 15px; }
-}
-
-/* ─── About Page Header Brand Logo ─────────────────── */
-.about-logo-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    margin-bottom: 14px;
-    user-select: none;
-}
-
-/* ─── About Page "درباره Nitt" Header ──────────────── */
-.about-title-heading {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 32px;
-    font-weight: 800;
-    margin-bottom: 12px;
-    color: var(--label);
-}
-
-.logo-text-inline {
-    font-size: 34px;
-    font-weight: 800;
-    letter-spacing: -0.6px;
-    color: var(--label) !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-/* ─── Ultra-Lightweight Pure CSS Spinner ─────────────── */
+/* ─── Loading Box ─────────────── */
 .nitt-loading-box {
     display: flex;
     flex-direction: column;
@@ -1392,33 +1156,12 @@ body.dark .price-chip.gold .chip-label { color: #facc15; }
     width: 100%;
 }
 
-.nitt-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid rgba(0, 122, 255, 0.18);
-    border-top-color: #007AFF; /* رنگ آبی اصلی برند Nitt */
-    border-radius: 50%;
-    animation: nittSpin 0.7s linear infinite;
-    will-change: transform;
-}
-
-.dark .nitt-spinner,
-body.dark .nitt-spinner {
-    border-color: rgba(255, 255, 255, 0.12);
-    border-top-color: #007AFF;
-}
-
-@keyframes nittSpin {
-    to { transform: rotate(360deg); }
-}
-
 .nitt-loading-text {
     font-size: 13.5px;
     font-weight: 600;
     color: var(--label-2);
 }
 
-/* ─── Telegram Breaking News Theme ──────────────────── */
 .card.telegram-news-card.breaking {
     border: 1.5px solid rgba(225, 29, 72, 0.5) !important;
     background: rgba(225, 29, 72, 0.06) !important;
@@ -1428,8 +1171,6 @@ body.dark .nitt-spinner {
 body.dark .card.telegram-news-card.breaking {
     background: rgba(225, 29, 72, 0.12) !important;
 }
-
-/* ─── Ultra-Sleek Glowing Breaking News Pill Badge ─── */
 
 .detail-breaking {
     display: inline-flex;
@@ -1456,45 +1197,7 @@ body.dark .card.telegram-news-card.breaking {
     animation: pulse 1.2s ease-in-out infinite;
 }
 
-/* ─── Telegram Branded Special Category Pill Style ──── */
-
-.cat-telegram {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(42, 171, 238, 0.12) !important;
-    color: #0088cc !important;
-    border: 1px solid rgba(42, 171, 238, 0.28) !important;
-    font-weight: 700 !important;
-    transition: all 0.2s ease !important;
-}
-
-.cat-telegram:hover {
-    background: rgba(42, 171, 238, 0.2) !important;
-}
-
-.cat-telegram.active {
-    background: #2AABEE !important;
-    color: #ffffff !important;
-    border-color: #2AABEE !important;
-    box-shadow: 0 4px 14px rgba(42, 171, 238, 0.35) !important;
-}
-
-.dark .cat-telegram,
-body.dark .cat-telegram {
-    background: rgba(42, 171, 238, 0.16) !important;
-    color: #38bdf8 !important;
-    border-color: rgba(56, 189, 248, 0.3) !important;
-}
-
-.dark .cat-telegram.active,
-body.dark .cat-telegram.active {
-    background: #2AABEE !important;
-    color: #ffffff !important;
-}
-
 /* ─── RTL Chronological Masonry Layout ─────────────── */
-
 .masonry-grid {
     display: flex;
     flex-direction: row;
@@ -1503,7 +1206,7 @@ body.dark .cat-telegram.active {
     max-width: 1100px;
     margin: 0 auto;
     padding: 14px 20px 60px;
-    min-height: 80vh; /* Eliminates Layout Shift */
+    min-height: 80vh;
 }
 
 .masonry-col {
@@ -1524,8 +1227,7 @@ body.dark .cat-telegram.active {
     }
 }
 
-/* ─── Duta Eye Animations (Header Relaxed 8s vs Active Loading 1s) ─── */
-
+/* ─── Duta Eye Animations ─── */
 .duta-eye-wrap {
     display: inline-flex;
     align-items: center;
@@ -1541,7 +1243,6 @@ body.dark .cat-telegram.active {
     height: 100%;
 }
 
-/* ۱. انیمیشن آرام و باوقار 180 ثانیه‌ای لوگوی هدر بالای سایت */
 .eye-lid {
     opacity: 0;
     transition: all 0.3s ease;
@@ -1555,7 +1256,7 @@ body.dark .cat-telegram.active {
     animation: eyePupilLook 180s infinite ease-in-out;
     transform-origin: center;
 }
-/* ۲. انیمیشن فوق‌العاده سریع و زنده ۱ ثانیه‌ای مخصوص لودینگ خبر (is-loading) */
+
 .duta-eye-wrap.is-loading .eye-lid {
     opacity: 0.95 !important;
     animation: fastEyeBlink 1.0s infinite ease-in-out !important;
@@ -1570,75 +1271,30 @@ body.dark .cat-telegram.active {
     filter: drop-shadow(0 0 6px rgba(168, 41, 43, 0.8));
 }
 
-/* کی‌فریم‌های انیمیشن آرام هدر (180 ثانیه) */
 @keyframes eyeLidMorph {
-    0%{
-        opacity: 0;
-        transform: scale(0.2);
-    }
-    0.5%, 1.2% {
-        opacity: 0.95;
-        transform: scale(1); /* باز شدن سریع در نیم ثانیه */
-    }
-    1.5%, 100% {
-        opacity: 0;
-        transform: scale(0.2); /* استراحت ۱۷۸ ثانیه‌ای */
-    }
+    0% { opacity: 0; transform: scale(0.2); }
+    0.5%, 1.2% { opacity: 0.95; transform: scale(1); }
+    1.5%, 100% { opacity: 0; transform: scale(0.2); }
 }
 
 @keyframes eyePupilLook {
-    0% {
-        transform: translate(0, 0) scale(1);
-    }
-    0.5% {
-        transform: translate(-3.5px, 0) scale(0.92); /* نگاه به چپ */
-    }
-    1.0% {
-        transform: translate(3.5px, 0) scale(0.92);  /* نگاه به راست */
-    }
-    1.5%, 100% {
-        transform: translate(0, 0) scale(1); /* استراحت ۱۷۸ ثانیه‌ای */
-    }
+    0% { transform: translate(0, 0) scale(1); }
+    0.5% { transform: translate(-3.5px, 0) scale(0.92); }
+    1.0% { transform: translate(3.5px, 0) scale(0.92); }
+    1.5%, 100% { transform: translate(0, 0) scale(1); }
 }
 
-/* کی‌فریم‌های انیمیشن پویای لودینگ خبر (۱ ثانیه) */
 @keyframes fastEyeBlink {
-    0%, 100% {
-        opacity: 0.95;
-        transform: scaleY(1);
-    }
-    50% {
-        opacity: 0.2;
-        transform: scaleY(0.2);
-    }
+    0%, 100% { opacity: 0.95; transform: scaleY(1); }
+    50% { opacity: 0.2; transform: scaleY(0.2); }
 }
 
 @keyframes fastPupilGlance {
-    0%, 100% {
-        transform: translate(0, 0);
-    }
-    25% {
-        transform: translate(-3.5px, 0);
-    }
-    75% {
-        transform: translate(3.5px, 0);
-    }
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-3.5px, 0); }
+    75% { transform: translate(3.5px, 0); }
 }
 
-/* ─── Mobile Corner Header Bar ──────────────────────── */
-@media (max-width: 768px) {
-    .mobile-header {
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        background: var(--navbar-bg);
-        backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
-        border-bottom: 0.5px solid var(--separator);
-    }
-}
-
-/* ─── Centered Mobile Full Brand Header ──────────────── */
 @media (max-width: 768px) {
     .mobile-header-centered {
         position: sticky;
@@ -1654,8 +1310,8 @@ body.dark .cat-telegram.active {
         width: 100%;
     }
 }
-/* ─── Official Duta Wordmark with Blue 'D' Letter ───── */
 
+/* ─── Official Duta Wordmark with Blue 'D' Letter ───── */
 .about-title-heading {
     display: inline-flex;
     align-items: center;
@@ -1676,7 +1332,6 @@ body.dark .cat-telegram.active {
     line-height: 1;
 }
 
-/* حرف D آبی برندی متمایز */
 .wordmark-blue {
     color: var(--blue) !important;
 }
