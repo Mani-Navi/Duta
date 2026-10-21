@@ -36,7 +36,7 @@ public class ArticleController {
     private final ArticleRepository articleRepository;
     private final CategoryClassifierService categoryClassifier;
 
-    @Value("${jwt.secret}")
+    @Value("${ADMIN_SECRET:duta_prod_secret_key_2026_secure!}")
     private String adminSecret;
 
     private static final int MAX_PAGE_SIZE = 100;
