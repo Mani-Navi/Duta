@@ -7,7 +7,8 @@ function ArticleDetail({ article }) {
     const [clusterArticles, setClusterArticles] = useState([]);
     const [copied, setCopied] = useState(false);
 
-    const shareUrl = `https://news-grid-pi.vercel.app/article/${article.slug || article.id}`;
+    // FIXED: Use official duta.ir domain for sharing
+    const shareUrl = `https://duta.ir/article/${article.slug || article.id}`;
 
     useEffect(() => {
         if (article.cluster?.id) {
@@ -80,7 +81,7 @@ function ArticleDetail({ article }) {
         if (navigator.share) {
             try {
                 await navigator.share({ title: article.title, url: shareUrl });
-            } catch (ignored) {}
+            } catch {}
         } else {
             await copyLink();
         }
@@ -98,15 +99,18 @@ function ArticleDetail({ article }) {
     const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
     const sourceCount = article.cluster?.sourceCount ?? 1;
     const scoreColor = getScoreColor(score);
-    const categoryName = article.source?.category?.nameFa || article.category;
+    const categoryName = article.category || article.source?.category?.nameFa;
     const allSources = [article, ...clusterArticles];
+    const hasDistinctDescription = article.description && article.description.trim() !== article.title?.trim();
 
     // Structured JSON-LD Schema for Google News
     const newsSchema = {
         "@context": "https://schema.org",
         "@type": "NewsArticle",
         "headline": article.title,
+        "description": article.description || article.title,
         "datePublished": article.publishedAt,
+        "mainEntityOfPage": shareUrl,
         "author": {
             "@type": "Organization",
             "name": article.source?.name || "Duta"
@@ -114,7 +118,7 @@ function ArticleDetail({ article }) {
         "publisher": {
             "@type": "Organization",
             "name": "Duta",
-            "url": "https://news-grid-pi.vercel.app"
+            "url": "https://duta.ir"
         }
     };
 
@@ -140,7 +144,11 @@ function ArticleDetail({ article }) {
                 <span className="detail-time">{formatTime(article.publishedAt)}</span>
             </div>
 
-            <div className="detail-title">{article.title}</div>
+            <h1 className="detail-title">{article.title}</h1>
+
+            {hasDistinctDescription && (
+                <p className="detail-description">{article.description}</p>
+            )}
 
             <div className="group-card">
                 <div className="cred-row">
@@ -189,7 +197,6 @@ function ArticleDetail({ article }) {
                 })}
             </div>
 
-            {/* نوار share */}
             <div className="share-inline-bar">
                 <span className="share-inline-label">اشتراک‌گذاری</span>
                 <div className="share-inline-btns">

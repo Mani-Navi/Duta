@@ -20,8 +20,6 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
 
     useEffect(() => {
         const handleClickOutside = (e) => {
-            // BUGFIX: فقط زمانی با کلیک بیرون سرچ را ببند که کاربر هنوز عبارتی تایپ نکرده باشد
-            // تا هنگام کلیک روی کارت‌های نتایج جستجو، لیست نتایج قبل از باز شدن خبر پاک نشود
             if (searchOpen && !keyword.trim() && navRef.current && !navRef.current.contains(e.target)) {
                 closeSearch();
             }
@@ -43,8 +41,9 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             const trimmed = val.trim();
+            // FIXED: Reset search cleanly when input drops below 2 chars
             if (trimmed.length >= 2) onSearch(trimmed);
-            else if (trimmed.length === 0) onSearch('');
+            else onSearch('');
         }, 300);
     };
 
@@ -56,7 +55,6 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <header className="navbar" ref={navRef}>
             <div className="nav-row">
-                {/* Duta Luxury Integrated Brand Header: Eye Logo + Duta | دو نگاه، یک حقیقت */}
                 <div
                     className="logo"
                     dir="ltr"
@@ -107,7 +105,6 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                 </div>
             </div>
 
-            {/* BUGFIX: مخفی کردن اینپوت سرچ هنگام مشاهده صفحه جزئیات خبر */}
             {searchOpen && view !== 'detail' && (
                 <div className="search-bar" role="search">
                     <label htmlFor="search-input" className="sr-only">جستجو در اخبار</label>

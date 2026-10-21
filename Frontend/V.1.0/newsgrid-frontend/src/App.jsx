@@ -14,6 +14,9 @@ const Features = lazy(() => import('./pages/Features'));
 const Credibility = lazy(() => import('./pages/Credibility'));
 const About = lazy(() => import('./pages/About'));
 
+const DEFAULT_TITLE = 'Duta — دو نگاه، یک حقیقت';
+const DEFAULT_DESC = 'Duta — پلتفرم تجمیع و کلسترینگ هوشمند اخبار فارسی. اخبار معتبر را از شایعه و منابع مختلف در یک نگاه تشخیص دهید.';
+
 function ArticleDetailPage() {
     const { slug } = useParams();
     const navigate = useNavigate();
@@ -29,7 +32,6 @@ function ArticleDetailPage() {
         setArticle(null);
         setLoading(true);
 
-        // BUGFIX 1: پشتیبانی همزمان از Slug و ID عددی + Encode کردن حروف فارسی
         const isNumericId = /^\d+$/.test(slug);
         const endpoint = isNumericId
             ? `/articles/${slug}`
@@ -41,10 +43,13 @@ function ArticleDetailPage() {
                 setArticle(res.data);
                 if (res.data?.title) {
                     document.title = `${res.data.title} | Duta`;
+                    const metaDesc = document.querySelector('meta[name="description"]');
+                    if (metaDesc) {
+                        metaDesc.setAttribute('content', res.data.description || res.data.title);
+                    }
                 }
             })
             .catch(async () => {
-                // Fallback: اگر با اسلاگ پیدا نشد ولی از طریق state مقاله را داریم، نمایش بده
                 if (isMounted && location.state?.articleData) {
                     setArticle(location.state.articleData);
                 } else if (isMounted) {
@@ -57,9 +62,22 @@ function ArticleDetailPage() {
 
         return () => {
             isMounted = false;
-            document.title = 'Duta — دو نگاه، یک حقیقت';
+            document.title = DEFAULT_TITLE;
+            const metaDesc = document.querySelector('meta[name="description"]');
+            if (metaDesc) {
+                metaDesc.setAttribute('content', DEFAULT_DESC);
+            }
         };
     }, [slug, navigate, location.state]);
+
+    // FIXED: Safe back navigation for direct entrants from Telegram/Google
+    const handleBack = () => {
+        if (window.history.state && window.history.state.idx > 0) {
+            navigate(-1);
+        } else {
+            navigate('/');
+        }
+    };
 
     if (loading) {
         return (
@@ -75,7 +93,7 @@ function ArticleDetailPage() {
     return (
         <main id="main-content" aria-label="محتوای خبر">
             <div className="back-bar">
-                <button className="back-btn" onClick={() => navigate(-1)} aria-label="بازگشت به اخبار">
+                <button className="back-btn" onClick={handleBack} aria-label="بازگشت به اخبار">
                     <i className="ti ti-chevron-right" aria-hidden="true" />
                     بازگشت به اخبار
                 </button>
@@ -94,7 +112,6 @@ function AppLayout() {
     const [searchKeyword, setSearchKeyword] = useState('');
     const [restoreScroll, setRestoreScroll] = useState(null);
 
-    // --- ANALYTICS_START: Route Change Tracking ---
     useEffect(() => {
         if (window.gtag) {
             window.gtag('config', 'G-5ZTGQ5ZVBJ', {
@@ -102,7 +119,6 @@ function AppLayout() {
             });
         }
     }, [location]);
-    // --- ANALYTICS_END ---
 
     const isDetail = location.pathname.startsWith('/article/');
     const view = isDetail ? 'detail'
@@ -111,7 +127,6 @@ function AppLayout() {
                 : location.pathname === '/about' ? 'about'
                     : 'home';
 
-    // BUGFIX 2: تثبیت رفرنس تابع سرچ با useCallback و جلوگیری از ریدایرکت ناخواسته به صفحه اصلی
     const handleSearch = useCallback((keyword) => {
         setSearchKeyword(prev => {
             if (prev !== keyword && keyword) {
@@ -121,7 +136,6 @@ function AppLayout() {
         });
     }, [navigate]);
 
-    // BUGFIX 3: عدم پاک کردن ناگهانی استیت سرچ در لحظه کلیک و ارسال دیتای خبر به عنوان پشتیبان
     const openArticle = useCallback((article) => {
         setRestoreScroll(window.scrollY);
         const targetSlug = article.slug || article.id;

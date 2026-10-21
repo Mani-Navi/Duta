@@ -1,11 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 
 function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
     const [searchOpen, setSearchOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
     const debounceRef = useRef(null);
 
-    // BUGFIX: حذف popstate تداخلی که با دکمه بازگشت مرورگر از صفحه خبر تداخل داشت
     const closeSearch = () => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         setSearchOpen(false);
@@ -19,8 +18,9 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             const trimmed = val.trim();
+            // FIXED: Reset search cleanly when input drops below 2 chars
             if (trimmed.length >= 2) onSearch(trimmed);
-            else if (trimmed.length === 0) onSearch('');
+            else onSearch('');
         }, 300);
     };
 
@@ -36,7 +36,6 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
 
     return (
         <>
-            {/* BUGFIX: مخفی شدن باکس سرچ شناور موبایل هنگام ورود به صفحه جزئیات خبر */}
             {searchOpen && view !== 'detail' && (
                 <div className="bottom-search" role="search">
                     <input
