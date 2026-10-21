@@ -1,9 +1,9 @@
 package com.NewsGrid.V10.service;
 
+import com.NewsGrid.V10.Dto.SeoArticleDto;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.repository.ArticleRepository;
-import com.NewsGrid.V10.Dto.SeoArticleDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -19,7 +19,6 @@ public class ArticleService {
 
     private final ArticleRepository articleRepository;
 
-    // OPTIMIZED: Cache first page of representative articles for 0ms ultra-fast response
     @Cacheable(value = "articles", key = "#page + '-' + #size")
     public Page<Article> getAllArticles(int page, int size) {
         return articleRepository.findRepresentativeArticles(PageRequest.of(page, size));
@@ -51,10 +50,19 @@ public class ArticleService {
     }
 
     public Page<Article> searchArticles(String keyword, int page, int size) {
-        return articleRepository.searchByKeyword(keyword, PageRequest.of(page, size));
+        if (keyword == null || keyword.isBlank()) {
+            return Page.empty(PageRequest.of(page, size));
+        }
+
+        // FIXED: Normalize Persian chars and escape POSIX regex special characters to prevent SQL regex errors
+        String cleanKeyword = keyword.trim()
+                .replace('ي', 'ی')
+                .replace('ك', 'ک')
+                .replaceAll("([\\\\.*+?^${}()|\\[\\]])", "\\\\$1");
+
+        return articleRepository.searchByKeyword(cleanKeyword, PageRequest.of(page, size));
     }
 
-    // Evict articles cache when new news is scraped
     @CacheEvict(value = "articles", allEntries = true)
     public void evictArticlesCache() {
         // Automatically cleared by Spring
@@ -64,12 +72,16 @@ public class ArticleService {
         Article article = articleRepository.findBySlug(slug)
                 .orElseThrow(() -> new RuntimeException("خبر یافت نشد"));
 
+        String metaDescription = (article.getDescription() != null && !article.getDescription().isBlank())
+                ? article.getDescription()
+                : article.getTitle();
+
         return SeoArticleDto.builder()
                 .title(article.getTitle())
-                .description(article.getTitle()) // فعلاً چون متن نداریم، تیتر را قرار می‌دهیم
-                .sourceName(article.getSource().getName())
+                .description(metaDescription)
+                .sourceName(article.getSource() != null ? article.getSource().getName() : "Duta")
                 .category(article.getCategory())
-                .publishedAt(article.getPublishedAt().toString())
+                .publishedAt(article.getPublishedAt() != null ? article.getPublishedAt().toString() : "")
                 .url(article.getUrl())
                 .build();
     }

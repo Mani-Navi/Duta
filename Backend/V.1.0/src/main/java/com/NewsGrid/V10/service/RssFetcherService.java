@@ -4,14 +4,16 @@ import com.NewsGrid.V10.config.ProxyConfig;
 import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.Source;
 import com.NewsGrid.V10.entity.SourceType;
-import com.NewsGrid.V10.logging.DutaLogger; // اضافه شد
-import com.NewsGrid.V10.logging.LogEvent;   // اضافه شد
+import com.NewsGrid.V10.logging.DutaLogger;
+import com.NewsGrid.V10.logging.LogEvent;
+import com.NewsGrid.V10.repository.ArticleClusterRepository;
 import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.repository.SourceRepository;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
+import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -32,11 +34,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 public class RssFetcherService {
 
-    // جایگزینی @Slf4j با لاگر اختصاصی Duta
     private static final DutaLogger logger = DutaLogger.of(RssFetcherService.class);
 
     private final SourceRepository sourceRepository;
     private final ArticleRepository articleRepository;
+    private final ArticleClusterRepository clusterRepository;
+    private final ArticleService articleService;
     private final ClusteringService clusteringService;
     private final SlugService slugService;
     private final CategoryClassifierService categoryClassifier;
@@ -46,6 +49,8 @@ public class RssFetcherService {
     public RssFetcherService(
             SourceRepository sourceRepository,
             ArticleRepository articleRepository,
+            ArticleClusterRepository clusterRepository,
+            ArticleService articleService,
             ClusteringService clusteringService,
             SlugService slugService,
             CategoryClassifierService categoryClassifier,
@@ -53,6 +58,8 @@ public class RssFetcherService {
             ProxyConfig proxyConfig) {
         this.sourceRepository = sourceRepository;
         this.articleRepository = articleRepository;
+        this.clusterRepository = clusterRepository;
+        this.articleService = articleService;
         this.clusteringService = clusteringService;
         this.slugService = slugService;
         this.categoryClassifier = categoryClassifier;
@@ -61,23 +68,26 @@ public class RssFetcherService {
     }
 
     private static final Set<String> BREAKING_KEYWORDS = Set.of(
-            "زلزله", "سیل", "آتش‌سوزی", "انفجار", "حمله", "جنگ", "بمب", "موشک",
+            "زلزله", "سیل", "آتش‌سوزی", "آتش سوزی", "انفجار", "حمله", "جنگ", "بمب", "موشک",
             "کشته", "شهید", "سقوط", "تصادف", "اورژانس", "بحران", "فوری", "خبر فوری", "ترور"
     );
+
+    // FIXED: Scoped SSL SocketFactory for RSS connections only (does not pollute global JVM SSL)
+    private static SSLSocketFactory rssSslSocketFactory;
+    private static final HostnameVerifier RSS_HOSTNAME_VERIFIER = (hostname, session) -> true;
 
     static {
         try {
             TrustManager[] trustAllCerts = new TrustManager[]{
                     new X509TrustManager() {
-                        public X509Certificate[] getAcceptedIssuers() { return null; }
+                        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
                         public void checkClientTrusted(X509Certificate[] certs, String authType) {}
                         public void checkServerTrusted(X509Certificate[] certs, String authType) {}
                     }
             };
-            SSLContext sc = SSLContext.getInstance("SSL");
+            SSLContext sc = SSLContext.getInstance("TLS");
             sc.init(null, trustAllCerts, new java.security.SecureRandom());
-            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-            HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
+            rssSslSocketFactory = sc.getSocketFactory();
         } catch (Exception ignored) {}
     }
 
@@ -93,10 +103,12 @@ public class RssFetcherService {
             logger.info(LogEvent.FETCH_CYCLE_START, "Starting Parallel RSS fetch cycle", "sources_count", sources.size());
 
             AtomicInteger successCount = new AtomicInteger(0);
+            AtomicInteger totalNewArticles = new AtomicInteger(0);
 
             List<CompletableFuture<Void>> futures = sources.stream()
                     .map(source -> CompletableFuture.runAsync(() -> {
-                                fetchSingleRssSource(source);
+                                int saved = fetchSingleRssSource(source);
+                                totalNewArticles.addAndGet(saved);
                                 successCount.incrementAndGet();
                             }, rssTaskExecutor)
                             .orTimeout(20, TimeUnit.SECONDS)
@@ -109,72 +121,102 @@ public class RssFetcherService {
 
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
+            // FIXED: Evict articles cache immediately when new articles are saved
+            if (totalNewArticles.get() > 0) {
+                articleService.evictArticlesCache();
+                logger.info(LogEvent.CACHE_EVICTED, "Articles cache evicted after new RSS items",
+                        "new_articles", totalNewArticles.get());
+            }
+
             logger.info(LogEvent.FETCH_CYCLE_END, "Parallel RSS fetch cycle completed",
                     "duration_ms", cycleTimer.stop(),
                     "successful_sources", successCount.get(),
-                    "total_sources", sources.size());
+                    "total_sources", sources.size(),
+                    "total_new_articles", totalNewArticles.get());
 
         } catch (Throwable t) {
             logger.error(LogEvent.FETCH_FAILED, "Global RSS fetch cycle error", t);
         }
     }
 
+    // FIXED: Retain articles for 30 days (UCS-005 & Google SEO) + Clean up orphan clusters
     @Scheduled(cron = "0 0 3 * * ?")
     public void cleanupOldArticles() {
         var timer = logger.startTimer();
         try {
-            ZonedDateTime cutoff = ZonedDateTime.now(ZoneOffset.UTC).minusDays(3);
+            ZonedDateTime cutoff = ZonedDateTime.now(ZoneOffset.UTC).minusDays(30);
             articleRepository.deleteByPublishedAtBefore(cutoff);
-            logger.info(LogEvent.ARTICLES_CLEANUP, "Old articles cleanup completed",
-                    "cutoff_date", cutoff, "duration_ms", timer.stop());
+            int deletedClusters = clusterRepository.deleteOrphanClusters();
+            articleService.evictArticlesCache();
+
+            logger.info(LogEvent.ARTICLES_CLEANUP, "Old articles & orphan clusters cleanup completed",
+                    "cutoff_date", cutoff,
+                    "deleted_orphan_clusters", deletedClusters,
+                    "duration_ms", timer.stop());
         } catch (Exception e) {
             logger.error(LogEvent.DB_ERROR, "Error during daily article cleanup", e);
         }
     }
 
-    private void fetchSingleRssSource(Source source) {
+    private int fetchSingleRssSource(Source source) {
         var fetchTimer = logger.startTimer();
         logger.debug(LogEvent.FETCH_START, "Fetching single RSS source", "source", source.getName());
+        int savedCount = 0;
+        int duplicateCount = 0;
 
         try {
             URL feedUrl = new URL(source.getRssUrl());
             HttpURLConnection conn = (HttpURLConnection) feedUrl.openConnection(proxyConfig.getProxy());
+
+            if (conn instanceof HttpsURLConnection httpsConn && rssSslSocketFactory != null) {
+                httpsConn.setSSLSocketFactory(rssSslSocketFactory);
+                httpsConn.setHostnameVerifier(RSS_HOSTNAME_VERIFIER);
+            }
+
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36");
             conn.setRequestProperty("Accept", "text/xml, application/xml, application/rss+xml, */*");
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
 
-            SyndFeed feed = new SyndFeedInput().build(new XmlReader(conn));
-            int savedCount = 0;
-            int duplicateCount = 0;
+            try (XmlReader reader = new XmlReader(conn)) {
+                SyndFeed feed = new SyndFeedInput().build(reader);
 
-            for (SyndEntry entry : feed.getEntries()) {
-                try {
-                    if (!articleRepository.existsByUrl(entry.getLink())) {
-                        Article article = new Article();
-                        article.setTitle(entry.getTitle());
-                        article.setUrl(entry.getLink());
+                for (SyndEntry entry : feed.getEntries()) {
+                    try {
+                        String link = entry.getLink();
+                        String title = entry.getTitle() != null ? entry.getTitle().trim() : null;
 
-                        if (entry.getPublishedDate() != null) {
-                            article.setPublishedAt(entry.getPublishedDate().toInstant().atZone(ZoneOffset.UTC));
-                        } else {
-                            article.setPublishedAt(ZonedDateTime.now(ZoneOffset.UTC));
+                        if (link == null || link.isBlank() || title == null || title.isBlank()) {
+                            continue;
                         }
 
-                        article.setSource(source);
-                        article.setBreaking(isBreaking(entry.getTitle()));
-                        article.setCategory(categoryClassifier.classify(entry.getTitle(), source));
-                        article.setSlug(slugService.generateSlug(entry.getTitle(), articleRepository));
+                        if (!articleRepository.existsByUrl(link)) {
+                            Article article = new Article();
+                            article.setTitle(title);
+                            article.setDescription(extractCleanDescription(entry));
+                            article.setUrl(link);
 
-                        articleRepository.save(article);
-                        clusteringService.clusterArticle(article);
+                            if (entry.getPublishedDate() != null) {
+                                article.setPublishedAt(entry.getPublishedDate().toInstant().atZone(ZoneOffset.UTC));
+                            } else {
+                                article.setPublishedAt(ZonedDateTime.now(ZoneOffset.UTC));
+                            }
 
-                        logger.debug(LogEvent.ARTICLE_SAVED, "New article saved", "title", article.getTitle());
-                        savedCount++;
-                    } else {
-                        duplicateCount++;
-                    }
-                } catch (Throwable ignored) {}
+                            article.setSource(source);
+                            article.setBreaking(isBreaking(title));
+                            article.setCategory(categoryClassifier.classify(title, source));
+                            article.setSlug(slugService.generateSlug(title, articleRepository));
+
+                            articleRepository.save(article);
+                            clusteringService.clusterArticle(article);
+
+                            logger.debug(LogEvent.ARTICLE_SAVED, "New article saved", "title", article.getTitle());
+                            savedCount++;
+                        } else {
+                            duplicateCount++;
+                        }
+                    } catch (Throwable ignored) {}
+                }
             }
 
             source.setLastFetchedAt(ZonedDateTime.now(ZoneOffset.UTC));
@@ -190,11 +232,30 @@ public class RssFetcherService {
             logger.warn(LogEvent.FETCH_FAILED, "Failed to fetch RSS source",
                     "source", source.getName(), "error", t.getMessage(), "duration_ms", fetchTimer.stop());
         }
+
+        return savedCount;
+    }
+
+    private String extractCleanDescription(SyndEntry entry) {
+        try {
+            if (entry.getDescription() == null || entry.getDescription().getValue() == null) {
+                return null;
+            }
+            String clean = Jsoup.parse(entry.getDescription().getValue()).text().trim();
+            if (clean.isBlank()) return null;
+            if (clean.length() > 350) {
+                int lastSpace = clean.substring(0, 350).lastIndexOf(' ');
+                return (lastSpace > 100) ? clean.substring(0, lastSpace) + "..." : clean.substring(0, 347) + "...";
+            }
+            return clean;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private boolean isBreaking(String title) {
         if (title == null) return false;
-        String lower = title.toLowerCase();
+        String lower = title.toLowerCase().replace('ي', 'ی').replace('ك', 'ک');
         return BREAKING_KEYWORDS.stream().anyMatch(lower::contains);
     }
 }
