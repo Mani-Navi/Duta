@@ -13,9 +13,6 @@ const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
 const Features = lazy(() => import('./pages/Features'));
 const Credibility = lazy(() => import('./pages/Credibility'));
 const About = lazy(() => import('./pages/About'));
-const Privacy = lazy(() => import('./pages/Privacy'));
-const Terms = lazy(() => import('./pages/Terms'));
-const NotFound = lazy(() => import('./pages/NotFound'));
 
 const DEFAULT_TITLE = 'Duta — دو نگاه، یک حقیقت | پلتفرم هوشمند تجمیع و سنجش اعتبار اخبار';
 const DEFAULT_DESC = 'Duta (دوتا) — پلتفرم هوشمند تجمیع، خوشه‌بندی و سنجش اعتبار اخبار فارسی. اخبار فوری، سیاسی، اقتصادی، ورزشی و تکنولوژی را با امتیاز اعتبار منابع دنبال کنید.';
@@ -40,6 +37,117 @@ function syncDocumentSeoTags({ title, description, canonicalUrl }) {
         document.head.appendChild(canonicalEl);
     }
     canonicalEl.setAttribute('href', canonicalUrl || 'https://duta.ir/');
+}
+
+function NotFoundPage() {
+    const navigate = useNavigate();
+
+    return (
+        <div className="page-content" style={{ textAlign: 'center', padding: '80px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                <DutaLogo breaking={true} />
+            </div>
+            <h1 style={{ fontSize: '64px', fontWeight: 800, color: 'var(--blue)', lineHeight: 1, marginBottom: '12px' }}>
+                404
+            </h1>
+            <h2 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '10px', color: 'var(--label)' }}>
+                صفحه یا خبر مورد نظر یافت نشد
+            </h2>
+            <p style={{ fontSize: '14.5px', color: 'var(--label-2)', maxWidth: '420px', margin: '0 auto 28px', lineHeight: 1.7 }}>
+                ممکن است آدرس صفحه را اشتباه وارد کرده باشید یا این خبر پس از گذشت ۳۰ روز از آرشیو خودکار Duta حذف شده باشد.
+            </p>
+            <button
+                className="retry-btn"
+                onClick={() => navigate('/')}
+                aria-label="بازگشت به صفحه اصلی اخبار"
+            >
+                <i className="ti ti-home" aria-hidden="true" />
+                مشاهده آخرین اخبار
+            </button>
+        </div>
+    );
+}
+
+function PrivacyPage() {
+    const sections = [
+        {
+            icon: "ti-shield-lock",
+            title: "عدم دریافت اطلاعات هویتی",
+            desc: "استفاده از پلتفرم خبری Duta کاملاً آزاد و رایگان است و برای مطالعه اخبار، جستجو یا بررسی اعتبار منابع نیازی به ثبت‌نام یا ارائه اطلاعات شخصی (مانند شماره تماس یا نام) نیست."
+        },
+        {
+            icon: "ti-chart-bar",
+            title: "داده‌های آماری و کوکی‌ها",
+            desc: "ما صرفاً از کوکی‌های استاندارد تحلیلی (Google Analytics) به صورت ناشناس برای سنجش سرعت بارگذاری صفحات و بهبود تجربه کاربری استفاده می‌کنیم و هیچ‌گونه ردیابی تبلیغاتی انجام نمی‌دهیم."
+        },
+        {
+            icon: "ti-lock",
+            title: "امنیت ارتباطات و عدم اشتراک‌گذاری",
+            desc: "تمامی ارتباطات شما با سرورهای Duta از طریق پروتکل امن HTTPS (TLS 1.3) رمزنگاری می‌شود و هیچ داده‌ای با اشخاص یا شرکت‌های ثالث به اشتراک گذاشته نمی‌شود."
+        }
+    ];
+
+    return (
+        <div className="page-content">
+            <div className="page-header">
+                <h1>سیاست حفظ حریم خصوصی</h1>
+                <p>در Duta، احترام به حریم خصوصی و امنیت داده‌های کاربران اولویت اصلی ماست.</p>
+            </div>
+
+            <div className="feature-grid">
+                {sections.map((s, i) => (
+                    <div className="feature-card" key={i}>
+                        <div className="feature-icon">
+                            <i className={`ti ${s.icon}`} aria-hidden="true" />
+                        </div>
+                        <h3>{s.title}</h3>
+                        <p>{s.desc}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function TermsPage() {
+    const terms = [
+        {
+            icon: "ti-rss",
+            title: "ماهیت خودکار تجمیع اخبار",
+            desc: "پلتفرم Duta یک موتور هوشمند تجمیع خبر (News Aggregator) است که تیتر و خلاصه اخبار را به صورت خودکار از فیدهای عمومی RSS خبرگزاری‌های رسمی جمع‌آوری می‌کند. مسئولیت حقوقی و محتوایی هر خبر بر عهده رسانه منتشرکننده اصلی است."
+        },
+        {
+            icon: "ti-cpu",
+            title: "محاسبه الگوریتمی امتیاز اعتبار",
+            desc: "امتیاز اعتبار نمایش‌داده‌شده برای هر خبر یا خوشه خبری، حاصل پردازش آماری و ریاضی (الگوریتم شباهت جاکارد و فرمول وزنی بیزین بر اساس تعداد و سابقه منابع پوشش‌دهنده) بوده و به منزله قضاوت انسانی یا تایید و رد قطعی حقوقی نیست."
+        },
+        {
+            icon: "ti-external-link",
+            title: "حقوق مالکیت فکری و ارجاع به منبع",
+            desc: "تمامی حقوق مادی و معنوی اخبار متعلق به رسانه‌های منتشرکننده است. Duta همواره نام منبع را به صورت شفاف درج کرده و کاربر را برای مطالعه متن کامل خبر مستقیماً به وب‌سایت اصلی منبع ارجاع می‌دهد."
+        }
+    ];
+
+    return (
+        <div className="page-content">
+            <div className="page-header">
+                <h1>قوانین استفاده و سلب مسئولیت</h1>
+                <p>شرایط بهره‌برداری از خدمات پلتفرم تجمیع و سنجش اعتبار خبر Duta</p>
+            </div>
+
+            <div className="feature-grid">
+                {terms.map((item, i) => (
+                    <div className="feature-card" key={i}>
+                        <div className="feature-icon">
+                            <i className={`ti ${item.icon}`} aria-hidden="true" />
+                        </div>
+                        <h3>{item.title}</h3>
+                        <p>{item.desc}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 }
 
 function ArticleDetailPage() {
@@ -117,7 +225,7 @@ function ArticleDetailPage() {
     }
 
     if (notFound || !article) {
-        return <NotFound />;
+        return <NotFoundPage />;
     }
 
     return (
@@ -300,9 +408,9 @@ function AppLayout() {
                             <Route path="/features" element={<Features />} />
                             <Route path="/credibility" element={<Credibility />} />
                             <Route path="/about" element={<About />} />
-                            <Route path="/privacy" element={<Privacy />} />
-                            <Route path="/terms" element={<Terms />} />
-                            <Route path="*" element={<NotFound />} />
+                            <Route path="/privacy" element={<PrivacyPage />} />
+                            <Route path="/terms" element={<TermsPage />} />
+                            <Route path="*" element={<NotFoundPage />} />
                         </Routes>
                     </Suspense>
                 </main>
