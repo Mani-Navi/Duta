@@ -26,6 +26,7 @@ function NewsCard({ article, onOpen }) {
     const isBreaking = article.breaking;
     const srcColor = article.source?.color || '#8E8E93';
     const srcInitials = article.source?.initials || article.source?.name?.substring(0, 2) || '?';
+    const articleHref = `/article/${encodeURIComponent(article.slug || article.id)}`;
 
     return (
         <article
@@ -70,7 +71,15 @@ function NewsCard({ article, onOpen }) {
                 </div>
             </div>
 
-            <h2 className="card-title">{article.title}</h2>
+            <h2 className="card-title">
+                <a
+                    href={articleHref}
+                    onClick={(e) => e.preventDefault()}
+                    style={{ color: 'inherit', textDecoration: 'none' }}
+                >
+                    {article.title}
+                </a>
+            </h2>
 
             <div className="card-bottom">
                 <span className="time">{formatTime(article.publishedAt)}</span>

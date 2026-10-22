@@ -41,7 +41,6 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             const trimmed = val.trim();
-            // FIXED: Reset search cleanly when input drops below 2 chars
             if (trimmed.length >= 2) onSearch(trimmed);
             else onSearch('');
         }, 300);
@@ -55,20 +54,18 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     return (
         <header className="navbar" ref={navRef}>
             <div className="nav-row">
-                <div
+                <a
+                    href="/"
                     className="logo"
                     dir="ltr"
-                    onClick={() => { closeSearch(); onNavigate('home'); }}
-                    role="button"
-                    tabIndex={0}
+                    onClick={(e) => { e.preventDefault(); closeSearch(); onNavigate('home'); }}
                     aria-label="Duta - دو نگاه، یک حقیقت"
-                    onKeyDown={(e) => { if (e.key === 'Enter') { closeSearch(); onNavigate('home'); } }}
                 >
                     <DutaLogo />
                     <span className="logo-text">Duta</span>
                     <span className="logo-divider" aria-hidden="true" />
                     <span className="logo-sub" dir="rtl">دو نگاه، یک حقیقت</span>
-                </div>
+                </a>
 
                 <div className="nav-center">
                     <PriceTicker />
@@ -77,9 +74,9 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                 <div className="nav-right">
                     {!searchOpen && (
                         <nav className="nav-links" aria-label="لینک‌های هدر">
-                            <a onClick={() => onNavigate('features')} role="button" tabIndex={0}>{t.features}</a>
-                            <a onClick={() => onNavigate('credibility')} role="button" tabIndex={0}>{t.credibility}</a>
-                            <a onClick={() => onNavigate('about')} role="button" tabIndex={0}>{t.about}</a>
+                            <a href="/features" onClick={(e) => { e.preventDefault(); onNavigate('features'); }}>{t.features}</a>
+                            <a href="/credibility" onClick={(e) => { e.preventDefault(); onNavigate('credibility'); }}>{t.credibility}</a>
+                            <a href="/about" onClick={(e) => { e.preventDefault(); onNavigate('about'); }}>{t.about}</a>
                         </nav>
                     )}
 

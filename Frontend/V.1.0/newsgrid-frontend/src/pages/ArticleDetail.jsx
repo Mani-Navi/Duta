@@ -7,7 +7,6 @@ function ArticleDetail({ article }) {
     const [clusterArticles, setClusterArticles] = useState([]);
     const [copied, setCopied] = useState(false);
 
-    // FIXED: Use official duta.ir domain for sharing
     const shareUrl = `https://duta.ir/article/${article.slug || article.id}`;
 
     useEffect(() => {
@@ -103,29 +102,69 @@ function ArticleDetail({ article }) {
     const allSources = [article, ...clusterArticles];
     const hasDistinctDescription = article.description && article.description.trim() !== article.title?.trim();
 
-    // Structured JSON-LD Schema for Google News
-    const newsSchema = {
+    // Rich SEO & GEO Schema: NewsArticle + ClaimReview (Fact-Check Verification)
+    const structuredData = {
         "@context": "https://schema.org",
-        "@type": "NewsArticle",
-        "headline": article.title,
-        "description": article.description || article.title,
-        "datePublished": article.publishedAt,
-        "mainEntityOfPage": shareUrl,
-        "author": {
-            "@type": "Organization",
-            "name": article.source?.name || "Duta"
-        },
-        "publisher": {
-            "@type": "Organization",
-            "name": "Duta",
-            "url": "https://duta.ir"
-        }
+        "@graph": [
+            {
+                "@type": "NewsArticle",
+                "@id": `${shareUrl}#article`,
+                "headline": article.title,
+                "description": article.description || article.title,
+                "datePublished": article.publishedAt,
+                "dateModified": article.cluster?.updatedAt || article.publishedAt,
+                "articleSection": categoryName || "اخبار",
+                "inLanguage": "fa-IR",
+                "mainEntityOfPage": shareUrl,
+                "author": {
+                    "@type": "Organization",
+                    "name": article.source?.name || "Duta"
+                },
+                "publisher": {
+                    "@type": "Organization",
+                    "name": "Duta",
+                    "url": "https://duta.ir",
+                    "logo": {
+                        "@type": "ImageObject",
+                        "url": "https://duta.ir/duta-logo.svg"
+                    }
+                },
+                "isBasedOn": allSources.map(s => ({
+                    "@type": "NewsArticle",
+                    "headline": s.title,
+                    "url": s.url,
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": s.source?.name || "منبع خبری"
+                    }
+                }))
+            },
+            {
+                "@type": "ClaimReview",
+                "@id": `${shareUrl}#claimreview`,
+                "url": shareUrl,
+                "claimReviewed": article.title,
+                "datePublished": article.publishedAt,
+                "author": {
+                    "@type": "Organization",
+                    "name": "Duta",
+                    "url": "https://duta.ir"
+                },
+                "reviewRating": {
+                    "@type": "Rating",
+                    "ratingValue": score,
+                    "bestRating": 100,
+                    "worstRating": 0,
+                    "alternateName": getScoreLabel(score)
+                }
+            }
+        ]
     };
 
     return (
         <div className="detail-content">
             <script type="application/ld+json">
-                {JSON.stringify(newsSchema)}
+                {JSON.stringify(structuredData)}
             </script>
 
             {article.breaking && (
@@ -173,10 +212,13 @@ function ArticleDetail({ article }) {
                     const color = src.source?.color || '#8E8E93';
                     const initials = src.source?.initials || src.source?.name?.substring(0, 2) || '?';
                     return (
-                        <div key={src.id ?? i} className="source-item"
-                             onClick={() => window.open(src.url, '_blank')}
-                             role="button" tabIndex={0}
-                             onKeyDown={(e) => e.key === 'Enter' && window.open(src.url, '_blank')}>
+                        <a
+                            key={src.id ?? i}
+                            href={src.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="source-item"
+                        >
                             <div className="source-info">
                                 <div className="source-icon" style={{ background: color, color: '#fff' }}>
                                     {initials}
@@ -190,9 +232,9 @@ function ArticleDetail({ article }) {
                                 <span className={`source-badge ${srcBadgeClass}`}>
                                     {getScoreLabel(src.source?.credibility ?? 0)}
                                 </span>
-                                <i className="ti ti-chevron-left arrow-icon" />
+                                <i className="ti ti-chevron-left arrow-icon" aria-hidden="true" />
                             </div>
-                        </div>
+                        </a>
                     );
                 })}
             </div>

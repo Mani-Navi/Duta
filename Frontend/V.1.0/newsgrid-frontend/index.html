@@ -5,6 +5,10 @@
   <link rel="icon" type="image/svg+xml" href="/duta-logo.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://duta.ir/" id="canonical-link" />
 
   <!-- Google tag (gtag.js) - Duta Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-5ZTGQ5ZVBJ"></script>
@@ -16,34 +20,55 @@
   </script>
 
   <!-- SEO & Branding -->
-  <title>Duta — دو نگاه، یک حقیقت</title>
-  <meta name="description" content="Duta — پلتفرم تجمیع و کلسترینگ هوشمند اخبار فارسی. اخبار معتبر را از شایعه و منابع مختلف در یک نگاه تشخیص دهید." />
-  <meta name="keywords" content="خبر, خبرخوان, پلتفرم خبری, Duta, اخبار فوری, قیمت دلار, قیمت طلا, اخبار اقتصادی, اخبار سیاسی" />
+  <title>Duta — دو نگاه، یک حقیقت | پلتفرم هوشمند تجمیع و سنجش اعتبار اخبار</title>
+  <meta name="description" content="Duta (دوتا) — پلتفرم هوشمند تجمیع، خوشه‌بندی و سنجش اعتبار اخبار فارسی. اخبار فوری، سیاسی، اقتصادی، ورزشی و تکنولوژی را با امتیاز اعتبار منابع دنبال کنید." />
+  <meta name="keywords" content="خبر, خبرخوان هوشمند, Duta, دوتا, سنجش اعتبار خبر, اخبار فوری, قیمت دلار, قیمت طلا, اخبار اقتصادی, اخبار سیاسی" />
   <meta name="theme-color" content="#123378" />
 
   <!-- Open Graph / Social Media -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Duta" />
+  <meta property="og:url" content="https://duta.ir/" />
   <meta property="og:title" content="Duta — دو نگاه، یک حقیقت" />
   <meta property="og:description" content="پلتفرم تجمیع اخبار فارسی با سنجش اعتبار منابع و کلسترینگ هوشمند اخبار مشابه." />
+  <meta property="og:image" content="https://duta.ir/duta-logo.svg" />
   <meta property="og:locale" content="fa_IR" />
 
+  <!-- Twitter / X -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Duta — دو نگاه، یک حقیقت" />
-  <meta name="twitter:description" content="پلتفرم تجمیع اخبار فارسی با سنجش اعتبار منابع." />
+  <meta name="twitter:description" content="پلتفرم تجمیع اخبار فارسی با سنجش اعتبار منابع و کلسترینگ هوشمند." />
+  <meta name="twitter:image" content="https://duta.ir/duta-logo.svg" />
 
   <link rel="preconnect" href="https://duta.ir" crossorigin />
   <link rel="dns-prefetch" href="https://duta.ir" />
 
-  <!-- JSON-LD -->
+  <!-- Structured Data (JSON-LD) for Google Knowledge Graph & GEO -->
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Duta",
-      "alternateName": "NewsGrid",
-      "url": "https://duta.ir",
-      "description": "پلتفرم تجمیع و کلسترینگ هوشمند اخبار فارسی"
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://duta.ir/#organization",
+          "name": "Duta",
+          "alternateName": ["دوتا", "NewsGrid"],
+          "url": "https://duta.ir",
+          "logo": "https://duta.ir/duta-logo.svg",
+          "description": "پلتفرم تجمیع، خوشه‌بندی و سنجش اعتبار اخبار فارسی با الگوریتم بیزین و شباهت جاکارد",
+          "email": "info@duta.ir"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://duta.ir/#website",
+          "url": "https://duta.ir",
+          "name": "Duta — دو نگاه، یک حقیقت",
+          "inLanguage": "fa-IR",
+          "publisher": {
+            "@id": "https://duta.ir/#organization"
+          }
+        }
+      ]
     }
   </script>
 </head>

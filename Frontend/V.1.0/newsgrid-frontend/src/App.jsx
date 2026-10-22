@@ -14,8 +14,30 @@ const Features = lazy(() => import('./pages/Features'));
 const Credibility = lazy(() => import('./pages/Credibility'));
 const About = lazy(() => import('./pages/About'));
 
-const DEFAULT_TITLE = 'Duta — دو نگاه، یک حقیقت';
-const DEFAULT_DESC = 'Duta — پلتفرم تجمیع و کلسترینگ هوشمند اخبار فارسی. اخبار معتبر را از شایعه و منابع مختلف در یک نگاه تشخیص دهید.';
+const DEFAULT_TITLE = 'Duta — دو نگاه، یک حقیقت | پلتفرم هوشمند تجمیع و سنجش اعتبار اخبار';
+const DEFAULT_DESC = 'Duta (دوتا) — پلتفرم هوشمند تجمیع، خوشه‌بندی و سنجش اعتبار اخبار فارسی. اخبار فوری، سیاسی، اقتصادی، ورزشی و تکنولوژی را با امتیاز اعتبار منابع دنبال کنید.';
+
+function syncDocumentSeoTags({ title, description, canonicalUrl }) {
+    document.title = title || DEFAULT_TITLE;
+
+    const setMeta = (selector, content) => {
+        const el = document.querySelector(selector);
+        if (el && content) el.setAttribute('content', content);
+    };
+
+    setMeta('meta[name="description"]', description || DEFAULT_DESC);
+    setMeta('meta[property="og:title"]', title || DEFAULT_TITLE);
+    setMeta('meta[property="og:description"]', description || DEFAULT_DESC);
+    setMeta('meta[property="og:url"]', canonicalUrl || 'https://duta.ir/');
+
+    let canonicalEl = document.querySelector('link[rel="canonical"]');
+    if (!canonicalEl) {
+        canonicalEl = document.createElement('link');
+        canonicalEl.setAttribute('rel', 'canonical');
+        document.head.appendChild(canonicalEl);
+    }
+    canonicalEl.setAttribute('href', canonicalUrl || 'https://duta.ir/');
+}
 
 function ArticleDetailPage() {
     const { slug } = useParams();
@@ -40,13 +62,20 @@ function ArticleDetailPage() {
         api.get(endpoint)
             .then(res => {
                 if (!isMounted) return;
-                setArticle(res.data);
-                if (res.data?.title) {
-                    document.title = `${res.data.title} | Duta`;
-                    const metaDesc = document.querySelector('meta[name="description"]');
-                    if (metaDesc) {
-                        metaDesc.setAttribute('content', res.data.description || res.data.title);
-                    }
+                const data = res.data;
+                setArticle(data);
+                if (data?.title) {
+                    const canonicalSlug = data.slug || data.id;
+                    const score = data.cluster?.credibilityScore ?? data.source?.credibility ?? 50;
+                    const seoDesc = data.description
+                        ? `امتیاز اعتبار: ${score}٪ | ${data.description}`
+                        : `امتیاز اعتبار: ${score}٪ | ${data.title}`;
+
+                    syncDocumentSeoTags({
+                        title: `${data.title} | Duta`,
+                        description: seoDesc,
+                        canonicalUrl: `https://duta.ir/article/${canonicalSlug}`
+                    });
                 }
             })
             .catch(async () => {
@@ -62,15 +91,9 @@ function ArticleDetailPage() {
 
         return () => {
             isMounted = false;
-            document.title = DEFAULT_TITLE;
-            const metaDesc = document.querySelector('meta[name="description"]');
-            if (metaDesc) {
-                metaDesc.setAttribute('content', DEFAULT_DESC);
-            }
         };
     }, [slug, navigate, location.state]);
 
-    // FIXED: Safe back navigation for direct entrants from Telegram/Google
     const handleBack = () => {
         if (window.history.state && window.history.state.idx > 0) {
             navigate(-1);
@@ -116,6 +139,33 @@ function AppLayout() {
         if (window.gtag) {
             window.gtag('config', 'G-5ZTGQ5ZVBJ', {
                 page_path: location.pathname + location.search,
+            });
+        }
+
+        // Dynamic SEO Title & Canonical for static routes
+        if (location.pathname === '/') {
+            syncDocumentSeoTags({
+                title: DEFAULT_TITLE,
+                description: DEFAULT_DESC,
+                canonicalUrl: 'https://duta.ir/'
+            });
+        } else if (location.pathname === '/features') {
+            syncDocumentSeoTags({
+                title: 'ویژگی‌های پلتفرم خبری Duta | خوشه‌بندی و سنجش اعتبار خبر',
+                description: 'آشنایی با امکانات Duta: امتیاز اعتبار زنده، مقایسه چند منبع، فیلتر دسته‌بندی و هشدار شایعه.',
+                canonicalUrl: 'https://duta.ir/features'
+            });
+        } else if (location.pathname === '/credibility') {
+            syncDocumentSeoTags({
+                title: 'الگوریتم امتیاز اعتبار خبر در Duta | تشخیص خبر معتبر از شایعه',
+                description: 'نحوه کار الگوریتم امتیازدهی بیزین و خوشه‌بندی اخبار در Duta برای سنجش اعتبار رسانه‌ها.',
+                canonicalUrl: 'https://duta.ir/credibility'
+            });
+        } else if (location.pathname === '/about') {
+            syncDocumentSeoTags({
+                title: 'درباره Duta — دو نگاه، یک حقیقت',
+                description: 'درباره پلتفرم تجمیع و اعتبارسنجی اخبار فارسی Duta و راه‌های ارتباطی.',
+                canonicalUrl: 'https://duta.ir/about'
             });
         }
     }, [location]);
@@ -181,19 +231,18 @@ function AppLayout() {
         <ErrorBoundary>
             <div>
                 <header className="mobile-only mobile-header-centered">
-                    <div
+                    <a
+                        href="/"
                         className="logo"
                         dir="ltr"
-                        onClick={() => handleNavigate('home')}
-                        role="button"
-                        tabIndex={0}
+                        onClick={(e) => { e.preventDefault(); handleNavigate('home'); }}
                         aria-label="Duta - دو نگاه، یک حقیقت"
                     >
                         <DutaLogo />
                         <span className="logo-text">Duta</span>
                         <span className="logo-divider" aria-hidden="true" />
                         <span className="logo-sub" dir="rtl">دو نگاه، یک حقیقت</span>
-                    </div>
+                    </a>
                 </header>
 
                 <div className="mobile-only" style={{ padding: '6px 0', background: 'var(--navbar-bg)' }}>
