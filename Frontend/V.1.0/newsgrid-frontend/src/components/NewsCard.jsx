@@ -32,10 +32,6 @@ function NewsCard({ article, onOpen }) {
         <article
             className={`card ${isBreaking ? 'breaking' : ''}`}
             onClick={() => onOpen(article)}
-            role="button"
-            tabIndex={0}
-            aria-label={article.title}
-            onKeyDown={(e) => e.key === 'Enter' && onOpen(article)}
         >
             {isBreaking && (
                 <div className="breaking-strip">
@@ -65,7 +61,7 @@ function NewsCard({ article, onOpen }) {
                             {sourceCount} منبع
                         </span>
                     )}
-                    <span className={`badge ${badgeClass}`} aria-label={`امتیاز ${score}`}>
+                    <span className={`badge ${badgeClass}`} aria-label={`امتیاز اعتبار ${score} درصد`}>
                         {score}%
                     </span>
                 </div>

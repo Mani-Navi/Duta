@@ -158,8 +158,8 @@ a {
 }
 
 .theme-toggle {
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     font-size: 15px;
 }
@@ -267,9 +267,9 @@ body.dark .card:hover {
     font-weight: 700;
 }
 
-.badge.green { background: rgba(52,199,89,0.14); color: var(--green); }
-.badge.yellow { background: rgba(255,149,0,0.14); color: var(--orange); }
-.badge.red { background: rgba(255,59,48,0.14); color: var(--red); }
+.badge.green, .source-badge.green { background: rgba(21, 128, 61, 0.14); color: #15803d; }
+.badge.yellow, .source-badge.yellow { background: rgba(180, 83, 9, 0.14); color: #b45309; }
+.badge.red, .source-badge.red { background: rgba(185, 28, 28, 0.14); color: #b91c1c; }
 
 .card-title {
     font-size: 15px;
@@ -462,9 +462,12 @@ body.dark .card:hover {
     border-radius: 20px;
 }
 
-.source-badge.green { background: rgba(52,199,89,0.14); color: var(--green); }
-.source-badge.yellow { background: rgba(255,149,0,0.14); color: var(--orange); }
-.source-badge.red { background: rgba(255,59,48,0.14); color: var(--red); }
+.dark .badge.green, body.dark .badge.green,
+.dark .source-badge.green, body.dark .source-badge.green { background: rgba(52, 199, 89, 0.18); color: #4ade80; }
+.dark .badge.yellow, body.dark .badge.yellow,
+.dark .source-badge.yellow, body.dark .source-badge.yellow { background: rgba(255, 149, 0, 0.18); color: #fbbf24; }
+.dark .badge.red, body.dark .badge.red,
+.dark .source-badge.red, body.dark .source-badge.red { background: rgba(255, 59, 48, 0.18); color: #f87171; }
 
 .arrow-icon { font-size: 13px; color: var(--label-3); }
 
@@ -787,12 +790,11 @@ body.dark .card:hover {
     letter-spacing: 0.2px;
 }
 
-/* ─── Breaking News ─────────────────────────────────── */
 .cat-breaking {
     display: flex;
     align-items: center;
     gap: 6px;
-    background: #E11D48 !important;
+    background: #BE123C !important; /* WCAG AA 6.2:1 contrast ratio with white text */
     color: #fff !important;
     border-radius: 8px !important;
 }
