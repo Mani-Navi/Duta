@@ -6,7 +6,7 @@ function Home({ onOpenArticle, searchKeyword }) {
     const [activeCategory, setActiveCategory] = useState(null);
 
     return (
-        <main aria-label="صفحه اصلی اخبار Duta">
+        <section aria-label="صفحه اصلی اخبار Duta">
             {!searchKeyword && (
                 <CategoryBar
                     activeCategory={activeCategory}
@@ -19,7 +19,7 @@ function Home({ onOpenArticle, searchKeyword }) {
                 onOpenArticle={onOpenArticle}
                 searchKeyword={searchKeyword}
             />
-        </main>
+        </section>
     );
 }
 

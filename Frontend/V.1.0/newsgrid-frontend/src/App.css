@@ -150,13 +150,6 @@ a {
     cursor: pointer;
 }
 
-.lang-toggle {
-    font-size: 12px;
-    padding: 6px 12px;
-    letter-spacing: 0.3px;
-    min-width: 44px;
-}
-
 .theme-toggle {
     width: 36px;
     height: 36px;
@@ -213,7 +206,6 @@ a {
     transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.25s ease,
     border-color 0.2s ease;
-    will-change: transform, box-shadow;
     content-visibility: auto;
     contain-intrinsic-size: 140px;
 }
@@ -267,9 +259,17 @@ body.dark .card:hover {
     font-weight: 700;
 }
 
+/* WCAG AA Accessible Contrast Ratios */
 .badge.green, .source-badge.green { background: rgba(21, 128, 61, 0.14); color: #15803d; }
 .badge.yellow, .source-badge.yellow { background: rgba(180, 83, 9, 0.14); color: #b45309; }
 .badge.red, .source-badge.red { background: rgba(185, 28, 28, 0.14); color: #b91c1c; }
+
+.dark .badge.green, body.dark .badge.green,
+.dark .source-badge.green, body.dark .source-badge.green { background: rgba(52, 199, 89, 0.18); color: #4ade80; }
+.dark .badge.yellow, body.dark .badge.yellow,
+.dark .source-badge.yellow, body.dark .source-badge.yellow { background: rgba(255, 149, 0, 0.18); color: #fbbf24; }
+.dark .badge.red, body.dark .badge.red,
+.dark .source-badge.red, body.dark .source-badge.red { background: rgba(255, 59, 48, 0.18); color: #f87171; }
 
 .card-title {
     font-size: 15px;
@@ -462,13 +462,6 @@ body.dark .card:hover {
     border-radius: 20px;
 }
 
-.dark .badge.green, body.dark .badge.green,
-.dark .source-badge.green, body.dark .source-badge.green { background: rgba(52, 199, 89, 0.18); color: #4ade80; }
-.dark .badge.yellow, body.dark .badge.yellow,
-.dark .source-badge.yellow, body.dark .source-badge.yellow { background: rgba(255, 149, 0, 0.18); color: #fbbf24; }
-.dark .badge.red, body.dark .badge.red,
-.dark .source-badge.red, body.dark .source-badge.red { background: rgba(255, 59, 48, 0.18); color: #f87171; }
-
 .arrow-icon { font-size: 13px; color: var(--label-3); }
 
 .footer-note {
@@ -529,6 +522,7 @@ body.dark .card:hover {
     margin-bottom: 16px;
 }
 
+.feature-card h2,
 .feature-card h3 {
     font-size: 16.5px;
     font-weight: 700;
@@ -790,11 +784,12 @@ body.dark .card:hover {
     letter-spacing: 0.2px;
 }
 
+/* ─── Breaking News ─────────────────────────────────── */
 .cat-breaking {
     display: flex;
     align-items: center;
     gap: 6px;
-    background: #BE123C !important; /* WCAG AA 6.2:1 contrast ratio with white text */
+    background: #BE123C !important;
     color: #fff !important;
     border-radius: 8px !important;
 }
@@ -806,6 +801,7 @@ body.dark .card:hover {
     background: #fff;
     flex-shrink: 0;
     animation: pulse 1.3s ease-in-out infinite;
+    will-change: transform, opacity;
 }
 
 @keyframes pulse {
@@ -836,7 +832,7 @@ body.dark .card.breaking:hover {
 }
 
 .breaking-strip {
-    background: #E11D48;
+    background: #BE123C;
     color: #fff;
     font-size: 10.5px;
     font-weight: 800;
@@ -930,31 +926,42 @@ body.dark .card.breaking:hover {
 
 .view-in-telegram:hover { text-decoration: underline; }
 
-/* ─── Shimmer Skeleton Animation ─── */
+/* ─── 100% GPU-Composited Shimmer Skeleton Animation (Zero CPU Repaint) ─── */
 .skeleton-card {
     pointer-events: none;
     min-height: 130px;
     background: var(--card) !important;
 }
 
-body:not(.dark) .shimmer {
-    background-image: linear-gradient(90deg, #e5e5ea 0%, #ffffff 50%, #e5e5ea 100%) !important;
-    background-size: 200% 100% !important;
-    background-repeat: no-repeat !important;
-    animation: shimmerMove 1.3s infinite linear !important;
+.shimmer {
+    position: relative;
+    overflow: hidden;
+    background: #e5e5ea;
 }
 
 .dark .shimmer,
 body.dark .shimmer {
-    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.04) 100%) !important;
-    background-size: 200% 100% !important;
-    background-repeat: no-repeat !important;
-    animation: shimmerMove 1.3s infinite linear !important;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.7) 50%, transparent 100%);
+    transform: translateX(-100%);
+    animation: shimmerMove 1.3s infinite linear;
+    will-change: transform;
+}
+
+.dark .shimmer::after,
+body.dark .shimmer::after {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.18) 50%, transparent 100%);
 }
 
 @keyframes shimmerMove {
-    0% { background-position: -250px 0; }
-    100% { background-position: 250px 0; }
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
 }
 
 .skeleton-badge { width: 20px; height: 20px; border-radius: 6px; }
@@ -1045,7 +1052,7 @@ body.dark .shimmer {
     font-size: 12.5px;
     background: rgba(0, 0, 0, 0.05);
     border: 1px solid rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .dark .price-chip,
@@ -1133,12 +1140,13 @@ body.dark .price-chip.gold .chip-label { color: #facc15; }
     border-radius: 99px;
     font-size: 14.5px;
     font-weight: 700;
+    font-family: inherit;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 8px;
     box-shadow: 0 4px 16px rgba(0, 122, 255, 0.35);
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .retry-btn:hover {
@@ -1229,7 +1237,7 @@ body.dark .card.telegram-news-card.breaking {
     }
 }
 
-/* ─── Duta Eye Animations ─── */
+/* ─── Duta Eye Animations (GPU-Composited transform & opacity) ─── */
 .duta-eye-wrap {
     display: inline-flex;
     align-items: center;
@@ -1247,16 +1255,16 @@ body.dark .card.telegram-news-card.breaking {
 
 .eye-lid {
     opacity: 0;
-    transition: all 0.3s ease;
     transform-origin: center;
     animation: eyeLidMorph 180s infinite ease-in-out;
+    will-change: transform, opacity;
 }
 
 .eye-pupil {
     fill: var(--turquoise) !important;
-    transition: fill 0.3s ease;
     animation: eyePupilLook 180s infinite ease-in-out;
     transform-origin: center;
+    will-change: transform;
 }
 
 .duta-eye-wrap.is-loading .eye-lid {

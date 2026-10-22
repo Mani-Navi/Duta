@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import ErrorBoundary from './components/ErrorBoundary';
 import DutaLogo from './components/DutaLogo';
 import api from './api/axiosConfig';
+import { getArticleScore } from './utils/articleHelpers';
 import './App.css';
 
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
@@ -179,7 +180,7 @@ function ArticleDetailPage() {
                 setArticle(data);
                 if (data?.title) {
                     const canonicalSlug = data.slug || data.id;
-                    const score = data.cluster?.credibilityScore ?? data.source?.credibility ?? 50;
+                    const score = getArticleScore(data);
                     const seoDesc = data.description
                         ? `امتیاز اعتبار: ${score}٪ | ${data.description}`
                         : `امتیاز اعتبار: ${score}٪ | ${data.title}`;
@@ -229,7 +230,7 @@ function ArticleDetailPage() {
     }
 
     return (
-        <main id="main-content" aria-label="محتوای خبر">
+        <section aria-label="محتوای خبر">
             <div className="back-bar">
                 <button className="back-btn" onClick={handleBack} aria-label="بازگشت به اخبار">
                     <i className="ti ti-chevron-right" aria-hidden="true" />
@@ -237,7 +238,7 @@ function ArticleDetailPage() {
                 </button>
             </div>
             <ArticleDetail article={article} />
-        </main>
+        </section>
     );
 }
 

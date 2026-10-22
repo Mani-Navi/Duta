@@ -4,6 +4,13 @@ import TelegramNewsCard from './TelegramNewsCard';
 import NewsCardSkeleton from './NewsCardSkeleton';
 import api from '../api/axiosConfig';
 
+function getColumnCountForWidth(w) {
+    if (w <= 440) return 1;
+    if (w <= 768) return 2;
+    if (w <= 1024) return 3;
+    return 4;
+}
+
 function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     const [articles, setArticles] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -12,22 +19,36 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [hasNewArticles, setHasNewArticles] = useState(false);
-    const [columnCount, setColumnCount] = useState(() =>
-        window.innerWidth <= 440 ? 1 : window.innerWidth <= 768 ? 2 : window.innerWidth <= 1024 ? 3 : 4
-    );
+    const [columnCount, setColumnCount] = useState(() => getColumnCountForWidth(window.innerWidth));
 
     const observer = useRef(null);
     const abortControllerRef = useRef(null);
+    const latestArticleIdRef = useRef(null);
+    const isBusyRef = useRef(false);
 
-    // ۱. ریسپانسیو ستون‌ها
     useEffect(() => {
+        latestArticleIdRef.current = articles[0]?.id ?? null;
+    }, [articles]);
+
+    useEffect(() => {
+        isBusyRef.current = loading || isFetchingMore;
+    }, [loading, isFetchingMore]);
+
+    // ۱. ریسپانسیو ستون‌ها با Throttling مبتنی بر requestAnimationFrame
+    useEffect(() => {
+        let rafId = null;
         const handleResize = () => {
-            const w = window.innerWidth;
-            const newCol = w <= 440 ? 1 : w <= 768 ? 2 : w <= 1024 ? 3 : 4;
-            setColumnCount(prev => (prev !== newCol ? newCol : prev));
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                const newCol = getColumnCountForWidth(window.innerWidth);
+                setColumnCount(prev => (prev !== newCol ? newCol : prev));
+            });
         };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        window.addEventListener('resize', handleResize, { passive: true });
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            window.removeEventListener('resize', handleResize);
+        };
     }, []);
 
     const buildEndpointUrl = useCallback((pageNum) => {
@@ -84,31 +105,33 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         }
     }, [buildEndpointUrl]);
 
-    // لود اولیه هنگام تغییر دسته‌بندی یا جستجو
     useEffect(() => {
         setPage(0);
         setHasMore(true);
         fetchArticles(0, true);
     }, [fetchArticles]);
 
-    // لود صفحات بعدی هنگام افزایش page
     useEffect(() => {
         if (page > 0) {
             fetchArticles(page, false);
         }
     }, [page, fetchArticles]);
 
-    // ۳. بررسی خودکار اخبار جدید هر ۵ دقیقه (طبق UCS-001)
+    // ۳. بررسی خودکار اخبار جدید هر ۵ دقیقه (بدون بازسازی تایمر در هنگام اسکرول)
     useEffect(() => {
         if (searchKeyword) return;
 
         const interval = setInterval(async () => {
-            if (document.hidden || loading || isFetchingMore) return;
+            if (document.hidden || isBusyRef.current) return;
             try {
                 const url = buildEndpointUrl(0);
                 const res = await api.get(url);
                 const latestItems = Array.isArray(res.data) ? res.data : (res.data?.content || []);
-                if (latestItems.length > 0 && articles.length > 0 && latestItems[0].id !== articles[0].id) {
+                if (
+                    latestItems.length > 0 &&
+                    latestArticleIdRef.current !== null &&
+                    latestItems[0].id !== latestArticleIdRef.current
+                ) {
                     setHasNewArticles(true);
                 }
             } catch {
@@ -117,9 +140,9 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         }, 5 * 60 * 1000);
 
         return () => clearInterval(interval);
-    }, [searchKeyword, loading, isFetchingMore, buildEndpointUrl, articles]);
+    }, [searchKeyword, buildEndpointUrl]);
 
-    // ۴. اسکرول بی‌نهایت با Sentinel در پایین گرید
+    // ۴. اسکرول بی‌نهایت با Sentinel
     const sentinelRef = useCallback(node => {
         if (loading || isFetchingMore) return;
         if (observer.current) observer.current.disconnect();
@@ -128,7 +151,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
             if (entries[0].isIntersecting && hasMore) {
                 setPage(prev => prev + 1);
             }
-        }, { rootMargin: '200px' });
+        }, { rootMargin: '250px' });
 
         if (node) observer.current.observe(node);
     }, [loading, isFetchingMore, hasMore]);
