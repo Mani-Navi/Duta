@@ -4,6 +4,8 @@ import com.NewsGrid.V10.entity.Article;
 import com.NewsGrid.V10.entity.ArticleCluster;
 import com.NewsGrid.V10.repository.ArticleClusterRepository;
 import com.NewsGrid.V10.repository.ArticleRepository;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,9 +13,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * Groups related news articles into clusters using Jaccard Similarity (>= 25% overlap)
+ * within a 6-hour sliding window. Uses memoized token sets to minimize CPU & GC pressure.
+ */
 @Service
 @RequiredArgsConstructor
 public class ClusteringService {
@@ -37,6 +44,12 @@ public class ClusteringService {
             "روی", "زیر", "بین", "چند", "دارد", "شود", "کند", "گفت",
             "the", "a", "an", "in", "of", "to", "and", "is", "was"
     );
+
+    // OPTIMIZED: Memoize tokenized headline sets to avoid redundant Regex splitting across cycles
+    private final Cache<String, Set<String>> tokenCache = Caffeine.newBuilder()
+            .maximumSize(2000)
+            .expireAfterWrite(6, TimeUnit.HOURS)
+            .build();
 
     @Transactional
     public void clusterArticle(Article article) {
@@ -81,13 +94,13 @@ public class ClusteringService {
         cluster.setSourceCount((int) Math.max(1, uniqueSourceCount));
         cluster.setUpdatedAt(ZonedDateTime.now(ZoneOffset.UTC));
 
-        // انتخاب تیترِ معتبرترین منبع به عنوان تیتر نماینده کلستر
         clusterArticles.stream()
                 .filter(a -> a.getSource() != null && a.getSource().getCredibility() != null)
                 .max(Comparator.comparingInt(a -> a.getSource().getCredibility()))
                 .ifPresent(bestArticle -> cluster.setRepresentativeTitle(bestArticle.getTitle()));
 
-        cluster.setCredibilityScore(scoringService.calculateClusterScore(cluster));
+        // OPTIMIZED: Pass already-fetched clusterArticles to avoid a second SELECT query
+        cluster.setCredibilityScore(scoringService.calculateClusterScore(cluster, clusterArticles));
         clusterRepository.save(cluster);
     }
 
@@ -112,27 +125,35 @@ public class ClusteringService {
     private double jaccardSimilarity(Set<String> a, Set<String> b) {
         if (a.isEmpty() || b.isEmpty()) return 0;
 
-        Set<String> intersection = new HashSet<>(a);
-        intersection.retainAll(b);
+        int intersectionSize = 0;
+        for (String token : a) {
+            if (b.contains(token)) {
+                intersectionSize++;
+            }
+        }
+        if (intersectionSize == 0) return 0;
 
-        Set<String> union = new HashSet<>(a);
-        union.addAll(b);
-
-        return (double) intersection.size() / union.size();
+        int unionSize = a.size() + b.size() - intersectionSize;
+        return (double) intersectionSize / unionSize;
     }
 
     private Set<String> tokenize(String text) {
         if (text == null || text.isBlank()) return Collections.emptySet();
+        return tokenCache.get(text, this::computeTokens);
+    }
 
+    private Set<String> computeTokens(String text) {
         String normalized = text.toLowerCase(Locale.ROOT)
                 .replace('ي', 'ی')
                 .replace('ك', 'ک')
                 .replace('\u200C', ' ');
 
-        return Arrays.stream(CLEAN_PATTERN.matcher(normalized).replaceAll(" ").split("\\s+"))
-                .map(String::trim)
-                .filter(w -> w.length() > 1)
-                .filter(w -> !STOP_WORDS.contains(w))
-                .collect(Collectors.toSet());
+        return Collections.unmodifiableSet(
+                Arrays.stream(CLEAN_PATTERN.matcher(normalized).replaceAll(" ").split("\\s+"))
+                        .map(String::trim)
+                        .filter(w -> w.length() > 1)
+                        .filter(w -> !STOP_WORDS.contains(w))
+                        .collect(Collectors.toSet())
+        );
     }
 }
