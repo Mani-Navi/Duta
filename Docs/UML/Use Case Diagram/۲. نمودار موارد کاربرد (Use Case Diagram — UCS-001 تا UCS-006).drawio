@@ -1,0 +1,166 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="F0YoFNamHZLp8PzAdVAX">
+    <mxGraphModel dx="2870" dy="1102" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="" plantUmlData="{&#xa;  &quot;data&quot;: &quot;@startuml\nleft to right direction\nskinparam packageStyle rectangle\nskinparam defaultFontName Tahoma\nskinparam shadowing false\n\nactor \&quot;کاربر (User)\&quot; as User\nactor \&quot;سیستم زمان‌بند\\n(Spring Scheduler)\&quot; as Scheduler\nactor \&quot;منابع خبری\\n(RSS &amp; TGJU)\&quot; as External\n\nrectangle \&quot;پلتفرم تجمیع و سنجش اعتبار خبر Duta (duta.ir)\&quot; {\n    usecase \&quot;UCS-001\\nمدیریت منو و نمایش خبر\\n(لندینگ پیج)\&quot; as UCS1\n    usecase \&quot;UCS-002\\nنمایش جزئیات خبر\\nو اشتراک‌گذاری\&quot; as UCS2\n    usecase \&quot;UCS-003\\nنمایش اخبار بر اساس\\nدسته‌بندی\&quot; as UCS3\n    usecase \&quot;UCS-004\\nنمایش لیست منابع\\nپوشش‌دهنده کلستر\&quot; as UCS4\n    usecase \&quot;UCS-005\\nبه‌روزرسانی خودکار، دسته‌بندی\\nو خوشه‌بندی اخبار\&quot; as UCS5\n    usecase \&quot;UCS-006\\nجستجوی هوشمند در\\nاخبار و منابع\&quot; as UCS6\n}\n\nUser --&gt; UCS1\nUser --&gt; UCS2\nUser --&gt; UCS3\nUser --&gt; UCS6\n\nUCS2 .up.&gt; UCS1 : &lt;&lt;extend&gt;&gt;\\nکلیک روی کارت خبر\nUCS3 .up.&gt; UCS1 : &lt;&lt;extend&gt;&gt;\\nانتخاب دسته‌بندی\nUCS6 .up.&gt; UCS1 : &lt;&lt;extend&gt;&gt;\\nکلیک روی آیکون جستجو\nUCS2 .down.&gt; UCS4 : &lt;&lt;include&gt;&gt;\\nواکشی منابع هم‌پوشان\n\nScheduler --&gt; UCS5\nUCS5 --&gt; External\n@enduml&quot;,&#xa;  &quot;config&quot;: null&#xa;}" id="NlxUj2sNAYKc58V4VYeo-269">
+          <mxCell connectable="0" parent="1" style="group;transparentBounds=1;editIcon=1;lockedGroup=0;groupPadding=10;" vertex="1">
+            <mxGeometry as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="پلتفرم تجمیع و سنجش اعتبار خبر Duta (duta.ir)" plantUmlId="rect_0" plantUmlBaseStyle="swimlane;collapsible=0;startSize=26;fillColor=none;strokeColor=#181818;fontColor=#000000;fontSize=13;fontStyle=1;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="پلتفرم تجمیع و سنجش اعتبار خبر Duta (duta.ir)" id="NlxUj2sNAYKc58V4VYeo-270">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-269" style="swimlane;collapsible=0;startSize=26;fillColor=none;strokeColor=#181818;fontColor=#000000;fontSize=13;fontStyle=1;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="750" width="1019" x="-280" y="40" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-309" edge="1" parent="NlxUj2sNAYKc58V4VYeo-270" source="NlxUj2sNAYKc58V4VYeo-271" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;defaultLabelBackgroundColor=page;" target="NlxUj2sNAYKc58V4VYeo-273">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <UserObject label="UCS-002&lt;br&gt;نمایش جزئیات خبر&lt;br&gt;و اشتراک‌گذاری" plantUmlId="uc_1" plantUmlBaseStyle="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="UCS-002&lt;br&gt;نمایش جزئیات خبر&lt;br&gt;و اشتراک‌گذاری" id="NlxUj2sNAYKc58V4VYeo-271">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-270" style="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="76" width="173" x="450" y="350" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-308" edge="1" parent="NlxUj2sNAYKc58V4VYeo-270" source="NlxUj2sNAYKc58V4VYeo-272" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;defaultLabelBackgroundColor=page;" target="NlxUj2sNAYKc58V4VYeo-271">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <UserObject label="UCS-003&lt;br&gt;نمایش اخبار بر اساس&lt;br&gt;دسته‌بندی" plantUmlId="uc_2" plantUmlBaseStyle="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="UCS-003&lt;br&gt;نمایش اخبار بر اساس&lt;br&gt;دسته‌بندی" id="NlxUj2sNAYKc58V4VYeo-272">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-270" style="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="76" width="202" x="104.5" y="350" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="UCS-006&lt;br&gt;جستجوی هوشمند در&lt;br&gt;اخبار و منابع" plantUmlId="uc_3" plantUmlBaseStyle="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="UCS-006&lt;br&gt;جستجوی هوشمند در&lt;br&gt;اخبار و منابع" id="NlxUj2sNAYKc58V4VYeo-273">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-270" style="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="76" width="173" x="721.5" y="350" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="UCS-005&lt;br&gt;به‌روزرسانی خودکار، دسته‌بندی&lt;br&gt;و خوشه‌بندی اخبار" plantUmlId="uc_4" plantUmlBaseStyle="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="UCS-005&lt;br&gt;به‌روزرسانی خودکار، دسته‌بندی&lt;br&gt;و خوشه‌بندی اخبار" id="NlxUj2sNAYKc58V4VYeo-274">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-270" style="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="76" width="313" x="30" y="510" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="UCS-004&lt;br&gt;نمایش لیست منابع&lt;br&gt;پوشش‌دهنده کلستر" plantUmlId="uc_6" plantUmlBaseStyle="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="UCS-004&lt;br&gt;نمایش لیست منابع&lt;br&gt;پوشش‌دهنده کلستر" id="NlxUj2sNAYKc58V4VYeo-276">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-270" style="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="76" width="176" x="448.5" y="520" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" plantUmlId="rel_20" plantUmlBaseStyle="endArrow=open;dashed=1;dashPattern=5 5;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;verticalAlign=bottom;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="«include»&#xa;&#xa;واکشی منابع هم‌پوشان" id="NlxUj2sNAYKc58V4VYeo-290">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-270" source="NlxUj2sNAYKc58V4VYeo-319" style="endArrow=open;dashed=1;dashPattern=5 5;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;verticalAlign=bottom;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-276">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="UCS-001&lt;br&gt;مدیریت منو و نمایش خبر&lt;br&gt;(لندینگ پیج)" plantUmlId="uc_5" plantUmlBaseStyle="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="UCS-001&lt;br&gt;مدیریت منو و نمایش خبر&lt;br&gt;(لندینگ پیج)" id="NlxUj2sNAYKc58V4VYeo-275">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-270" style="ellipse;html=1;fillColor=#F1F1F1;strokeColor=#181818;whiteSpace=wrap;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="76" width="231" x="392" y="100" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="rel_19" plantUmlBaseStyle="endArrow=open;dashed=1;dashPattern=5 5;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;verticalAlign=bottom;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="«extend»&#xa;&#xa;کلیک روی آیکون جستجو" id="NlxUj2sNAYKc58V4VYeo-289">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-270" source="NlxUj2sNAYKc58V4VYeo-295" style="endArrow=none;dashed=1;dashPattern=5 5;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;verticalAlign=bottom;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;endFill=0;" target="NlxUj2sNAYKc58V4VYeo-275">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-295" parent="NlxUj2sNAYKc58V4VYeo-270" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="انتخاب دسته بندی&lt;br&gt;&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" vertex="1">
+          <mxGeometry height="40" width="95" x="158" y="278" as="geometry" />
+        </mxCell>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-296" edge="1" parent="NlxUj2sNAYKc58V4VYeo-270" source="NlxUj2sNAYKc58V4VYeo-272" style="endArrow=none;dashed=1;dashPattern=5 5;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;verticalAlign=bottom;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;endFill=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;startArrow=open;startFill=0;" target="NlxUj2sNAYKc58V4VYeo-295" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="330" as="sourcePoint" />
+            <mxPoint x="36" y="286" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-311" edge="1" parent="NlxUj2sNAYKc58V4VYeo-270" source="NlxUj2sNAYKc58V4VYeo-314" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;defaultLabelBackgroundColor=page;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="NlxUj2sNAYKc58V4VYeo-275" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="660" y="280" as="sourcePoint" />
+            <mxPoint x="710" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-312" edge="1" parent="NlxUj2sNAYKc58V4VYeo-270" source="NlxUj2sNAYKc58V4VYeo-313" style="endArrow=open;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;defaultLabelBackgroundColor=page;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endFill=0;" target="NlxUj2sNAYKc58V4VYeo-273" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="660" y="280" as="sourcePoint" />
+            <mxPoint x="710" y="230" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-315" edge="1" parent="NlxUj2sNAYKc58V4VYeo-270" source="NlxUj2sNAYKc58V4VYeo-271" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;defaultLabelBackgroundColor=page;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;endFill=0;startArrow=open;startFill=0;" target="NlxUj2sNAYKc58V4VYeo-314" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="367" y="390" as="sourcePoint" />
+            <mxPoint x="338" y="216" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-314" parent="NlxUj2sNAYKc58V4VYeo-270" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;کلیک روی کارت خبر&lt;br&gt;&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="40" width="95" x="480" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-318" edge="1" parent="NlxUj2sNAYKc58V4VYeo-270" source="NlxUj2sNAYKc58V4VYeo-275" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;defaultLabelBackgroundColor=page;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="NlxUj2sNAYKc58V4VYeo-313" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="419" y="205" as="sourcePoint" />
+            <mxPoint x="638" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-313" parent="NlxUj2sNAYKc58V4VYeo-270" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="&lt;font style=&quot;font-size: 11px;&quot;&gt;کلیک روی آیکون سرچ&lt;br&gt;&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="40" width="95" x="640" y="238" as="geometry" />
+        </mxCell>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-320" edge="1" parent="NlxUj2sNAYKc58V4VYeo-270" source="NlxUj2sNAYKc58V4VYeo-271" style="endArrow=open;dashed=1;dashPattern=5 5;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;verticalAlign=bottom;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-319" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="366" y="466" as="sourcePoint" />
+            <mxPoint x="365" y="550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-319" parent="NlxUj2sNAYKc58V4VYeo-270" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="واکنش منابع همپوشانی&lt;br&gt;&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" vertex="1">
+          <mxGeometry height="40" width="95" x="489" y="450" as="geometry" />
+        </mxCell>
+        <UserObject label="" plantUmlId="actor_7" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-277">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-269" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="60" width="40" x="-650" y="210" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="کاربر (User)" plantUmlId="actorlbl_8" plantUmlBaseStyle="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;fontFamily=Tahoma;" plantUmlBaseValue="کاربر (User)" id="NlxUj2sNAYKc58V4VYeo-278">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-277" style="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="17" width="95" x="-27.5" y="62" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="actor_9" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-279">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-269" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="60" width="40" x="-640" y="410" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="سیستم زمان‌بند&#xa;(Spring Scheduler)" plantUmlId="actorlbl_10" plantUmlBaseStyle="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;fontFamily=Tahoma;" plantUmlBaseValue="سیستم زمان‌بند&#xa;(Spring Scheduler)" id="NlxUj2sNAYKc58V4VYeo-280">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-279" style="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="17" width="261" x="-110.5" y="62" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="actor_11" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-281">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-269" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;fontColor=#000000;fontSize=14;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="60" width="40" x="-640" y="570" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="منابع خبری&#xa;(RSS &amp;amp; TGJU)" plantUmlId="actorlbl_12" plantUmlBaseStyle="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;fontFamily=Tahoma;" plantUmlBaseValue="منابع خبری&#xa;(RSS &amp;amp; TGJU)" id="NlxUj2sNAYKc58V4VYeo-282">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-281" style="text;html=1;align=center;verticalAlign=middle;spacingBottom=1;fontColor=#000000;fontSize=14;part=1;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="17" width="198" x="-79" y="62" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="rel_21" plantUmlBaseStyle="endArrow=block;endFill=1;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-291">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-269" source="NlxUj2sNAYKc58V4VYeo-279" style="endArrow=block;endFill=1;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-274">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="rel_22" plantUmlBaseStyle="endArrow=block;endFill=1;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-292">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-269" source="NlxUj2sNAYKc58V4VYeo-274" style="endArrow=block;endFill=1;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-281">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-294" edge="1" parent="NlxUj2sNAYKc58V4VYeo-269" source="NlxUj2sNAYKc58V4VYeo-277" style="endArrow=block;endFill=1;strokeColor=#181818;fontColor=#000000;fontSize=13;edgeStyle=none;rounded=0;html=1;fontFamily=Tahoma;curved=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" target="NlxUj2sNAYKc58V4VYeo-275" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-630" y="240" as="sourcePoint" />
+            <mxPoint x="499" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="NlxUj2sNAYKc58V4VYeo-307" edge="1" parent="NlxUj2sNAYKc58V4VYeo-269" source="NlxUj2sNAYKc58V4VYeo-277" style="endArrow=classic;html=1;rounded=0;defaultLabelBackgroundColor=page;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="NlxUj2sNAYKc58V4VYeo-272" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="-90" y="380" as="sourcePoint" />
+            <mxPoint x="-40" y="330" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

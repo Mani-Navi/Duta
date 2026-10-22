@@ -1,0 +1,258 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="F0YoFNamHZLp8PzAdVAX">
+    <mxGraphModel dx="1288" dy="703" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="" plantUmlData="{&#xa;  &quot;data&quot;: &quot;@startuml\nskinparam defaultFontName Tahoma\nskinparam componentStyle rectangle\nskinparam shadowing false\n\nactor \&quot;کاربر واقعی\\n(Browser / Mobile)\&quot; as User\nactor \&quot;ربات‌های سئو و شبکه اجتماعی\\n(Googlebot / TelegramBot)\&quot; as Bot\n\ncloud \&quot;منابع بیرونی\&quot; {\n    component \&quot;فیدهای RSS خبرگزاری‌ها\&quot; as RSS\n    component \&quot;سایت TGJU\\n(قیمت دلار و طلا)\&quot; as TGJU\n}\n\nnode \&quot;سرور ابری پارس‌پک (https://duta.ir)\&quot; {\n\n    package \&quot;Nginx Reverse Proxy (Port 80/443 + HTTP/2 + Gzip)\&quot; {\n        component \&quot;Canonical Redirect (301)\\nwww &amp; IP -&gt; duta.ir\&quot; as Redirect\n        component \&quot;Bot Detector ($is_bot)\\n&amp; /robots.txt + /sitemap.xml\&quot; as NginxRouter\n        component \&quot;Static Files (React 19 SPA)\\n/usr/share/nginx/html\&quot; as SPA\n    }\n\n    node \&quot;Docker Container: Prerender\&quot; {\n        component \&quot;duta-prerender:4000\\n(Dynamic OG &amp; Meta Renderer)\&quot; as Prerender\n    }\n\n    node \&quot;Docker Container: nitt-backend:8080 (Java 21 / Spring Boot 3.3)\&quot; {\n        component \&quot;RateLimitInterceptor\\n(120 req/min via X-Real-IP)\&quot; as RateLimit\n        component \&quot;REST Controllers\\n(Article, Cluster, Price, SEO)\&quot; as Controllers\n        database \&quot;Caffeine Cache\\n(In-Memory, 10m TTL)\&quot; as Cache\n        component \&quot;Core Intelligence\\n(Classifier, Jaccard Clustering,\\nBayesian Scoring, SlugService)\&quot; as Services\n        component \&quot;Background Schedulers\\n(5 Async RSS Threads + Price Job)\&quot; as Schedulers\n    }\n\n    database \&quot;PostgreSQL Database\\n(articles, clusters, sources, categories)\&quot; as DB\n}\n\nUser --&gt; Redirect : HTTPS\nBot --&gt; Redirect : HTTPS\nRedirect --&gt; NginxRouter\n\nNginxRouter --&gt; SPA : Human ($is_bot = 0)\nNginxRouter --&gt; Prerender : Bot on /article/* ($is_bot = 1)\nPrerender .&gt; SPA : Fallback on 502/504\nPrerender --&gt; Controllers : GET /api/articles/seo/{slug}\n\nSPA --&gt; RateLimit : /api/*\nNginxRouter --&gt; Controllers : /sitemap.xml\nRateLimit --&gt; Controllers\n\nControllers &lt;--&gt; Cache : Read / CacheEvict\nControllers --&gt; Services\nServices &lt;--&gt; DB\n\nSchedulers --&gt; RSS : Every 5 min\nSchedulers --&gt; TGJU : Every 5 min\nSchedulers --&gt; Services\nSchedulers .&gt; Cache : Evict on new articles\n@enduml&quot;,&#xa;  &quot;config&quot;: null&#xa;}" id="NlxUj2sNAYKc58V4VYeo-322">
+          <mxCell connectable="0" parent="1" style="group;transparentBounds=1;editIcon=1;lockedGroup=0;groupPadding=10;" vertex="1">
+            <mxGeometry as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="n_0" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-323">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-322" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="54" width="40" x="375.08" y="30" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="کاربر واقعی&#xa;(Browser / Mobile)" plantUmlId="cap_1" plantUmlBaseStyle="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontSize=14;whiteSpace=wrap;fontFamily=Tahoma;part=1;" plantUmlBaseValue="کاربر واقعی&#xa;(Browser / Mobile)" id="NlxUj2sNAYKc58V4VYeo-324">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-323" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontSize=14;whiteSpace=wrap;fontFamily=Tahoma;part=1;" vertex="1">
+            <mxGeometry height="22" width="133" x="-46.5" y="54" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="n_2" plantUmlBaseStyle="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-325">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-322" style="shape=umlActor;html=1;fillColor=#F1F1F1;strokeColor=#181818;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="54" width="40" x="577.58" y="30" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="ربات‌های سئو و شبکه اجتماعی&#xa;(Googlebot / TelegramBot)" plantUmlId="cap_3" plantUmlBaseStyle="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontSize=14;whiteSpace=wrap;fontFamily=Tahoma;part=1;" plantUmlBaseValue="ربات‌های سئو و شبکه اجتماعی&#xa;(Googlebot / TelegramBot)" id="NlxUj2sNAYKc58V4VYeo-326">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-325" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontSize=14;whiteSpace=wrap;fontFamily=Tahoma;part=1;" vertex="1">
+            <mxGeometry height="22" width="202" x="-81" y="54" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="منابع بیرونی" plantUmlId="c_4" plantUmlBaseStyle="shape=mxgraph.basic.cloud_rect;html=1;fillColor=none;strokeColor=#181818;verticalAlign=top;align=center;spacingTop=8;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="منابع بیرونی" id="NlxUj2sNAYKc58V4VYeo-327">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-322" style="shape=mxgraph.basic.cloud_rect;html=1;fillColor=none;strokeColor=#181818;verticalAlign=top;align=center;spacingTop=8;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="102" width="434" x="867.79" y="830.5" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="فیدهای RSS خبرگزاری‌ها" plantUmlId="n_5" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="فیدهای RSS خبرگزاری‌ها" id="NlxUj2sNAYKc58V4VYeo-328">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-327" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="49" width="204" x="20" y="35" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="سایت TGJU&#xa;(قیمت دلار و طلا)" plantUmlId="n_6" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="سایت TGJU&#xa;(قیمت دلار و طلا)" id="NlxUj2sNAYKc58V4VYeo-329">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-327" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="49" width="155" x="259" y="35" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="سرور ابری پارس‌پک (https://duta.ir)" plantUmlId="c_7" plantUmlBaseStyle="shape=cube;size=10;flipH=1;fillColor=none;strokeColor=#181818;verticalAlign=top;align=center;spacingTop=7;spacingRight=10;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="سرور ابری پارس‌پک (https://duta.ir)" id="NlxUj2sNAYKc58V4VYeo-330">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-322" style="shape=cube;size=10;flipH=1;fillColor=none;strokeColor=#181818;verticalAlign=top;align=center;spacingTop=7;spacingRight=10;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="896.5" width="802.79" x="30" y="150.5" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Nginx Reverse Proxy (Port 80/443 + HTTP/2 + Gzip)" plantUmlId="c_8" plantUmlBaseStyle="shape=folder;tabWidth=347;tabHeight=23;tabPosition=left;html=1;whiteSpace=wrap;fillColor=none;strokeColor=#000000;strokeWidth=1.5;fontSize=14;fontStyle=1;fontColor=#000000;align=left;verticalAlign=top;spacingLeft=2;spacingTop=-4;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="Nginx Reverse Proxy (Port 80/443 + HTTP/2 + Gzip)" id="NlxUj2sNAYKc58V4VYeo-331">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-330" style="shape=folder;tabWidth=347;tabHeight=23;tabPosition=left;html=1;whiteSpace=wrap;fillColor=none;strokeColor=#000000;strokeWidth=1.5;fontSize=14;fontStyle=1;fontColor=#000000;align=left;verticalAlign=top;spacingLeft=2;spacingTop=-4;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="329" width="382.17" x="328.23" y="57.5" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Canonical Redirect (301)&#xa;www &amp; IP -&gt; duta.ir" plantUmlId="n_9" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="Canonical Redirect (301)&#xa;www &amp; IP -&gt; duta.ir" id="NlxUj2sNAYKc58V4VYeo-332">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-331" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="49" width="198" x="88.66" y="34" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Bot Detector ($is_bot)&#xa;&amp; /robots.txt + /sitemap.xml" plantUmlId="n_10" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="Bot Detector ($is_bot)&#xa;&amp; /robots.txt + /sitemap.xml" id="NlxUj2sNAYKc58V4VYeo-333">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-331" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="49" width="227" x="96.83" y="143" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Static Files (React 19 SPA)&#xa;/usr/share/nginx/html" plantUmlId="n_11" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="Static Files (React 19 SPA)&#xa;/usr/share/nginx/html" id="NlxUj2sNAYKc58V4VYeo-334">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-331" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="49" width="207" x="58" y="268" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="e_23" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-346">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-331" source="NlxUj2sNAYKc58V4VYeo-332" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-333">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Human ($is_bot = 0)" plantUmlId="e_24" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="Human ($is_bot = 0)" id="NlxUj2sNAYKc58V4VYeo-347">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-331" source="NlxUj2sNAYKc58V4VYeo-333" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-334">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="68" y="9" as="offset" />
+              <Array as="points">
+                <mxPoint x="134.56" y="222" />
+              </Array>
+              <mxPoint x="172.5" y="192" as="sourcePoint" />
+              <mxPoint x="161.5" y="268" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Docker Container: Prerender" plantUmlId="c_12" plantUmlBaseStyle="shape=cube;size=10;flipH=1;fillColor=none;strokeColor=#181818;verticalAlign=top;align=center;spacingTop=7;spacingRight=10;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="Docker Container: Prerender" id="NlxUj2sNAYKc58V4VYeo-335">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-330" style="shape=cube;size=10;flipH=1;fillColor=none;strokeColor=#181818;verticalAlign=top;align=center;spacingTop=7;spacingRight=10;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="105" width="278.23" x="15" y="281.5" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="duta-prerender:4000&#xa;(Dynamic OG &amp; Meta Renderer)" plantUmlId="n_13" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="duta-prerender:4000&#xa;(Dynamic OG &amp; Meta Renderer)" id="NlxUj2sNAYKc58V4VYeo-336">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-335" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="49" width="237" x="16" y="40" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Docker Container: nitt-backend:8080 (Java 21 / Spring Boot 3.3)" plantUmlId="c_14" plantUmlBaseStyle="shape=cube;size=10;flipH=1;fillColor=none;strokeColor=#181818;verticalAlign=top;align=center;spacingTop=7;spacingRight=10;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="Docker Container: nitt-backend:8080 (Java 21 / Spring Boot 3.3)" id="NlxUj2sNAYKc58V4VYeo-337">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-330" style="shape=cube;size=10;flipH=1;fillColor=none;strokeColor=#181818;verticalAlign=top;align=center;spacingTop=7;spacingRight=10;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="352" width="577.17" x="200.62" y="438.75" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="RateLimitInterceptor&#xa;(120 req/min via X-Real-IP)" plantUmlId="n_15" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="RateLimitInterceptor&#xa;(120 req/min via X-Real-IP)" id="NlxUj2sNAYKc58V4VYeo-338">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-337" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="49" width="222" x="51.11" y="40" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="REST Controllers&#xa;(Article, Cluster, Price, SEO)" plantUmlId="n_16" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="REST Controllers&#xa;(Article, Cluster, Price, SEO)" id="NlxUj2sNAYKc58V4VYeo-339">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-337" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="49" width="224" x="15" y="149" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Caffeine Cache&#xa;(In-Memory, 10m TTL)" plantUmlId="n_17" plantUmlBaseStyle="shape=cylinder3;size=10;boundedLbl=1;backgroundOutline=1;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="Caffeine Cache&#xa;(In-Memory, 10m TTL)" id="NlxUj2sNAYKc58V4VYeo-340">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-337" style="shape=cylinder3;size=10;boundedLbl=1;backgroundOutline=1;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="46" width="166" x="95.9" y="274" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Core Intelligence&#xa;(Classifier, Jaccard Clustering,&#xa;Bayesian Scoring, SlugService)" plantUmlId="n_18" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="Core Intelligence&#xa;(Classifier, Jaccard Clustering,&#xa;Bayesian Scoring, SlugService)" id="NlxUj2sNAYKc58V4VYeo-341">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-337" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="62" width="246" x="296.9" y="274" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Background Schedulers&#xa;(5 Async RSS Threads + Price Job)" plantUmlId="n_19" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="Background Schedulers&#xa;(5 Async RSS Threads + Price Job)" id="NlxUj2sNAYKc58V4VYeo-342">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-337" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="49" width="265" x="287.17" y="149" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="e_30" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-353">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-337" source="NlxUj2sNAYKc58V4VYeo-338" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-339">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Read / CacheEvict" plantUmlId="e_31" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;startArrow=classicThin;startFill=1;fontFamily=Tahoma;curved=1;rounded=0;endSize=6;startSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="Read / CacheEvict" id="NlxUj2sNAYKc58V4VYeo-354">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-337" source="NlxUj2sNAYKc58V4VYeo-339" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;startArrow=classicThin;startFill=1;fontFamily=Tahoma;curved=1;rounded=0;endSize=6;startSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-340">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="51" y="-4" as="offset" />
+              <Array as="points">
+                <mxPoint x="85.39999999999998" y="228" />
+              </Array>
+              <mxPoint x="89.67000000000002" y="198" as="sourcePoint" />
+              <mxPoint x="151.23000000000002" y="274" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="e_32" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-355">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-337" source="NlxUj2sNAYKc58V4VYeo-339" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-341">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Evict on new articles" plantUmlId="e_37" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;verticalAlign=bottom;endArrow=classicThin;endFill=1;dashed=1;dashPattern=7 7;fontFamily=Tahoma;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="Evict on new articles" id="NlxUj2sNAYKc58V4VYeo-360">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-337" source="NlxUj2sNAYKc58V4VYeo-342" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;verticalAlign=bottom;endArrow=classicThin;endFill=1;dashed=1;dashPattern=7 7;fontFamily=Tahoma;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-340">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="52" y="15" as="offset" />
+              <Array as="points">
+                <mxPoint x="227.89999999999998" y="228" />
+              </Array>
+              <mxPoint x="375.5" y="198" as="sourcePoint" />
+              <mxPoint x="206.56" y="274" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="e_36" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-359">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-337" source="NlxUj2sNAYKc58V4VYeo-342" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-341">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="PostgreSQL Database&#xa;(articles, clusters, sources, categories)" plantUmlId="n_20" plantUmlBaseStyle="shape=cylinder3;size=10;boundedLbl=1;backgroundOutline=1;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" plantUmlBaseValue="PostgreSQL Database&#xa;(articles, clusters, sources, categories)" id="NlxUj2sNAYKc58V4VYeo-343">
+          <mxCell parent="NlxUj2sNAYKc58V4VYeo-330" style="shape=cylinder3;size=10;boundedLbl=1;backgroundOutline=1;fillColor=#F1F1F1;strokeColor=#181818;fontSize=14;whiteSpace=wrap;shadow=0;fontFamily=Tahoma;" vertex="1">
+            <mxGeometry height="46" width="286" x="477.81" y="834.5" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Bot on /article/* ($is_bot = 1)" plantUmlId="e_25" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="Bot on /article/* ($is_bot = 1)" id="NlxUj2sNAYKc58V4VYeo-348">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-330" source="NlxUj2sNAYKc58V4VYeo-333" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-336">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="/sitemap.xml" plantUmlId="e_29" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="/sitemap.xml" id="NlxUj2sNAYKc58V4VYeo-352">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-330" source="NlxUj2sNAYKc58V4VYeo-333" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-339">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="103" y="-14" as="offset" />
+              <Array as="points">
+                <mxPoint x="614.82" y="287.5" />
+                <mxPoint x="607.91" y="350" />
+                <mxPoint x="602.91" y="388.52" />
+                <mxPoint x="601.95" y="394.44000000000005" />
+                <mxPoint x="598.63" y="414.71000000000004" />
+                <mxPoint x="508.77" y="445.79999999999995" />
+                <mxPoint x="500.67999999999995" y="503.25" />
+                <mxPoint x="494.61" y="557.75" />
+              </Array>
+              <mxPoint x="576.39" y="249.5" as="sourcePoint" />
+              <mxPoint x="383.62" y="587.75" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Fallback on 502/504" plantUmlId="e_26" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;dashed=1;dashPattern=7 7;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="Fallback on 502/504" id="NlxUj2sNAYKc58V4VYeo-349">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-330" source="NlxUj2sNAYKc58V4VYeo-336" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;dashed=1;dashPattern=7 7;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-334">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="/api/*" plantUmlId="e_28" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="/api/*" id="NlxUj2sNAYKc58V4VYeo-351">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-330" source="NlxUj2sNAYKc58V4VYeo-334" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-338">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="33" y="-7" as="offset" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="GET /api/articles/seo/{slug}" plantUmlId="e_27" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="GET /api/articles/seo/{slug}" id="NlxUj2sNAYKc58V4VYeo-350">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-330" source="NlxUj2sNAYKc58V4VYeo-336" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-339">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="56" y="-46" as="offset" />
+              <Array as="points">
+                <mxPoint x="149.41" y="388.52" />
+                <mxPoint x="149.38" y="394.44000000000005" />
+                <mxPoint x="196.26" y="414.71000000000004" />
+                <mxPoint x="244.07999999999998" y="445.79999999999995" />
+                <mxPoint x="233.55" y="503.25" />
+                <mxPoint x="233.35000000000002" y="557.75" />
+              </Array>
+              <mxPoint x="149.5" y="370.5" as="sourcePoint" />
+              <mxPoint x="271.62" y="587.75" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="e_33" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;endArrow=classicThin;endFill=1;startArrow=classicThin;startFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;startSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="" id="NlxUj2sNAYKc58V4VYeo-356">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-330" source="NlxUj2sNAYKc58V4VYeo-341" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;endArrow=classicThin;endFill=1;startArrow=classicThin;startFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;startSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-343">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="HTTPS" plantUmlId="e_21" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="HTTPS" id="NlxUj2sNAYKc58V4VYeo-344">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-322" source="NlxUj2sNAYKc58V4VYeo-323" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-332">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="-1" y="-29" as="offset" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="HTTPS" plantUmlId="e_22" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="HTTPS" id="NlxUj2sNAYKc58V4VYeo-345">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-322" source="NlxUj2sNAYKc58V4VYeo-325" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-332">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="33" y="-29" as="offset" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="Every 5 min" plantUmlId="e_34" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="Every 5 min" id="NlxUj2sNAYKc58V4VYeo-357">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-322" source="NlxUj2sNAYKc58V4VYeo-342" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-328">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Every 5 min" plantUmlId="e_35" plantUmlBaseStyle="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="Every 5 min" id="NlxUj2sNAYKc58V4VYeo-358">
+          <mxCell edge="1" parent="NlxUj2sNAYKc58V4VYeo-322" source="NlxUj2sNAYKc58V4VYeo-342" style="strokeColor=#181818;fontColor=#000000;fontSize=13;html=1;labelBackgroundColor=#FFFFFF;labelPosition=right;align=left;endArrow=classicThin;endFill=1;fontFamily=Tahoma;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="NlxUj2sNAYKc58V4VYeo-329">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,19 +1,31 @@
-# Environment
+# ── Java / Spring Boot / Maven ──
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.jar
+*.war
+*.class
+logs/
+*.log
+
+# ── Node / React / Vite ──
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Environment & Secrets ──
 .env
-*.env
-.env.production
-application-prod.properties
+.env.*
+!.env.example
+*.pem
+*.key
 
-# Backend
-Backend/target/
-Backend/.mvn/
-Backend/*.jar
-
-# Frontend
-Frontend/node_modules/
-Frontend/dist/
-
-# IDE
+# ── IDEs & OS ──
 .idea/
 *.iml
 .vscode/
+.DS_Store
+Thumbs.db
