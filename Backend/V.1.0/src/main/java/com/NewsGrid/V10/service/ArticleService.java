@@ -12,6 +12,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Objects;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -54,7 +57,6 @@ public class ArticleService {
             return Page.empty(PageRequest.of(page, size));
         }
 
-        // FIXED: Normalize Persian chars and escape POSIX regex special characters to prevent SQL regex errors
         String cleanKeyword = keyword.trim()
                 .replace('ي', 'ی')
                 .replace('ك', 'ک')
@@ -68,21 +70,73 @@ public class ArticleService {
         // Automatically cleared by Spring
     }
 
-    public SeoArticleDto getSeoDataBySlug(String slug) {
-        Article article = articleRepository.findBySlug(slug)
-                .orElseThrow(() -> new RuntimeException("خبر یافت نشد"));
+    public SeoArticleDto getSeoDataBySlug(String slugOrId) {
+        Article article;
+        if (slugOrId != null && slugOrId.matches("^\\d+$")) {
+            article = articleRepository.findById(Long.parseLong(slugOrId))
+                    .orElseGet(() -> articleRepository.findBySlug(slugOrId)
+                            .orElseThrow(() -> new RuntimeException("خبر یافت نشد")));
+        } else {
+            article = articleRepository.findBySlug(slugOrId)
+                    .orElseThrow(() -> new RuntimeException("خبر یافت نشد"));
+        }
 
-        String metaDescription = (article.getDescription() != null && !article.getDescription().isBlank())
-                ? article.getDescription()
-                : article.getTitle();
+        int score = article.getCluster() != null
+                ? article.getCluster().getCredibilityScore()
+                : (article.getSource() != null && article.getSource().getCredibility() != null
+                ? article.getSource().getCredibility() : 50);
+
+        String credibilityLabel = score >= 80 ? "تأیید شده" : (score >= 50 ? "در حال بررسی" : "نامعتبر");
+
+        List<String> coveredSources;
+        if (article.getCluster() != null) {
+            coveredSources = articleRepository.findByCluster(article.getCluster()).stream()
+                    .map(Article::getSource)
+                    .filter(Objects::nonNull)
+                    .map(Source::getName)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+        } else {
+            String singleSource = article.getSource() != null ? article.getSource().getName() : "Duta";
+            coveredSources = List.of(singleSource);
+        }
+
+        int sourceCount = Math.max(1, coveredSources.size());
+        String canonicalSlug = (article.getSlug() != null && !article.getSlug().isBlank())
+                ? article.getSlug()
+                : String.valueOf(article.getId());
+
+        String richDescription = buildRichSeoDescription(article, score, credibilityLabel, sourceCount, coveredSources);
 
         return SeoArticleDto.builder()
                 .title(article.getTitle())
-                .description(metaDescription)
+                .description(richDescription)
+                .image("https://duta.ir/duta-logo.svg")
                 .sourceName(article.getSource() != null ? article.getSource().getName() : "Duta")
-                .category(article.getCategory())
+                .category(article.getCategory() != null ? article.getCategory() : "اخبار")
                 .publishedAt(article.getPublishedAt() != null ? article.getPublishedAt().toString() : "")
                 .url(article.getUrl())
+                .slug(canonicalSlug)
+                .canonicalUrl("https://duta.ir/article/" + canonicalSlug)
+                .credibilityScore(score)
+                .credibilityLabel(credibilityLabel)
+                .sourceCount(sourceCount)
+                .breaking(article.isBreaking())
+                .coveredSources(coveredSources)
                 .build();
+    }
+
+    private String buildRichSeoDescription(Article article, int score, String label, int sourceCount, List<String> sources) {
+        String sourcesText = String.join("، ", sources.stream().limit(4).toList());
+        String credPrefix = String.format("امتیاز اعتبار: %d٪ (%s | پوشش توسط %d منبع: %s)",
+                score, label, sourceCount, sourcesText);
+
+        String baseSummary = (article.getDescription() != null && !article.getDescription().isBlank())
+                ? article.getDescription().trim()
+                : article.getTitle().trim();
+
+        String combined = credPrefix + " — " + baseSummary;
+        return combined.length() > 300 ? combined.substring(0, 297) + "..." : combined;
     }
 }
