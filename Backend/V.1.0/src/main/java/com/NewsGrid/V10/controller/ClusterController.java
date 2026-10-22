@@ -1,9 +1,7 @@
 package com.NewsGrid.V10.controller;
 
 import com.NewsGrid.V10.entity.Article;
-import com.NewsGrid.V10.entity.ArticleCluster;
-import com.NewsGrid.V10.repository.ArticleClusterRepository;
-import com.NewsGrid.V10.repository.ArticleRepository;
+import com.NewsGrid.V10.service.ArticleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,13 +12,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ClusterController {
 
-    private final ArticleClusterRepository clusterRepository;
-    private final ArticleRepository articleRepository;
+    private final ArticleService articleService;
 
     @GetMapping("/{id}/articles")
     public List<Article> getClusterArticles(@PathVariable Long id) {
-        ArticleCluster cluster = clusterRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("کلستر یافت نشد"));
-        return articleRepository.findByCluster(cluster);
+        return articleService.getClusterArticles(id);
     }
 }

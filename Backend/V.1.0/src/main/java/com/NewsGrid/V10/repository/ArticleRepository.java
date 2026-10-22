@@ -23,14 +23,47 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         boolean existsByUrl(String url);
         boolean existsBySlug(String slug);
 
-        Optional<Article> findBySlug(String slug);
+        // OPTIMIZED: Single-query JOIN FETCH eliminates N+1 selects for source & cluster
+        @Query("""
+        SELECT a FROM Article a
+        LEFT JOIN FETCH a.source
+        LEFT JOIN FETCH a.cluster
+        WHERE a.slug = :slug
+        """)
+        Optional<Article> findBySlug(@Param("slug") String slug);
+
+        @Query("""
+        SELECT a FROM Article a
+        LEFT JOIN FETCH a.source
+        LEFT JOIN FETCH a.cluster
+        WHERE a.id = :id
+        """)
+        Optional<Article> findByIdWithDetails(@Param("id") Long id);
 
         @Modifying
         @Transactional
         void deleteByPublishedAtBefore(ZonedDateTime cutoff);
 
         List<Article> findBySource(Source source);
-        List<Article> findByCluster(ArticleCluster cluster);
+
+        // OPTIMIZED: Fetch all cluster articles and their sources in 1 query instead of N+1
+        @Query("""
+        SELECT a FROM Article a
+        LEFT JOIN FETCH a.source s
+        LEFT JOIN FETCH a.cluster
+        WHERE a.cluster = :cluster
+        ORDER BY s.credibility DESC, a.publishedAt DESC
+        """)
+        List<Article> findByCluster(@Param("cluster") ArticleCluster cluster);
+
+        @Query("""
+        SELECT a FROM Article a
+        LEFT JOIN FETCH a.source s
+        LEFT JOIN FETCH a.cluster
+        WHERE a.cluster.id = :clusterId
+        ORDER BY s.credibility DESC, a.publishedAt DESC
+        """)
+        List<Article> findByClusterIdWithSources(@Param("clusterId") Long clusterId);
 
         Page<Article> findBySourceSourceTypeOrderByPublishedAtDesc(SourceType sourceType, Pageable pageable);
 
@@ -99,7 +132,6 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
                 nativeQuery = true)
         Page<Article> findRepresentativeBreaking(Pageable pageable);
 
-        // FIXED: Whole-word boundary matching in Persian/English + Cluster deduplication
         @Query(value = """
         SELECT a.* FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id

@@ -15,11 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -175,75 +170,13 @@ public class ArticleController {
         return articleService.getSeoDataBySlug(slug);
     }
 
-    // OPTIMIZED: Hybrid Google News (48h rule) + Standard Web Sitemap with Static Pages
     @GetMapping(value = "/sitemap.xml", produces = "application/xml;charset=UTF-8")
     public String getNewsSitemap() {
-        List<Article> recentArticles = articleRepository.findTop1000ByOrderByPublishedAtDesc();
-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-        ZonedDateTime googleNewsCutoff = now.minusHours(48);
-
-        StringBuilder xml = new StringBuilder();
-        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" ");
-        xml.append("xmlns:news=\"http://www.google.com/schemas/sitemap-news/0.9\">\n");
-
-        // 1. Core Static Pages
-        appendStaticUrl(xml, "https://duta.ir/", "always", "1.0");
-        appendStaticUrl(xml, "https://duta.ir/features", "monthly", "0.8");
-        appendStaticUrl(xml, "https://duta.ir/credibility", "monthly", "0.8");
-        appendStaticUrl(xml, "https://duta.ir/about", "monthly", "0.7");
-
-        // 2. Dynamic Article Pages (48h Google News + 30d Standard Archive)
-        for (Article a : recentArticles) {
-            String rawSlug = (a.getSlug() != null && !a.getSlug().isBlank())
-                    ? a.getSlug()
-                    : String.valueOf(a.getId());
-            String encodedSlug = URLEncoder.encode(rawSlug, StandardCharsets.UTF_8);
-            ZonedDateTime pubDate = a.getPublishedAt() != null ? a.getPublishedAt() : now;
-
-            xml.append("  <url>\n");
-            xml.append("    <loc>https://duta.ir/article/").append(escapeXml(encodedSlug)).append("</loc>\n");
-            xml.append("    <lastmod>").append(pubDate.toInstant()).append("</lastmod>\n");
-
-            if (pubDate.isAfter(googleNewsCutoff)) {
-                xml.append("    <news:news>\n");
-                xml.append("      <news:publication>\n");
-                xml.append("        <news:name>Duta</news:name>\n");
-                xml.append("        <news:language>fa</news:language>\n");
-                xml.append("      </news:publication>\n");
-                xml.append("      <news:publication_date>").append(pubDate.toInstant()).append("</news:publication_date>\n");
-                xml.append("      <news:title>").append(escapeXml(a.getTitle())).append("</news:title>\n");
-                xml.append("    </news:news>\n");
-            } else {
-                xml.append("    <changefreq>weekly</changefreq>\n");
-                xml.append("    <priority>0.7</priority>\n");
-            }
-
-            xml.append("  </url>\n");
-        }
-        xml.append("</urlset>");
-        return xml.toString();
-    }
-
-    private void appendStaticUrl(StringBuilder xml, String loc, String changefreq, String priority) {
-        xml.append("  <url>\n");
-        xml.append("    <loc>").append(loc).append("</loc>\n");
-        xml.append("    <changefreq>").append(changefreq).append("</changefreq>\n");
-        xml.append("    <priority>").append(priority).append("</priority>\n");
-        xml.append("  </url>\n");
+        return articleService.generateNewsSitemapXml();
     }
 
     private boolean isAuthorizedAdmin(String headerKey, String paramKey) {
         if (adminSecret == null || adminSecret.isBlank()) return false;
         return adminSecret.equals(headerKey) || adminSecret.equals(paramKey);
-    }
-
-    private String escapeXml(String input) {
-        if (input == null) return "";
-        return input.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
     }
 }
