@@ -53,6 +53,7 @@ a {
     backdrop-filter: blur(20px) saturate(180%);
     border-bottom: 0.5px solid var(--separator);
     min-height: 52px;
+    transform: translateZ(0); /* ایجاد لایه مستقل GPU برای جلوگیری از تداخل رندر کارت‌ها */
 }
 
 .nav-row {
@@ -1075,8 +1076,6 @@ body.dark .price-chip {
 .price-chip.usd {
     background: rgba(16, 185, 129, 0.1);
     border: 1px solid rgba(16, 185, 129, 0.28);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
 }
 
 .price-chip.usd .chip-label { color: #047857; }
@@ -1093,8 +1092,6 @@ body.dark .price-chip.usd .chip-label { color: #34d399; }
 .price-chip.gold {
     background: rgba(234, 179, 8, 0.1);
     border: 1px solid rgba(234, 179, 8, 0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
 }
 
 .price-chip.gold .chip-label { color: #b45309; }
