@@ -1,47 +1,30 @@
+import { useState, useEffect } from 'react';
 import strings from '../strings/strings';
+import api from '../api/axiosConfig';
+import {
+    getArticleScore,
+    getArticleSourceCount,
+    getBadgeClass,
+    getScoreLabel,
+    getScoreColor,
+    getScoreDesc,
+    formatRelativeTime
+} from '../utils/articleHelpers';
 
-function ArticleDetail({ lang, article }) {
-    const t = strings[lang];
+function ArticleDetail({ article }) {
+    const t = strings.fa;
+    const [clusterArticles, setClusterArticles] = useState([]);
+    const [copied, setCopied] = useState(false);
 
-    const getBadgeClass = (credibility) => {
-        if (credibility >= 80) return 'green';
-        if (credibility >= 50) return 'yellow';
-        return 'red';
-    };
+    const shareUrl = `https://duta.ir/article/${article.slug || article.id}`;
 
-    const getScoreLabel = (credibility) => {
-        if (credibility >= 80) return lang === 'fa' ? 'تأیید شده' : 'Verified';
-        if (credibility >= 50) return lang === 'fa' ? 'در حال بررسی' : 'Developing';
-        return lang === 'fa' ? 'نامعتبر' : 'Unverified';
-    };
-
-    const getScoreDesc = (credibility) => {
-        if (credibility >= 80) return lang === 'fa'
-            ? 'این خبر توسط منابع معتبر پوشش داده شده است.'
-            : 'This story has been covered by credible sources.';
-        if (credibility >= 50) return lang === 'fa'
-            ? 'این خبر هنوز توسط منابع بیشتری تأیید نشده است.'
-            : 'This story has not yet been confirmed by more sources.';
-        return lang === 'fa'
-            ? 'هیچ منبع معتبری این خبر را تأیید نکرده است.'
-            : 'No credible source has confirmed this story.';
-    };
-
-    const getScoreColor = (credibility) => {
-        if (credibility >= 80) return '#34C759';
-        if (credibility >= 50) return '#FF9500';
-        return '#FF3B30';
-    };
-
-    const formatTime = (dateStr) => {
-        if (!dateStr) return '';
-        const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
-        if (diff < 60) return lang === 'fa' ? `${diff} دقیقه پیش` : `${diff} minutes ago`;
-        const hours = Math.floor(diff / 60);
-        if (hours < 24) return lang === 'fa' ? `${hours} ساعت پیش` : `${hours} hours ago`;
-        const days = Math.floor(hours / 24);
-        return lang === 'fa' ? `${days} روز پیش` : `${days} days ago`;
-    };
+    useEffect(() => {
+        if (article.cluster?.id) {
+            api.get(`/clusters/${article.cluster.id}/articles`)
+                .then(res => setClusterArticles(res.data.filter(a => a.id !== article.id)))
+                .catch(() => {});
+        }
+    }, [article.id, article.cluster?.id]);
 
     const buildRing = (score, color) => {
         const r = 21, cx = 27, cy = 27;
@@ -60,79 +43,203 @@ function ArticleDetail({ lang, article }) {
         );
     };
 
-    const credibility = article.source?.credibility || 0;
-    const badgeClass = getBadgeClass(credibility);
-    const scoreColor = getScoreColor(credibility);
-    const category = article.source?.category;
+    const copyLink = async () => {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const shareNative = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: article.title, url: shareUrl });
+            } catch {}
+        } else {
+            await copyLink();
+        }
+    };
+
+    const shareToTelegram = () =>
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(article.title)}`, '_blank');
+
+    const shareToWhatsApp = () =>
+        window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + shareUrl)}`, '_blank');
+
+    const shareToTwitter = () =>
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+
+    const score = getArticleScore(article);
+    const sourceCount = getArticleSourceCount(article);
+    const scoreColor = getScoreColor(score);
+    const categoryName = article.category || article.source?.category?.nameFa;
+    const allSources = [article, ...clusterArticles];
+    const hasDistinctDescription = article.description && article.description.trim() !== article.title?.trim();
+
+    const structuredData = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "NewsArticle",
+                "@id": `${shareUrl}#article`,
+                "headline": article.title,
+                "description": article.description || article.title,
+                "datePublished": article.publishedAt,
+                "dateModified": article.cluster?.updatedAt || article.publishedAt,
+                "articleSection": categoryName || "اخبار",
+                "inLanguage": "fa-IR",
+                "mainEntityOfPage": shareUrl,
+                "author": {
+                    "@type": "Organization",
+                    "name": article.source?.name || "Duta"
+                },
+                "publisher": {
+                    "@type": "Organization",
+                    "name": "Duta",
+                    "url": "https://duta.ir",
+                    "logo": {
+                        "@type": "ImageObject",
+                        "url": "https://duta.ir/duta-logo.svg"
+                    }
+                },
+                "isBasedOn": allSources.map(s => ({
+                    "@type": "NewsArticle",
+                    "headline": s.title,
+                    "url": s.url,
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": s.source?.name || "منبع خبری"
+                    }
+                }))
+            },
+            {
+                "@type": "ClaimReview",
+                "@id": `${shareUrl}#claimreview`,
+                "url": shareUrl,
+                "claimReviewed": article.title,
+                "datePublished": article.publishedAt,
+                "author": {
+                    "@type": "Organization",
+                    "name": "Duta",
+                    "url": "https://duta.ir"
+                },
+                "reviewRating": {
+                    "@type": "Rating",
+                    "ratingValue": score,
+                    "bestRating": 100,
+                    "worstRating": 0,
+                    "alternateName": getScoreLabel(score)
+                }
+            }
+        ]
+    };
 
     return (
         <div className="detail-content">
+            <script type="application/ld+json">
+                {JSON.stringify(structuredData)}
+            </script>
 
-            {/* Meta */}
+            {article.breaking && (
+                <div className="detail-breaking">
+                    <span className="pulse-dot" aria-hidden="true" />
+                    خبر فوری
+                </div>
+            )}
+
             <div className="detail-meta">
-                {category && (
+                {categoryName && (
                     <span className="detail-category">
-            {lang === 'fa' ? category.nameFa : category.nameEn}
-          </span>
+                        {categoryName}
+                    </span>
                 )}
-                <span className="detail-time">
-          {formatTime(article.publishedAt)}
-        </span>
+                <span className="detail-time">{formatRelativeTime(article.publishedAt)}</span>
             </div>
 
-            {/* تیتر */}
-            <div className="detail-title">{article.title}</div>
+            <h1 className="detail-title">{article.title}</h1>
 
-            {/* امتیاز اعتبار */}
+            {hasDistinctDescription && (
+                <p className="detail-description">{article.description}</p>
+            )}
+
             <div className="group-card">
                 <div className="cred-row">
                     <div className="cred-ring-wrap">
-                        {buildRing(credibility, scoreColor)}
-                        <div className="cred-num" style={{ color: scoreColor }}>
-                            {credibility}
-                        </div>
+                        {buildRing(score, scoreColor)}
+                        <div className="cred-num" style={{ color: scoreColor }}>{score}</div>
                     </div>
                     <div>
-            <span className="cred-status" style={{ color: scoreColor }}>
-              {getScoreLabel(credibility)}
-            </span>
-                        <div className="cred-desc">
-                            {getScoreDesc(credibility)}
-                        </div>
+                        <span className="cred-status" style={{ color: scoreColor }}>
+                            {getScoreLabel(score)}
+                        </span>
+                        <div className="cred-desc">{getScoreDesc(score, sourceCount)}</div>
                     </div>
                 </div>
             </div>
 
-            {/* منبع */}
-            <div className="sources-title">
-                {t.sourcesCoveredBy(1)}
-            </div>
+            <div className="sources-title">{t.sourcesCoveredBy(sourceCount)}</div>
 
             <div className="source-list">
-                <div
-                    className="source-item"
-                    onClick={() => window.open(article.url, '_blank')}
-                >
-                    <div className="source-info">
-                        <div className="source-icon">
-                            {article.source?.name?.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                            <div className="source-name">{article.source?.name}</div>
-                            <div className="source-time-label">
-                                {formatTime(article.publishedAt)}
+                {allSources.map((src, i) => {
+                    const srcScore = src.source?.credibility ?? 0;
+                    const srcBadgeClass = getBadgeClass(srcScore);
+                    const color = src.source?.color || '#8E8E93';
+                    const initials = src.source?.initials || src.source?.name?.substring(0, 2) || '?';
+                    return (
+                        <a
+                            key={src.id ?? i}
+                            href={src.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="source-item"
+                        >
+                            <div className="source-info">
+                                <div className="source-icon" style={{ background: color, color: '#fff' }}>
+                                    {initials}
+                                </div>
+                                <div>
+                                    <div className="source-name">{src.source?.name}</div>
+                                    <div className="source-time-label">{formatRelativeTime(src.publishedAt)}</div>
+                                </div>
                             </div>
+                            <div className="source-right">
+                                <span className={`source-badge ${srcBadgeClass}`}>
+                                    {getScoreLabel(srcScore)}
+                                </span>
+                                <i className="ti ti-chevron-left arrow-icon" aria-hidden="true" />
+                            </div>
+                        </a>
+                    );
+                })}
+            </div>
+
+            <div className="share-inline-bar">
+                <span className="share-inline-label">اشتراک‌گذاری</span>
+                <div className="share-inline-btns">
+                    <button className="share-inline-btn" onClick={shareNative} aria-label="اشتراک‌گذاری بیشتر">
+                        <div className="share-inline-icon" style={{ background: '#007AFF' }}>
+                            <i className="ti ti-share" aria-hidden="true" />
                         </div>
-                    </div>
-                    <div className="source-right">
-            <span className={`source-badge ${badgeClass}`}>
-              {getScoreLabel(credibility)}
-            </span>
-                        <i className={`ti ${lang === 'fa'
-                            ? 'ti-chevron-left'
-                            : 'ti-chevron-right'} arrow-icon`}
-                        />
-                    </div>
+                    </button>
+                    <button className="share-inline-btn" onClick={shareToTwitter} aria-label="اشتراک‌گذاری در توییتر">
+                        <div className="share-inline-icon" style={{ background: '#000' }}>
+                            <i className="ti ti-brand-x" aria-hidden="true" />
+                        </div>
+                    </button>
+                    <button className="share-inline-btn" onClick={shareToWhatsApp} aria-label="اشتراک‌گذاری در واتساپ">
+                        <div className="share-inline-icon" style={{ background: '#25D366' }}>
+                            <i className="ti ti-brand-whatsapp" aria-hidden="true" />
+                        </div>
+                    </button>
+                    <button className="share-inline-btn" onClick={shareToTelegram} aria-label="اشتراک‌گذاری در تلگرام">
+                        <div className="share-inline-icon" style={{ background: '#2AABEE' }}>
+                            <i className="ti ti-brand-telegram" aria-hidden="true" />
+                        </div>
+                    </button>
+                    <button className="share-inline-btn" onClick={copyLink} aria-label="کپی لینک خبر">
+                        <div className="share-inline-icon" style={{ background: 'var(--chip-bg)', color: copied ? '#34C759' : 'var(--label)' }}>
+                            <i className={`ti ${copied ? 'ti-check' : 'ti-link'}`} aria-hidden="true" />
+                        </div>
+                    </button>
                 </div>
             </div>
 

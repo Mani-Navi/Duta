@@ -2,12 +2,16 @@ package com.NewsGrid.V10.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Table(name = "categories")
-@Data
+@Table(name = "categories", indexes = {
+        @Index(name = "idx_category_slug", columnList = "slug", unique = true)
+})
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Category {

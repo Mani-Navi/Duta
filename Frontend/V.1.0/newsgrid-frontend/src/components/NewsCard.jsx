@@ -1,54 +1,75 @@
-function NewsCard({ article, lang, onOpen }) {
+import { memo } from 'react';
+import {
+    getArticleScore,
+    getArticleSourceCount,
+    getBadgeClass,
+    formatRelativeTime
+} from '../utils/articleHelpers';
 
-    const getBadgeClass = (credibility) => {
-        if (credibility >= 80) return 'green';
-        if (credibility >= 50) return 'yellow';
-        return 'red';
-    };
-
-    const getBadgeLabel = (credibility, lang) => {
-        if (credibility >= 80) return lang === 'fa' ? 'تأیید شده' : 'Verified';
-        if (credibility >= 50) return lang === 'fa' ? 'در حال بررسی' : 'Developing';
-        return lang === 'fa' ? 'نامعتبر' : 'Unverified';
-    };
-
-    const formatTime = (dateStr) => {
-        if (!dateStr) return '';
-        const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
-        if (diff < 60) return lang === 'fa' ? `${diff} دقیقه پیش` : `${diff} minutes ago`;
-        const hours = Math.floor(diff / 60);
-        if (hours < 24) return lang === 'fa' ? `${hours} ساعت پیش` : `${hours} hours ago`;
-        const days = Math.floor(hours / 24);
-        return lang === 'fa' ? `${days} روز پیش` : `${days} days ago`;
-    };
-
-    const credibility = article.source?.credibility || 0;
-    const badgeClass = getBadgeClass(credibility);
-    const badgeLabel = getBadgeLabel(credibility, lang);
+function NewsCard({ article, onOpen }) {
+    const score = getArticleScore(article);
+    const sourceCount = getArticleSourceCount(article);
+    const badgeClass = getBadgeClass(score);
+    const isBreaking = article.breaking;
+    const srcColor = article.source?.color || '#8E8E93';
+    const srcInitials = article.source?.initials || article.source?.name?.substring(0, 2) || '?';
+    const articleHref = `/article/${encodeURIComponent(article.slug || article.id)}`;
 
     return (
-        <div
-            className="card"
-            dir={lang === 'fa' ? 'rtl' : 'ltr'}
+        <article
+            className={`card ${isBreaking ? 'breaking' : ''}`}
             onClick={() => onOpen(article)}
         >
+            {isBreaking && (
+                <div className="breaking-strip">
+                    <span className="pulse-dot" aria-hidden="true" />
+                    خبر فوری
+                </div>
+            )}
+
             <div className="card-top">
-        <span className="source-label">
-          {article.source?.name || ''}
-        </span>
-                <span className={`badge ${badgeClass}`}>
-          {credibility}%
-        </span>
+                <span className="src-group">
+                    <span
+                        className="src-badge"
+                        style={{ background: srcColor }}
+                        aria-hidden="true"
+                    >
+                        {srcInitials}
+                    </span>
+                    <span className="source-label">
+                        {article.source?.name || ''}
+                    </span>
+                </span>
+
+                <div className="card-top-right">
+                    {sourceCount > 1 && (
+                        <span className="multi-source-badge">
+                            <i className="ti ti-layers-intersect" aria-hidden="true" />
+                            {sourceCount} منبع
+                        </span>
+                    )}
+                    <span className={`badge ${badgeClass}`} aria-label={`امتیاز اعتبار ${score} درصد`}>
+                        {score}%
+                    </span>
+                </div>
             </div>
 
-            <div className="card-title">{article.title}</div>
+            <h2 className="card-title">
+                <a
+                    href={articleHref}
+                    onClick={(e) => e.preventDefault()}
+                    style={{ color: 'inherit', textDecoration: 'none' }}
+                >
+                    {article.title}
+                </a>
+            </h2>
 
             <div className="card-bottom">
-                <span className="time">{formatTime(article.publishedAt)}</span>
+                <span className="time">{formatRelativeTime(article.publishedAt)}</span>
                 <i className="ti ti-external-link ext" aria-hidden="true" />
             </div>
-        </div>
+        </article>
     );
 }
 
-export default NewsCard;
+export default memo(NewsCard);

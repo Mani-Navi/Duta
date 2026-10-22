@@ -1,16 +1,20 @@
 package com.NewsGrid.V10.entity;
 
-import com.NewsGrid.V10.entity.Category;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.ZonedDateTime;
 
 @Entity
-@Table(name = "sources")
-@Data
+@Table(name = "sources", indexes = {
+        @Index(name = "idx_source_type", columnList = "source_type"),
+        @Index(name = "idx_source_credibility", columnList = "credibility DESC")
+})
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Source {
@@ -22,13 +26,25 @@ public class Source {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
     private String rssUrl;
+
+    @Column(name = "telegram_username")
+    private String telegramUsername;
 
     @Column(nullable = false)
     private Short credibility;
 
-    @ManyToOne
+    @Column(length = 7)
+    private String color;
+
+    @Column(length = 5)
+    private String initials;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_type", nullable = false)
+    private SourceType sourceType = SourceType.RSS;
+
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
     private Category category;
 

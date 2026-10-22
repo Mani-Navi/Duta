@@ -1,7 +1,7 @@
 import strings from '../strings/strings';
 
-function Features({ lang }) {
-    const t = strings[lang];
+function Features() {
+    const t = strings.fa;
 
     return (
         <div className="page-content">

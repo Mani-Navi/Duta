@@ -1,87 +1,193 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import NewsCard from './NewsCard';
+import TelegramNewsCard from './TelegramNewsCard';
+import NewsCardSkeleton from './NewsCardSkeleton';
 import api from '../api/axiosConfig';
-import strings from '../strings/strings';
 
-function NewsGrid({ lang, activeCategory, onOpenArticle }) {
+function getColumnCountForWidth(w) {
+    if (w <= 440) return 1;
+    if (w <= 768) return 2;
+    if (w <= 1024) return 3;
+    return 4;
+}
+
+function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
     const [articles, setArticles] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [error, setError] = useState(null);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
+    const [hasNewArticles, setHasNewArticles] = useState(false);
+    const [columnCount, setColumnCount] = useState(() => getColumnCountForWidth(window.innerWidth));
+
     const observer = useRef(null);
-    const t = strings[lang];
+    const abortControllerRef = useRef(null);
+    const latestArticleIdRef = useRef(null);
+    const isBusyRef = useRef(false);
 
-    // وقتی کتگوری عوض شد، از اول شروع کن
     useEffect(() => {
-        setArticles([]);
-        setPage(0);
-        setHasMore(true);
-    }, [activeCategory]);
+        latestArticleIdRef.current = articles[0]?.id ?? null;
+    }, [articles]);
 
-    // هر بار page تغییر کرد، اخبار جدید بگیر
     useEffect(() => {
-        fetchArticles();
-    }, [page, activeCategory]);
+        isBusyRef.current = loading || isFetchingMore;
+    }, [loading, isFetchingMore]);
 
-    const fetchArticles = async () => {
-        if (loading || !hasMore) return;
+    // ۱. ریسپانسیو ستون‌ها با Throttling مبتنی بر requestAnimationFrame
+    useEffect(() => {
+        let rafId = null;
+        const handleResize = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                const newCol = getColumnCountForWidth(window.innerWidth);
+                setColumnCount(prev => (prev !== newCol ? newCol : prev));
+            });
+        };
+        window.addEventListener('resize', handleResize, { passive: true });
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
+
+    const buildEndpointUrl = useCallback((pageNum) => {
+        if (searchKeyword) {
+            return `/articles/search?keyword=${encodeURIComponent(searchKeyword)}&page=${pageNum}&size=20`;
+        }
+        if (activeCategory === 'breaking') {
+            return `/articles/breaking?page=${pageNum}&size=20`;
+        }
+        if (activeCategory === 'telegram') {
+            return `/articles/telegram?page=${pageNum}&size=20`;
+        }
+        if (activeCategory && activeCategory !== 'all') {
+            return `/articles/category?name=${encodeURIComponent(activeCategory)}&page=${pageNum}&size=20`;
+        }
+        return `/articles?page=${pageNum}&size=20`;
+    }, [activeCategory, searchKeyword]);
+
+    // ۲. متد دریافت اخبار با قابلیت لغو درخواست قبلی
+    const fetchArticles = useCallback(async (pageNum, isInitial = false) => {
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
 
         try {
-            setLoading(true);
+            if (isInitial) {
+                setLoading(true);
+                setArticles([]);
+                setHasNewArticles(false);
+            } else {
+                setIsFetchingMore(true);
+            }
             setError(null);
 
-            let response;
-            if (activeCategory === 0) {
-                response = await api.get(`/articles?page=${page}&size=20`);
-            } else {
-                response = await api.get(
-                    `/articles/category/${activeCategory}?page=${page}&size=20`
-                );
-            }
-
+            const url = buildEndpointUrl(pageNum);
+            const response = await api.get(url, { signal: abortControllerRef.current.signal });
             const data = response.data;
+            const newItems = Array.isArray(data) ? data : (data?.content || []);
 
-            // اخبار جدید رو به لیست قبلی اضافه کن
-            setArticles(prev => page === 0 ? data.content : [...prev, ...data.content]);
+            setArticles(prev => {
+                const combined = pageNum === 0 ? newItems : [...prev, ...newItems];
+                const uniqueMap = new Map();
+                combined.forEach(item => uniqueMap.set(item.id, item));
+                return Array.from(uniqueMap.values());
+            });
 
-            // اگه صفحه آخر بود، دیگه request نزن
-            setHasMore(!data.last);
-
+            setHasMore(Array.isArray(data) ? false : !data.last);
         } catch (err) {
-            setError(t.error);
+            if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+                setError("خطا در دریافت اخبار");
+            }
         } finally {
             setLoading(false);
+            setIsFetchingMore(false);
         }
-    };
+    }, [buildEndpointUrl]);
 
-    // آخرین کارت رو observe کن
-    const lastCardRef = useCallback(node => {
-        if (loading) return;
+    useEffect(() => {
+        setPage(0);
+        setHasMore(true);
+        fetchArticles(0, true);
+    }, [fetchArticles]);
+
+    useEffect(() => {
+        if (page > 0) {
+            fetchArticles(page, false);
+        }
+    }, [page, fetchArticles]);
+
+    // ۳. بررسی خودکار اخبار جدید هر ۵ دقیقه (بدون بازسازی تایمر در هنگام اسکرول)
+    useEffect(() => {
+        if (searchKeyword) return;
+
+        const interval = setInterval(async () => {
+            if (document.hidden || isBusyRef.current) return;
+            try {
+                const url = buildEndpointUrl(0);
+                const res = await api.get(url);
+                const latestItems = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+                if (
+                    latestItems.length > 0 &&
+                    latestArticleIdRef.current !== null &&
+                    latestItems[0].id !== latestArticleIdRef.current
+                ) {
+                    setHasNewArticles(true);
+                }
+            } catch {
+                // خطای بررسی پس‌زمینه نادیده گرفته می‌شود
+            }
+        }, 5 * 60 * 1000);
+
+        return () => clearInterval(interval);
+    }, [searchKeyword, buildEndpointUrl]);
+
+    // ۴. اسکرول بی‌نهایت با Sentinel
+    const sentinelRef = useCallback(node => {
+        if (loading || isFetchingMore) return;
         if (observer.current) observer.current.disconnect();
 
         observer.current = new IntersectionObserver(entries => {
             if (entries[0].isIntersecting && hasMore) {
                 setPage(prev => prev + 1);
             }
-        });
+        }, { rootMargin: '250px' });
 
         if (node) observer.current.observe(node);
-    }, [loading, hasMore]);
+    }, [loading, isFetchingMore, hasMore]);
 
-    if (error) {
+    // ۵. توزیع متوازن در ستون‌ها
+    const columns = useMemo(() => {
+        const cols = Array.from({ length: columnCount }, () => []);
+        articles.forEach((article, index) => {
+            cols[index % columnCount].push(article);
+        });
+        return cols;
+    }, [articles, columnCount]);
+
+    const handleRefreshNewArticles = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setPage(0);
+        setHasMore(true);
+        fetchArticles(0, true);
+    };
+
+    if (error && articles.length === 0) {
         return (
-            <div className="grid-status">
+            <div className="retry-container">
                 <div className="status-text error">{error}</div>
+                <button className="retry-btn" onClick={() => fetchArticles(0, true)}>تلاش مجدد</button>
             </div>
         );
     }
 
-    if (!loading && articles.length === 0) {
+    if (!loading && !error && articles.length === 0) {
         return (
             <div className="grid-status">
                 <div className="status-text">
-                    {lang === 'fa' ? 'خبری یافت نشد' : 'No news found'}
+                    {searchKeyword
+                        ? `نتیجه‌ای برای «${searchKeyword}» یافت نشد`
+                        : 'خبری در این دسته وجود ندارد'}
                 </div>
             </div>
         );
@@ -89,35 +195,47 @@ function NewsGrid({ lang, activeCategory, onOpenArticle }) {
 
     return (
         <>
-            <div className="grid">
-                {articles.map((article, index) => {
-                    // آخرین کارت رو ref بده
-                    const isLast = index === articles.length - 1;
-                    return (
-                        <div key={article.id} ref={isLast ? lastCardRef : null}>
-                            <NewsCard
-                                article={article}
-                                lang={lang}
-                                onOpen={onOpenArticle}
-                            />
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* loading indicator */}
-            {loading && (
-                <div className="grid-status">
-                    <div className="status-text">{t.loading}</div>
-                </div>
+            {hasNewArticles && (
+                <button
+                    className="new-articles-bar"
+                    onClick={handleRefreshNewArticles}
+                    aria-label="نمایش اخبار جدید"
+                >
+                    <i className="ti ti-refresh" aria-hidden="true" />
+                    اخبار جدید منتشر شد — نمایش
+                </button>
             )}
 
-            {/* پیام پایان اخبار */}
-            {!hasMore && articles.length > 0 && (
+            <div className="masonry-grid" dir="rtl">
+                {loading ? (
+                    Array.from({ length: columnCount }).map((_, i) => (
+                        <div key={i} className="masonry-col">
+                            <NewsCardSkeleton /><NewsCardSkeleton /><NewsCardSkeleton />
+                        </div>
+                    ))
+                ) : (
+                    columns.map((colItems, colIdx) => (
+                        <div key={colIdx} className="masonry-col">
+                            {colItems.map((article) => (
+                                <div key={article.id}>
+                                    {article.source?.sourceType === 'TELEGRAM' ?
+                                        <TelegramNewsCard article={article} onOpen={onOpenArticle} /> :
+                                        <NewsCard article={article} onOpen={onOpenArticle} />
+                                    }
+                                </div>
+                            ))}
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {!loading && hasMore && (
+                <div ref={sentinelRef} style={{ height: '1px', width: '100%' }} aria-hidden="true" />
+            )}
+
+            {isFetchingMore && (
                 <div className="grid-status">
-                    <div className="status-text">
-                        {lang === 'fa' ? 'همه اخبار نمایش داده شد' : 'All news loaded'}
-                    </div>
+                    <div className="status-text">در حال بارگذاری اخبار بیشتر...</div>
                 </div>
             )}
         </>

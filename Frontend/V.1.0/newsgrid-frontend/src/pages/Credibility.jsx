@@ -1,7 +1,7 @@
 import strings from '../strings/strings';
 
-function Credibility({ lang }) {
-    const t = strings[lang];
+function Credibility() {
+    const t = strings.fa;
 
     return (
         <div className="page-content">
@@ -10,7 +10,6 @@ function Credibility({ lang }) {
                 <p>{t.credDesc}</p>
             </div>
 
-            {/* سطوح اعتبار */}
             <div className="cred-grid">
                 {t.credLevels.map((c, i) => (
                     <div className={`cred-card ${c.cls}`} key={i}>
@@ -21,7 +20,6 @@ function Credibility({ lang }) {
                 ))}
             </div>
 
-            {/* نحوه کار الگوریتم */}
             <div className="algo-header">
                 <h2>{t.algoTitle}</h2>
                 <p>{t.algoDesc}</p>

@@ -1,25 +1,25 @@
 import { useState } from 'react';
 import CategoryBar from '../components/CategoryBar';
 import NewsGrid from '../components/NewsGrid';
-import strings from '../strings/strings';
 
-function Home({ lang, onOpenArticle }) {
-    const [activeCategory, setActiveCategory] = useState(0);
-    const t = strings[lang];
+function Home({ onOpenArticle, searchKeyword }) {
+    const [activeCategory, setActiveCategory] = useState(null);
 
     return (
-        <div>
-            <CategoryBar
-                lang={lang}
-                activeCategory={activeCategory}
-                onSelectCategory={setActiveCategory}
-            />
+        <section aria-label="صفحه اصلی اخبار Duta">
+            {!searchKeyword && (
+                <CategoryBar
+                    activeCategory={activeCategory}
+                    onSelectCategory={setActiveCategory}
+                />
+            )}
+
             <NewsGrid
-                lang={lang}
                 activeCategory={activeCategory}
                 onOpenArticle={onOpenArticle}
+                searchKeyword={searchKeyword}
             />
-        </div>
+        </section>
     );
 }
 
