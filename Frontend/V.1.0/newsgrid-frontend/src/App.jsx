@@ -13,6 +13,9 @@ const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
 const Features = lazy(() => import('./pages/Features'));
 const Credibility = lazy(() => import('./pages/Credibility'));
 const About = lazy(() => import('./pages/About'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 const DEFAULT_TITLE = 'Duta — دو نگاه، یک حقیقت | پلتفرم هوشمند تجمیع و سنجش اعتبار اخبار';
 const DEFAULT_DESC = 'Duta (دوتا) — پلتفرم هوشمند تجمیع، خوشه‌بندی و سنجش اعتبار اخبار فارسی. اخبار فوری، سیاسی، اقتصادی، ورزشی و تکنولوژی را با امتیاز اعتبار منابع دنبال کنید.';
@@ -48,11 +51,13 @@ function ArticleDetailPage() {
 
     const [article, setArticle] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [notFound, setNotFound] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
         setArticle(null);
         setLoading(true);
+        setNotFound(false);
 
         const isNumericId = /^\d+$/.test(slug);
         const endpoint = isNumericId
@@ -82,7 +87,7 @@ function ArticleDetailPage() {
                 if (isMounted && location.state?.articleData) {
                     setArticle(location.state.articleData);
                 } else if (isMounted) {
-                    navigate('/', { replace: true });
+                    setNotFound(true);
                 }
             })
             .finally(() => {
@@ -111,7 +116,9 @@ function ArticleDetailPage() {
         );
     }
 
-    if (!article) return null;
+    if (notFound || !article) {
+        return <NotFound />;
+    }
 
     return (
         <main id="main-content" aria-label="محتوای خبر">
@@ -142,7 +149,6 @@ function AppLayout() {
             });
         }
 
-        // Dynamic SEO Title & Canonical for static routes
         if (location.pathname === '/') {
             syncDocumentSeoTags({
                 title: DEFAULT_TITLE,
@@ -167,15 +173,34 @@ function AppLayout() {
                 description: 'درباره پلتفرم تجمیع و اعتبارسنجی اخبار فارسی Duta و راه‌های ارتباطی.',
                 canonicalUrl: 'https://duta.ir/about'
             });
+        } else if (location.pathname === '/privacy') {
+            syncDocumentSeoTags({
+                title: 'سیاست حفظ حریم خصوصی | Duta',
+                description: 'سیاست حفظ حریم خصوصی و امنیت داده‌های کاربران در پلتفرم خبری Duta.',
+                canonicalUrl: 'https://duta.ir/privacy'
+            });
+        } else if (location.pathname === '/terms') {
+            syncDocumentSeoTags({
+                title: 'قوانین استفاده و سلب مسئولیت | Duta',
+                description: 'قوانین بهره‌برداری، نحوه کارکرد الگوریتم اعتبارسنجی و سلب مسئولیت منابع خبری در Duta.',
+                canonicalUrl: 'https://duta.ir/terms'
+            });
+        } else if (!location.pathname.startsWith('/article/')) {
+            syncDocumentSeoTags({
+                title: 'صفحه یافت نشد (404) | Duta',
+                description: DEFAULT_DESC,
+                canonicalUrl: 'https://duta.ir/'
+            });
         }
     }, [location]);
 
+    const isHome = location.pathname === '/';
     const isDetail = location.pathname.startsWith('/article/');
     const view = isDetail ? 'detail'
         : location.pathname === '/features' ? 'features'
             : location.pathname === '/credibility' ? 'credibility'
                 : location.pathname === '/about' ? 'about'
-                    : 'home';
+                    : isHome ? 'home' : 'other';
 
     const handleSearch = useCallback((keyword) => {
         setSearchKeyword(prev => {
@@ -275,12 +300,24 @@ function AppLayout() {
                             <Route path="/features" element={<Features />} />
                             <Route path="/credibility" element={<Credibility />} />
                             <Route path="/about" element={<About />} />
+                            <Route path="/privacy" element={<Privacy />} />
+                            <Route path="/terms" element={<Terms />} />
+                            <Route path="*" element={<NotFound />} />
                         </Routes>
                     </Suspense>
                 </main>
 
-                <footer className="footer-note" style={{ padding: '20px', textAlign: 'center', opacity: 0.7 }} role="contentinfo">
-                    تمامی حقوق برای Duta محفوظ است © {new Date().getFullYear()}
+                <footer className="footer-note" style={{ padding: '28px 20px 90px', textAlign: 'center' }} role="contentinfo">
+                    <nav aria-label="لینک‌های فوتر" style={{ display: 'flex', justifyContent: 'center', gap: '18px', flexWrap: 'wrap', marginBottom: '12px', fontWeight: 600 }}>
+                        <a href="/about" onClick={(e) => { e.preventDefault(); handleNavigate('about'); }}>درباره ما</a>
+                        <a href="/credibility" onClick={(e) => { e.preventDefault(); handleNavigate('credibility'); }}>روش سنجش اعتبار</a>
+                        <a href="/privacy" onClick={(e) => { e.preventDefault(); handleNavigate('privacy'); }}>حریم خصوصی</a>
+                        <a href="/terms" onClick={(e) => { e.preventDefault(); handleNavigate('terms'); }}>قوانین و سلب مسئولیت</a>
+                        <a href="mailto:info@duta.ir">info@duta.ir</a>
+                    </nav>
+                    <div style={{ opacity: 0.75 }}>
+                        تمامی حقوق برای Duta محفوظ است © {new Date().getFullYear()} — ایران، تهران
+                    </div>
                 </footer>
 
                 <div className="mobile-only">

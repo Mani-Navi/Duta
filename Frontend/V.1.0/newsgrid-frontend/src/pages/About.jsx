@@ -6,7 +6,6 @@ function About() {
     return (
         <div className="page-content">
             <div className="page-header">
-                {/* تایپوگرافی رسمی Duta با حرف D آبی‌رنگ متمایز */}
                 <h1 className="about-title-heading">
                     درباره{' '}
                     <span className="about-brand-wordmark" dir="ltr" aria-label="Duta">
@@ -23,14 +22,14 @@ function About() {
                         <div className="feature-icon">
                             <i className={`ti ${block.icon}`} aria-hidden="true" />
                         </div>
-                        <h3>{block.title}</h3>
+                        <h2>{block.title}</h2>
                         <p>{block.desc}</p>
                     </div>
                 ))}
             </div>
 
             <div className="about-contact">
-                <div className="about-contact-title">{t.aboutContactTitle}</div>
+                <h2 className="about-contact-title">{t.aboutContactTitle}</h2>
                 <p className="about-contact-desc">{t.aboutContactDesc}</p>
 
                 <div className="about-contact-links">
@@ -38,9 +37,13 @@ function About() {
                         className="contact-btn"
                         href={`mailto:${t.aboutEmail}?subject=${encodeURIComponent(t.aboutEmailSubject)}`}
                     >
-                        <i className="ti ti-mail" />
+                        <i className="ti ti-mail" aria-hidden="true" />
                         {t.aboutEmail}
                     </a>
+                    <span className="contact-btn contact-btn-secondary" style={{ cursor: 'default' }}>
+                        <i className="ti ti-map-pin" aria-hidden="true" />
+                        ایران، تهران — پلتفرم آنلاین خبری Duta
+                    </span>
                 </div>
 
                 <div className="about-topics">

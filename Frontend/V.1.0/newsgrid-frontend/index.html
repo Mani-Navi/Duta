@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/duta-logo.svg" />
+  <link rel="apple-touch-icon" href="/duta-logo.svg" />
+  <link rel="manifest" href="/manifest.json" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
@@ -43,20 +45,33 @@
   <link rel="preconnect" href="https://duta.ir" crossorigin />
   <link rel="dns-prefetch" href="https://duta.ir" />
 
-  <!-- Structured Data (JSON-LD) for Google Knowledge Graph & GEO -->
+  <!-- Structured Data (JSON-LD) for Google Knowledge Graph & E-E-A-T -->
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@graph": [
         {
-          "@type": "Organization",
+          "@type": "NewsMediaOrganization",
           "@id": "https://duta.ir/#organization",
           "name": "Duta",
           "alternateName": ["دوتا", "NewsGrid"],
           "url": "https://duta.ir",
           "logo": "https://duta.ir/duta-logo.svg",
           "description": "پلتفرم تجمیع، خوشه‌بندی و سنجش اعتبار اخبار فارسی با الگوریتم بیزین و شباهت جاکارد",
-          "email": "info@duta.ir"
+          "email": "info@duta.ir",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Tehran",
+            "addressCountry": "IR"
+          },
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "info@duta.ir",
+            "contactType": "editorial and customer support",
+            "availableLanguage": ["Persian", "English"]
+          },
+          "publishingPrinciples": "https://duta.ir/terms",
+          "VerificationFactCheckingPolicy": "https://duta.ir/credibility"
         },
         {
           "@type": "WebSite",

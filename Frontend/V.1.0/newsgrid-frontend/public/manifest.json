@@ -1,0 +1,19 @@
+{
+  "name": "Duta — دو نگاه، یک حقیقت",
+  "short_name": "Duta",
+  "description": "پلتفرم هوشمند تجمیع، خوشه‌بندی و سنجش اعتبار اخبار فارسی",
+  "start_url": "/",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "fa-IR",
+  "background_color": "#F2F2F7",
+  "theme_color": "#123378",
+  "icons": [
+    {
+      "src": "/duta-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
