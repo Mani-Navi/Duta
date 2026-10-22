@@ -1,22 +1,16 @@
 import { memo } from 'react';
+import {
+    getArticleScore,
+    getArticleSourceCount,
+    getBadgeClass,
+    formatRelativeTime
+} from '../utils/articleHelpers';
 
 const TelegramNewsCard = ({ article, onOpen }) => {
-    const formatDate = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMins = Math.floor((now - date) / 60000);
-
-        if (diffMins < 1) return 'همین الان';
-        if (diffMins < 60) return `${diffMins} دقیقه پیش`;
-        if (diffMins < 1440) return `${Math.floor(diffMins / 60)} ساعت پیش`;
-        return date.toLocaleDateString('fa-IR');
-    };
-
     const isBreaking = article.breaking;
-    const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
-    const sourceCount = article.cluster?.sourceCount ?? 1;
-    const badgeClass = score >= 80 ? 'green' : score >= 50 ? 'yellow' : 'red';
+    const score = getArticleScore(article);
+    const sourceCount = getArticleSourceCount(article);
+    const badgeClass = getBadgeClass(score);
     const articleHref = `/article/${encodeURIComponent(article.slug || article.id)}`;
 
     return (
@@ -47,7 +41,7 @@ const TelegramNewsCard = ({ article, onOpen }) => {
                             {sourceCount} منبع
                         </span>
                     )}
-                    <span className={`badge ${badgeClass}`} aria-label={`امتیاز ${score}`}>
+                    <span className={`badge ${badgeClass}`} aria-label={`امتیاز اعتبار ${score} درصد`}>
                         {score}%
                     </span>
                 </div>
@@ -77,7 +71,7 @@ const TelegramNewsCard = ({ article, onOpen }) => {
                     borderTop: '1px solid rgba(128, 128, 128, 0.15)'
                 }}
             >
-                <span className="telegram-time">{formatDate(article.publishedAt)}</span>
+                <span className="telegram-time">{formatRelativeTime(article.publishedAt)}</span>
 
                 <a
                     href={article.url}

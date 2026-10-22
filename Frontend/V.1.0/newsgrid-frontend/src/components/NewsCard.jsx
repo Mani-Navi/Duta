@@ -1,27 +1,14 @@
 import { memo } from 'react';
+import {
+    getArticleScore,
+    getArticleSourceCount,
+    getBadgeClass,
+    formatRelativeTime
+} from '../utils/articleHelpers';
 
 function NewsCard({ article, onOpen }) {
-
-    const getBadgeClass = (score) => {
-        if (score >= 80) return 'green';
-        if (score >= 50) return 'yellow';
-        return 'red';
-    };
-
-    const formatTime = (dateStr) => {
-        if (!dateStr) return '';
-        const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
-
-        if (diff < 1) return 'همین الان';
-        if (diff < 60) return `${diff} دقیقه پیش`;
-        const hours = Math.floor(diff / 60);
-        if (hours < 24) return `${hours} ساعت پیش`;
-        const days = Math.floor(hours / 24);
-        return `${days} روز پیش`;
-    };
-
-    const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
-    const sourceCount = article.cluster?.sourceCount ?? 1;
+    const score = getArticleScore(article);
+    const sourceCount = getArticleSourceCount(article);
     const badgeClass = getBadgeClass(score);
     const isBreaking = article.breaking;
     const srcColor = article.source?.color || '#8E8E93';
@@ -78,7 +65,7 @@ function NewsCard({ article, onOpen }) {
             </h2>
 
             <div className="card-bottom">
-                <span className="time">{formatTime(article.publishedAt)}</span>
+                <span className="time">{formatRelativeTime(article.publishedAt)}</span>
                 <i className="ti ti-external-link ext" aria-hidden="true" />
             </div>
         </article>

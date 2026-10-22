@@ -1,24 +1,50 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axiosConfig';
 
+// Module-level singleton state to prevent duplicate requests from mobile + desktop headers
+let sharedPrices = null;
+let lastFetchTime = 0;
+let activePromise = null;
+const subscribers = new Set();
+const FETCH_INTERVAL_MS = 5 * 60 * 1000;
+
+function notifySubscribers(data) {
+    sharedPrices = data;
+    lastFetchTime = Date.now();
+    subscribers.forEach(cb => cb(data));
+}
+
+function fetchSharedPrices(force = false) {
+    if (document.hidden) return;
+    if (!force && sharedPrices && (Date.now() - lastFetchTime < FETCH_INTERVAL_MS)) {
+        return;
+    }
+    if (activePromise) return;
+
+    activePromise = api.get('/prices')
+        .then(res => {
+            if (res.data && !res.data.error) {
+                notifySubscribers(res.data);
+            }
+        })
+        .catch(() => {})
+        .finally(() => {
+            activePromise = null;
+        });
+}
+
 function PriceTicker() {
-    const [prices, setPrices] = useState(null);
+    const [prices, setPrices] = useState(sharedPrices);
 
     useEffect(() => {
-        const fetchPrices = () => {
-            if (document.hidden) return;
-            api.get('/prices')
-                .then(res => {
-                    if (res.data && !res.data.error) {
-                        setPrices(res.data);
-                    }
-                })
-                .catch(() => {});
-        };
+        subscribers.add(setPrices);
+        fetchSharedPrices(false);
 
-        fetchPrices();
-        const interval = setInterval(fetchPrices, 5 * 60 * 1000);
-        return () => clearInterval(interval);
+        const interval = setInterval(() => fetchSharedPrices(true), FETCH_INTERVAL_MS);
+        return () => {
+            subscribers.delete(setPrices);
+            clearInterval(interval);
+        };
     }, []);
 
     return (

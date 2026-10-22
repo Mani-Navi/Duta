@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import strings from '../strings/strings';
 import api from '../api/axiosConfig';
+import {
+    getArticleScore,
+    getArticleSourceCount,
+    getBadgeClass,
+    getScoreLabel,
+    getScoreColor,
+    getScoreDesc,
+    formatRelativeTime
+} from '../utils/articleHelpers';
 
 function ArticleDetail({ article }) {
     const t = strings.fa;
@@ -16,42 +25,6 @@ function ArticleDetail({ article }) {
                 .catch(() => {});
         }
     }, [article.id, article.cluster?.id]);
-
-    const getBadgeClass = (score) => {
-        if (score >= 80) return 'green';
-        if (score >= 50) return 'yellow';
-        return 'red';
-    };
-
-    const getScoreLabel = (score) => {
-        if (score >= 80) return 'تأیید شده';
-        if (score >= 50) return 'در حال بررسی';
-        return 'نامعتبر';
-    };
-
-    const getScoreDesc = (score) => {
-        const count = article.cluster?.sourceCount ?? 1;
-        if (score >= 80) return `این خبر توسط ${count} منبع معتبر پوشش داده شده است.`;
-        if (score >= 50) return 'این خبر هنوز توسط منابع بیشتری تأیید نشده است.';
-        return 'هیچ منبع معتبری این خبر را تأیید نکرده است.';
-    };
-
-    const getScoreColor = (score) => {
-        if (score >= 80) return '#34C759';
-        if (score >= 50) return '#FF9500';
-        return '#FF3B30';
-    };
-
-    const formatTime = (dateStr) => {
-        if (!dateStr) return '';
-        const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
-        if (diff < 1) return 'همین الان';
-        if (diff < 60) return `${diff} دقیقه پیش`;
-        const hours = Math.floor(diff / 60);
-        if (hours < 24) return `${hours} ساعت پیش`;
-        const days = Math.floor(hours / 24);
-        return `${days} روز پیش`;
-    };
 
     const buildRing = (score, color) => {
         const r = 21, cx = 27, cy = 27;
@@ -95,14 +68,13 @@ function ArticleDetail({ article }) {
     const shareToTwitter = () =>
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
 
-    const score = article.cluster?.credibilityScore ?? article.source?.credibility ?? 0;
-    const sourceCount = article.cluster?.sourceCount ?? 1;
+    const score = getArticleScore(article);
+    const sourceCount = getArticleSourceCount(article);
     const scoreColor = getScoreColor(score);
     const categoryName = article.category || article.source?.category?.nameFa;
     const allSources = [article, ...clusterArticles];
     const hasDistinctDescription = article.description && article.description.trim() !== article.title?.trim();
 
-    // Rich SEO & GEO Schema: NewsArticle + ClaimReview (Fact-Check Verification)
     const structuredData = {
         "@context": "https://schema.org",
         "@graph": [
@@ -180,7 +152,7 @@ function ArticleDetail({ article }) {
                         {categoryName}
                     </span>
                 )}
-                <span className="detail-time">{formatTime(article.publishedAt)}</span>
+                <span className="detail-time">{formatRelativeTime(article.publishedAt)}</span>
             </div>
 
             <h1 className="detail-title">{article.title}</h1>
@@ -199,7 +171,7 @@ function ArticleDetail({ article }) {
                         <span className="cred-status" style={{ color: scoreColor }}>
                             {getScoreLabel(score)}
                         </span>
-                        <div className="cred-desc">{getScoreDesc(score)}</div>
+                        <div className="cred-desc">{getScoreDesc(score, sourceCount)}</div>
                     </div>
                 </div>
             </div>
@@ -208,7 +180,8 @@ function ArticleDetail({ article }) {
 
             <div className="source-list">
                 {allSources.map((src, i) => {
-                    const srcBadgeClass = getBadgeClass(src.source?.credibility ?? 0);
+                    const srcScore = src.source?.credibility ?? 0;
+                    const srcBadgeClass = getBadgeClass(srcScore);
                     const color = src.source?.color || '#8E8E93';
                     const initials = src.source?.initials || src.source?.name?.substring(0, 2) || '?';
                     return (
@@ -225,12 +198,12 @@ function ArticleDetail({ article }) {
                                 </div>
                                 <div>
                                     <div className="source-name">{src.source?.name}</div>
-                                    <div className="source-time-label">{formatTime(src.publishedAt)}</div>
+                                    <div className="source-time-label">{formatRelativeTime(src.publishedAt)}</div>
                                 </div>
                             </div>
                             <div className="source-right">
                                 <span className={`source-badge ${srcBadgeClass}`}>
-                                    {getScoreLabel(src.source?.credibility ?? 0)}
+                                    {getScoreLabel(srcScore)}
                                 </span>
                                 <i className="ti ti-chevron-left arrow-icon" aria-hidden="true" />
                             </div>
@@ -244,27 +217,27 @@ function ArticleDetail({ article }) {
                 <div className="share-inline-btns">
                     <button className="share-inline-btn" onClick={shareNative} aria-label="اشتراک‌گذاری بیشتر">
                         <div className="share-inline-icon" style={{ background: '#007AFF' }}>
-                            <i className="ti ti-share" />
+                            <i className="ti ti-share" aria-hidden="true" />
                         </div>
                     </button>
                     <button className="share-inline-btn" onClick={shareToTwitter} aria-label="اشتراک‌گذاری در توییتر">
                         <div className="share-inline-icon" style={{ background: '#000' }}>
-                            <i className="ti ti-brand-x" />
+                            <i className="ti ti-brand-x" aria-hidden="true" />
                         </div>
                     </button>
                     <button className="share-inline-btn" onClick={shareToWhatsApp} aria-label="اشتراک‌گذاری در واتساپ">
                         <div className="share-inline-icon" style={{ background: '#25D366' }}>
-                            <i className="ti ti-brand-whatsapp" />
+                            <i className="ti ti-brand-whatsapp" aria-hidden="true" />
                         </div>
                     </button>
                     <button className="share-inline-btn" onClick={shareToTelegram} aria-label="اشتراک‌گذاری در تلگرام">
                         <div className="share-inline-icon" style={{ background: '#2AABEE' }}>
-                            <i className="ti ti-brand-telegram" />
+                            <i className="ti ti-brand-telegram" aria-hidden="true" />
                         </div>
                     </button>
                     <button className="share-inline-btn" onClick={copyLink} aria-label="کپی لینک خبر">
                         <div className="share-inline-icon" style={{ background: 'var(--chip-bg)', color: copied ? '#34C759' : 'var(--label)' }}>
-                            <i className={`ti ${copied ? 'ti-check' : 'ti-link'}`} />
+                            <i className={`ti ${copied ? 'ti-check' : 'ti-link'}`} aria-hidden="true" />
                         </div>
                     </button>
                 </div>
