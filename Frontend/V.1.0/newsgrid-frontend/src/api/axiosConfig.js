@@ -1,20 +1,30 @@
 import axios from 'axios';
 
-// OPTIMIZED: Robust API base URL with fallback to production Railway backend
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ||
     import.meta.env.VITE_API_URL ||
-    'https://newsgrid-production-16cb.up.railway.app/api';
+    '/api';
 
 const api = axios.create({
     baseURL: BASE_URL,
-    timeout: 10000, // 10 seconds timeout to prevent hanging connections
+    timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     }
 });
 
-// Response Interceptor for graceful error logging
+// Automatically attach Stateless JWT token if present
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('duta_token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
 api.interceptors.response.use(
     (response) => response,
     (error) => {
