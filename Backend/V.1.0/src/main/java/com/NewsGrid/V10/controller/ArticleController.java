@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -26,10 +27,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ArticleController {
 
     private final ArticleService articleService;
+    private final PersonalizationService personalizationService;
+    private final JwtService jwtService;
     private final RssFetcherService rssFetcherService;
     private final TelegramScraperService telegramScraperService;
     private final ArticleRepository articleRepository;
     private final CategoryClassifierService categoryClassifier;
+    private final LocationClassifierService locationClassifier;
 
     @Value("${ADMIN_SECRET:duta_prod_secret_key_2026_secure!}")
     private String adminSecret;
@@ -74,6 +78,42 @@ public class ArticleController {
         return articleService.getAllArticles(Math.max(page, 0), safeSize);
     }
 
+    // Phase 2 (UCS-008): Top 4 Hot News of the Day
+    @GetMapping("/hot")
+    public List<Article> getHotArticles() {
+        return personalizationService.getHotArticlesOfTheDay();
+    }
+
+    // Phase 2 (UCS-008 & UCS-011): 85/15 Personalized Feed ("فید من")
+    @GetMapping("/personalized")
+    public ResponseEntity<?> getPersonalizedFeed(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Long userId = jwtService.extractUserIdFromHeader(authHeader);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "برای مشاهده فید شخصی وارد شوید"));
+        }
+
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        return ResponseEntity.ok(personalizationService.getPersonalizedFeed(userId, Math.max(page, 0), safeSize));
+    }
+
+    // Phase 2 (UCS-008): General Newspaper Feed ("روزنامه") with user reaction state attached
+    @GetMapping("/newspaper")
+    public Page<Map<String, Object>> getNewspaperFeed(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Long userId = jwtService.extractUserIdFromHeader(authHeader);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        return personalizationService.getNewspaperFeed(userId, category, Math.max(page, 0), safeSize);
+    }
+
     @GetMapping("/telegram")
     public Page<Article> getTelegramArticles(
             @RequestParam(defaultValue = "0") int page,
@@ -104,12 +144,20 @@ public class ArticleController {
 
     @GetMapping("/{id}")
     public Article getArticleById(@PathVariable Long id) {
-        return articleService.getArticleById(id);
+        Article article = articleService.getArticleById(id);
+        if (article.getCluster() != null) {
+            personalizationService.incrementClusterViewAsync(article.getCluster().getId());
+        }
+        return article;
     }
 
     @GetMapping("/slug/{slug}")
     public Article getArticleBySlug(@PathVariable String slug) {
-        return articleService.getArticleBySlug(slug);
+        Article article = articleService.getArticleBySlug(slug);
+        if (article.getCluster() != null) {
+            personalizationService.incrementClusterViewAsync(article.getCluster().getId());
+        }
+        return article;
     }
 
     @GetMapping("/{id}/source")
@@ -148,15 +196,16 @@ public class ArticleController {
 
                 do {
                     articlePage = articleRepository.findAll(PageRequest.of(page, 100));
-                    articlePage.getContent().forEach(article ->
-                            article.setCategory(categoryClassifier.classify(article.getTitle(), article.getSource()))
-                    );
+                    articlePage.getContent().forEach(article -> {
+                        article.setCategory(categoryClassifier.classify(article.getTitle(), article.getSource()));
+                        article.setLocation(locationClassifier.detectLocation(article.getTitle(), article.getDescription()));
+                    });
                     articleRepository.saveAll(articlePage.getContent());
                     page++;
                 } while (articlePage.hasNext());
 
                 articleService.evictArticlesCache();
-                log.info("Batch reclassification of all articles completed successfully.");
+                log.info("Batch reclassification & location tagging of all articles completed successfully.");
             } finally {
                 isReclassifying.set(false);
             }

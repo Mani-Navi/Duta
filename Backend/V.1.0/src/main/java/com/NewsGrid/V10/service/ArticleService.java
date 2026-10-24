@@ -20,10 +20,6 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Core domain service for querying articles, clusters, SEO metadata, and XML sitemaps.
- * Utilizes multi-region Caffeine caching to serve viral traffic with zero database bottlenecks.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -34,6 +30,11 @@ public class ArticleService {
     @Cacheable(value = "articles", key = "'all-' + #page + '-' + #size")
     public Page<Article> getAllArticles(int page, int size) {
         return articleRepository.findRepresentativeArticles(PageRequest.of(page, size));
+    }
+
+    @Cacheable(value = "articles", key = "'pool-recent-300'")
+    public List<Article> getRecentRepresentativePool() {
+        return articleRepository.findRepresentativeArticles(PageRequest.of(0, 300)).getContent();
     }
 
     @Cacheable(value = "articles", key = "'cat-' + #categoryName + '-' + #page + '-' + #size")
@@ -85,15 +86,13 @@ public class ArticleService {
         return articleRepository.searchByKeyword(cleanKeyword, PageRequest.of(page, size));
     }
 
-    /**
-     * Evicts all article-related caches when new RSS items are ingested or reclassified.
-     */
     @Caching(evict = {
             @CacheEvict(value = "articles", allEntries = true),
             @CacheEvict(value = "article_detail", allEntries = true),
             @CacheEvict(value = "clusters", allEntries = true),
             @CacheEvict(value = "seo", allEntries = true),
-            @CacheEvict(value = "sitemap", allEntries = true)
+            @CacheEvict(value = "sitemap", allEntries = true),
+            @CacheEvict(value = "hot_articles", allEntries = true)
     })
     public void evictArticlesCache() {
         // Automatically cleared by Spring Cache abstraction
@@ -157,17 +156,13 @@ public class ArticleService {
                 .build();
     }
 
-    /**
-     * Generates and caches the hybrid Google News (48h) + Web Sitemap XML.
-     * Prevents repeated 1,000-row DB queries and 785KB string allocations on concurrent bot crawls.
-     */
     @Cacheable(value = "sitemap", key = "'xml'")
     public String generateNewsSitemapXml() {
         List<Article> recentArticles = articleRepository.findTop1000ByOrderByPublishedAtDesc();
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         ZonedDateTime googleNewsCutoff = now.minusHours(48);
 
-        StringBuilder xml = new StringBuilder(262_144); // Pre-sized buffer (256KB) to avoid array resizing
+        StringBuilder xml = new StringBuilder(262_144);
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" ");
         xml.append("xmlns:news=\"http://www.google.com/schemas/sitemap-news/0.9\">\n");

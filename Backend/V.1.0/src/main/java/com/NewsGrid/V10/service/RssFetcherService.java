@@ -7,6 +7,7 @@ import com.NewsGrid.V10.entity.SourceType;
 import com.NewsGrid.V10.logging.DutaLogger;
 import com.NewsGrid.V10.logging.LogEvent;
 import com.NewsGrid.V10.repository.ArticleClusterRepository;
+import com.NewsGrid.V10.repository.ArticleReactionRepository;
 import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.repository.SourceRepository;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -33,10 +34,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * High-throughput parallel RSS ingestion service.
- * Uses an in-memory LRU URL filter to eliminate 95%+ of redundant database existence checks.
- */
 @Service
 public class RssFetcherService {
 
@@ -45,14 +42,15 @@ public class RssFetcherService {
     private final SourceRepository sourceRepository;
     private final ArticleRepository articleRepository;
     private final ArticleClusterRepository clusterRepository;
+    private final ArticleReactionRepository reactionRepository;
     private final ArticleService articleService;
     private final ClusteringService clusteringService;
     private final SlugService slugService;
     private final CategoryClassifierService categoryClassifier;
+    private final LocationClassifierService locationClassifier;
     private final Executor rssTaskExecutor;
     private final ProxyConfig proxyConfig;
 
-    // OPTIMIZED: In-memory LRU filter eliminates 95% of repetitive existsByUrl() SQL queries every 5 minutes
     private final Cache<String, Boolean> seenUrlsCache = Caffeine.newBuilder()
             .maximumSize(5000)
             .expireAfterWrite(12, TimeUnit.HOURS)
@@ -62,19 +60,23 @@ public class RssFetcherService {
             SourceRepository sourceRepository,
             ArticleRepository articleRepository,
             ArticleClusterRepository clusterRepository,
+            ArticleReactionRepository reactionRepository,
             ArticleService articleService,
             ClusteringService clusteringService,
             SlugService slugService,
             CategoryClassifierService categoryClassifier,
+            LocationClassifierService locationClassifier,
             @Qualifier("rssTaskExecutor") Executor rssTaskExecutor,
             ProxyConfig proxyConfig) {
         this.sourceRepository = sourceRepository;
         this.articleRepository = articleRepository;
         this.clusterRepository = clusterRepository;
+        this.reactionRepository = reactionRepository;
         this.articleService = articleService;
         this.clusteringService = clusteringService;
         this.slugService = slugService;
         this.categoryClassifier = categoryClassifier;
+        this.locationClassifier = locationClassifier;
         this.rssTaskExecutor = rssTaskExecutor;
         this.proxyConfig = proxyConfig;
     }
@@ -156,12 +158,14 @@ public class RssFetcherService {
             ZonedDateTime cutoff = ZonedDateTime.now(ZoneOffset.UTC).minusDays(30);
             articleRepository.deleteByPublishedAtBefore(cutoff);
             int deletedClusters = clusterRepository.deleteOrphanClusters();
+            int deletedReactions = reactionRepository.deleteOrphanReactions();
             seenUrlsCache.invalidateAll();
             articleService.evictArticlesCache();
 
-            logger.info(LogEvent.ARTICLES_CLEANUP, "Old articles & orphan clusters cleanup completed",
+            logger.info(LogEvent.ARTICLES_CLEANUP, "Old articles, orphan clusters & reactions cleanup completed",
                     "cutoff_date", cutoff,
                     "deleted_orphan_clusters", deletedClusters,
+                    "deleted_orphan_reactions", deletedReactions,
                     "duration_ms", timer.stop());
         } catch (Exception e) {
             logger.error(LogEvent.DB_ERROR, "Error during daily article cleanup", e);
@@ -200,22 +204,22 @@ public class RssFetcherService {
                             continue;
                         }
 
-                        // 1. Ultra-fast RAM check (skips DB hit if URL was already seen recently)
                         if (seenUrlsCache.getIfPresent(link) != null) {
                             duplicateCount++;
                             continue;
                         }
 
-                        // 2. DB check only for unseen URLs
                         if (articleRepository.existsByUrl(link)) {
                             seenUrlsCache.put(link, Boolean.TRUE);
                             duplicateCount++;
                             continue;
                         }
 
+                        String cleanDesc = extractCleanDescription(entry);
+
                         Article article = new Article();
                         article.setTitle(title);
-                        article.setDescription(extractCleanDescription(entry));
+                        article.setDescription(cleanDesc);
                         article.setUrl(link);
 
                         if (entry.getPublishedDate() != null) {
@@ -227,6 +231,7 @@ public class RssFetcherService {
                         article.setSource(source);
                         article.setBreaking(isBreaking(title));
                         article.setCategory(categoryClassifier.classify(title, source));
+                        article.setLocation(locationClassifier.detectLocation(title, cleanDesc));
                         article.setSlug(slugService.generateSlug(title, articleRepository));
 
                         articleRepository.save(article);
