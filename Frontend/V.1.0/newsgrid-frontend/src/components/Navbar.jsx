@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import strings from '../strings/strings';
 import PriceTicker from './PriceTicker';
 import DutaLogo from './DutaLogo';
+import { useUser } from '../context/UserContext';
 
 function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
     const t = strings.fa;
+    const { user, isLoggedIn, openModal } = useUser();
     const [searchOpen, setSearchOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
     const navRef = useRef(null);
@@ -74,13 +76,34 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                 <div className="nav-right">
                     {!searchOpen && (
                         <nav className="nav-links" aria-label="لینک‌های هدر">
-                            <a href="/features" onClick={(e) => { e.preventDefault(); onNavigate('features'); }}>{t.features}</a>
+                            <a href="/tablo" onClick={(e) => { e.preventDefault(); onNavigate('tablo'); }} style={{ color: view === 'tablo' ? 'var(--blue)' : undefined }}>
+                                تابلو بازار
+                            </a>
                             <a href="/credibility" onClick={(e) => { e.preventDefault(); onNavigate('credibility'); }}>{t.credibility}</a>
                             <a href="/about" onClick={(e) => { e.preventDefault(); onNavigate('about'); }}>{t.about}</a>
                         </nav>
                     )}
 
                     <div className="nav-tools">
+                        {isLoggedIn && user?.locationCity && (
+                            <button
+                                type="button"
+                                className="x-city-pill"
+                                onClick={() => openModal('prefs', 'تغییر موقعیت مکانی و علایق')}
+                            >
+                                <i className="ti ti-map-pin" aria-hidden="true" />
+                                <span>{user.locationCity}</span>
+                            </button>
+                        )}
+
+                        <button
+                            type="button"
+                            className={`x-auth-pill ${isLoggedIn ? 'is-member' : ''}`}
+                            onClick={() => openModal(isLoggedIn ? 'prefs' : 'auth')}
+                        >
+                            {isLoggedIn ? (user.displayName || 'حساب من') : 'ورود / عضویت'}
+                        </button>
+
                         {view !== 'detail' && (
                             <button
                                 className="tool-btn theme-toggle"
@@ -88,7 +111,7 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                                 aria-label={searchOpen ? 'بستن جستجو' : 'جستجو'}
                                 aria-expanded={searchOpen}
                             >
-                                {searchOpen ? '✕' : '🔍'}
+                                <i className={`ti ${searchOpen ? 'ti-x' : 'ti-search'}`} aria-hidden="true" />
                             </button>
                         )}
                         <button
@@ -96,7 +119,7 @@ function Navbar({ dark, view, onToggleTheme, onNavigate, onSearch }) {
                             onClick={onToggleTheme}
                             aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}
                         >
-                            {dark ? '🌙' : '☀️'}
+                            <i className={`ti ${dark ? 'ti-moon' : 'ti-sun'}`} aria-hidden="true" />
                         </button>
                     </div>
                 </div>

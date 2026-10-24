@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
+import { useUser } from '../context/UserContext';
 
 function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
+    const { user, isLoggedIn, openModal } = useUser();
     const [searchOpen, setSearchOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
     const debounceRef = useRef(null);
@@ -18,7 +20,6 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             const trimmed = val.trim();
-            // FIXED: Reset search cleanly when input drops below 2 chars
             if (trimmed.length >= 2) onSearch(trimmed);
             else onSearch('');
         }, 300);
@@ -54,41 +55,37 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
                 <button
                     className={`bottom-nav-item ${activeView === 'home' ? 'active' : ''}`}
                     onClick={() => { closeSearch(); onNavigate('home'); }}
-                    aria-label="خانه"
-                    aria-current={activeView === 'home' ? 'page' : undefined}
+                    aria-label="اخبار"
                 >
                     <i className="ti ti-home" aria-hidden="true" />
-                    <span>خانه</span>
+                    <span>اخبار</span>
+                </button>
+
+                <button
+                    className={`bottom-nav-item ${activeView === 'tablo' ? 'active' : ''}`}
+                    onClick={() => { closeSearch(); onNavigate('tablo'); }}
+                    aria-label="تابلو بازار"
+                >
+                    <i className="ti ti-chart-bar" aria-hidden="true" />
+                    <span>تابلو</span>
                 </button>
 
                 <button
                     className={`bottom-nav-item ${activeView === 'search' ? 'active' : ''}`}
                     onClick={toggleSearch}
                     aria-label={searchOpen ? 'بستن جستجو' : 'جستجو'}
-                    aria-expanded={searchOpen}
                 >
                     <i className={`ti ${searchOpen ? 'ti-x' : 'ti-search'}`} aria-hidden="true" />
                     <span>جستجو</span>
                 </button>
 
                 <button
-                    className={`bottom-nav-item ${activeView === 'features' ? 'active' : ''}`}
-                    onClick={() => { closeSearch(); onNavigate('features'); }}
-                    aria-label="ویژگی‌ها"
-                    aria-current={activeView === 'features' ? 'page' : undefined}
+                    className="bottom-nav-item"
+                    onClick={() => openModal(isLoggedIn ? 'prefs' : 'auth')}
+                    aria-label="حساب و علایق"
                 >
-                    <i className="ti ti-layout-grid" aria-hidden="true" />
-                    <span>ویژگی‌ها</span>
-                </button>
-
-                <button
-                    className={`bottom-nav-item ${activeView === 'about' ? 'active' : ''}`}
-                    onClick={() => { closeSearch(); onNavigate('about'); }}
-                    aria-label="درباره"
-                    aria-current={activeView === 'about' ? 'page' : undefined}
-                >
-                    <i className="ti ti-info-circle" aria-hidden="true" />
-                    <span>درباره</span>
+                    <i className="ti ti-shield-check" aria-hidden="true" />
+                    <span>{isLoggedIn ? (user.displayName?.slice(0, 8) || 'علایق') : 'ورود'}</span>
                 </button>
 
                 <button

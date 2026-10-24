@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import strings from '../strings/strings';
 import api from '../api/axiosConfig';
+import { useUser } from '../context/UserContext';
 import {
     getArticleScore,
     getArticleSourceCount,
@@ -13,10 +14,14 @@ import {
 
 function ArticleDetail({ article }) {
     const t = strings.fa;
+    const { user, isLoggedIn, openModal, savePreferences, sendFeedback } = useUser();
+
     const [clusterArticles, setClusterArticles] = useState([]);
     const [copied, setCopied] = useState(false);
 
     const shareUrl = `https://duta.ir/article/${article.slug || article.id}`;
+    const categoryName = article.category || article.source?.category?.nameFa;
+    const mainSourceName = article.source?.name;
 
     useEffect(() => {
         if (article.cluster?.id) {
@@ -25,6 +30,35 @@ function ArticleDetail({ article }) {
                 .catch(() => {});
         }
     }, [article.id, article.cluster?.id]);
+
+    // UCS-009: Dwell Time Filter — Only count as a qualified read (+1) if user stays >= 12 seconds
+    useEffect(() => {
+        if (!isLoggedIn) return;
+        const timer = setTimeout(() => {
+            sendFeedback('QUALIFIED_READ', categoryName, mainSourceName, article.cluster?.id);
+        }, 12000);
+        return () => clearTimeout(timer);
+    }, [isLoggedIn, article.id, categoryName, mainSourceName, article.cluster?.id, sendFeedback]);
+
+    const handleSourceClick = (srcObj) => {
+        if (isLoggedIn) {
+            sendFeedback('SOURCE_CLICK', categoryName, srcObj.source?.name || mainSourceName, article.cluster?.id);
+        }
+    };
+
+    const handleToggleFollowSource = async (srcName) => {
+        if (!isLoggedIn) {
+            openModal('auth', `ورود برای دنبال کردن «${srcName}»`);
+            return;
+        }
+        const current = Array.isArray(user?.followedSources) ? [...user.followedSources] : [];
+        const next = current.includes(srcName)
+            ? current.filter(s => s !== srcName)
+            : [...current, srcName];
+        try {
+            await savePreferences({ followedSources: next });
+        } catch {}
+    };
 
     const buildRing = (score, color) => {
         const r = 21, cx = 27, cy = 27;
@@ -43,13 +77,21 @@ function ArticleDetail({ article }) {
         );
     };
 
+    const recordShareSignal = () => {
+        if (isLoggedIn) {
+            sendFeedback('SHARE', categoryName, mainSourceName, article.cluster?.id);
+        }
+    };
+
     const copyLink = async () => {
+        recordShareSignal();
         await navigator.clipboard.writeText(shareUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
     const shareNative = async () => {
+        recordShareSignal();
         if (navigator.share) {
             try {
                 await navigator.share({ title: article.title, url: shareUrl });
@@ -59,21 +101,27 @@ function ArticleDetail({ article }) {
         }
     };
 
-    const shareToTelegram = () =>
+    const shareToTelegram = () => {
+        recordShareSignal();
         window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(article.title)}`, '_blank');
+    };
 
-    const shareToWhatsApp = () =>
+    const shareToWhatsApp = () => {
+        recordShareSignal();
         window.open(`https://wa.me/?text=${encodeURIComponent(article.title + '\n' + shareUrl)}`, '_blank');
+    };
 
-    const shareToTwitter = () =>
+    const shareToTwitter = () => {
+        recordShareSignal();
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+    };
 
     const score = getArticleScore(article);
     const sourceCount = getArticleSourceCount(article);
     const scoreColor = getScoreColor(score);
-    const categoryName = article.category || article.source?.category?.nameFa;
     const allSources = [article, ...clusterArticles];
     const hasDistinctDescription = article.description && article.description.trim() !== article.title?.trim();
+    const followedSources = Array.isArray(user?.followedSources) ? user.followedSources : [];
 
     const structuredData = {
         "@context": "https://schema.org",
@@ -146,13 +194,30 @@ function ArticleDetail({ article }) {
                 </div>
             )}
 
-            <div className="detail-meta">
-                {categoryName && (
-                    <span className="detail-category">
-                        {categoryName}
-                    </span>
+            <div className="detail-meta" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {categoryName && (
+                        <span className="detail-category">
+                            {categoryName}
+                        </span>
+                    )}
+                    {article.location && (
+                        <span className="detail-category" style={{ background: 'rgba(21,128,61,0.12)', color: 'var(--green)' }}>
+                            {article.location}
+                        </span>
+                    )}
+                    <span className="detail-time">{formatRelativeTime(article.publishedAt)}</span>
+                </div>
+
+                {mainSourceName && (
+                    <button
+                        type="button"
+                        className={`tablo-pin-btn ${followedSources.includes(mainSourceName) ? 'active' : ''}`}
+                        onClick={() => handleToggleFollowSource(mainSourceName)}
+                    >
+                        {followedSources.includes(mainSourceName) ? `✓ دنبال‌شده: ${mainSourceName}` : `+ دنبال کردن ${mainSourceName}`}
+                    </button>
                 )}
-                <span className="detail-time">{formatRelativeTime(article.publishedAt)}</span>
             </div>
 
             <h1 className="detail-title">{article.title}</h1>
@@ -191,6 +256,7 @@ function ArticleDetail({ article }) {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="source-item"
+                            onClick={() => handleSourceClick(src)}
                         >
                             <div className="source-info">
                                 <div className="source-icon" style={{ background: color, color: '#fff' }}>
