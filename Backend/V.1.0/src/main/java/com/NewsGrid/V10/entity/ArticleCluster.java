@@ -14,7 +14,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "article_clusters", indexes = {
-        @Index(name = "idx_cluster_created_at", columnList = "createdAt DESC")
+        @Index(name = "idx_cluster_created_at", columnList = "createdAt DESC"),
+        @Index(name = "idx_cluster_hot_score", columnList = "hotScore DESC")
 })
 @Getter
 @Setter
@@ -34,6 +35,22 @@ public class ArticleCluster {
 
     @Column(nullable = false)
     private int sourceCount = 1;
+
+    // Phase 2 Denormalized Engagement Counters (Zero COUNT(*) query overhead)
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int viewCount = 0;
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int likeCount = 0; // مفید
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int hotCount = 0;  // مهم
+
+    @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int doubtCount = 0; // تردید
+
+    @Column(nullable = false, columnDefinition = "DOUBLE PRECISION DEFAULT 0.0")
+    private double hotScore = 0.0;
 
     private ZonedDateTime createdAt;
     private ZonedDateTime updatedAt;

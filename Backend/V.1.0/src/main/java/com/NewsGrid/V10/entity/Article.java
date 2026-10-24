@@ -17,6 +17,7 @@ import java.time.ZonedDateTime;
         @Index(name = "idx_article_slug", columnList = "slug"),
         @Index(name = "idx_article_breaking", columnList = "breaking"),
         @Index(name = "idx_article_category", columnList = "category"),
+        @Index(name = "idx_article_location", columnList = "location"),
         @Index(name = "idx_article_cluster_id", columnList = "cluster_id"),
         @Index(name = "idx_article_source_id", columnList = "source_id")
 })
@@ -53,6 +54,10 @@ public class Article {
 
     @Column(length = 50)
     private String category;
+
+    // Phase 2 (UCS-011): Detected province/city for local news prioritization
+    @Column(length = 50)
+    private String location;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cluster_id")
