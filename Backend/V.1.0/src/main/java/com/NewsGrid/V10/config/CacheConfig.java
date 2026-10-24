@@ -10,10 +10,6 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Multi-tier in-memory caching configuration powered by Caffeine (Window TinyLFU).
- * Designed to absorb high-concurrency read spikes (up to 1M users) with strictly bounded RAM usage.
- */
 @Configuration
 @EnableCaching
 public class CacheConfig {
@@ -27,11 +23,13 @@ public class CacheConfig {
                 "article_detail",
                 "clusters",
                 "seo",
-                "sitemap"
+                "sitemap",
+                "user_profiles",
+                "hot_articles"
         ));
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .initialCapacity(128)
-                .maximumSize(2000) // Strictly bounded memory footprint (< 15MB RAM)
+                .maximumSize(2500)
                 .expireAfterWrite(10, TimeUnit.MINUTES)
                 .recordStats());
         return cacheManager;
