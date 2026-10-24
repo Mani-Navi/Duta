@@ -1,4 +1,6 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
+import api from '../api/axiosConfig';
+import { useUser } from '../context/UserContext';
 import {
     getArticleScore,
     getArticleSourceCount,
@@ -6,7 +8,15 @@ import {
     formatRelativeTime
 } from '../utils/articleHelpers';
 
-function NewsCard({ article, onOpen }) {
+function NewsCard({ article, onOpen, onHideCard }) {
+    const { isLoggedIn, openModal, sendFeedback } = useUser();
+
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [likeCount, setLikeCount] = useState(article.cluster?.likeCount || 0);
+    const [hotCount, setHotCount] = useState(article.cluster?.hotCount || 0);
+    const [doubtCount, setDoubtCount] = useState(article.cluster?.doubtCount || 0);
+    const [userReaction, setUserReaction] = useState(article.userReaction || null);
+
     const score = getArticleScore(article);
     const sourceCount = getArticleSourceCount(article);
     const badgeClass = getBadgeClass(score);
@@ -15,15 +25,69 @@ function NewsCard({ article, onOpen }) {
     const srcInitials = article.source?.initials || article.source?.name?.substring(0, 2) || '?';
     const articleHref = `/article/${encodeURIComponent(article.slug || article.id)}`;
 
+    const handleReactionClick = async (e, type) => {
+        e.stopPropagation();
+        if (!isLoggedIn) {
+            openModal('auth', 'ورود به حساب برای ثبت بازخورد');
+            return;
+        }
+        const clusterId = article.cluster?.id;
+        if (!clusterId) return;
+
+        try {
+            const res = await api.post(`/clusters/${clusterId}/reactions`, { type });
+            if (res.data) {
+                setLikeCount(res.data.likeCount ?? 0);
+                setHotCount(res.data.hotCount ?? 0);
+                setDoubtCount(res.data.doubtCount ?? 0);
+                setUserReaction(res.data.userReaction ?? null);
+            }
+        } catch {}
+    };
+
+    const handleNegativeAction = async (e, actionType) => {
+        e.stopPropagation();
+        setMenuOpen(false);
+        if (!isLoggedIn) {
+            openModal('auth', 'ورود به حساب برای شخصی‌سازی فید');
+            return;
+        }
+        const category = article.category;
+        const sourceName = article.source?.name;
+        const clusterId = article.cluster?.id;
+
+        if (onHideCard) {
+            onHideCard(article, actionType);
+        }
+        await sendFeedback(actionType, category, sourceName, clusterId);
+    };
+
     return (
         <article
             className={`card ${isBreaking ? 'breaking' : ''}`}
-            onClick={() => onOpen(article)}
+            onClick={() => {
+                if (menuOpen) setMenuOpen(false);
+                else onOpen(article);
+            }}
         >
             {isBreaking && (
                 <div className="breaking-strip">
                     <span className="pulse-dot" aria-hidden="true" />
                     خبر فوری
+                </div>
+            )}
+
+            {/* برچسب دلیل پیشنهاد در تب «فید من» یا برچسب موقعیت مکانی */}
+            {(article.reasonLabel || article.location) && (
+                <div className={`x-card-signal ${article.reasonType === 'local' || article.location ? 'local' : article.reasonType === 'source' ? 'accent' : ''}`}>
+                    {article.reasonType === 'local' || (!article.reasonLabel && article.location) ? (
+                        <svg className="x-svg-sm" viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 1 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                    ) : article.reasonType === 'source' ? (
+                        <svg className="x-svg-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                    ) : (
+                        <svg className="x-svg-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    )}
+                    <span>{article.reasonLabel || `موقعیت · ${article.location}`}</span>
                 </div>
             )}
 
@@ -39,20 +103,54 @@ function NewsCard({ article, onOpen }) {
                     <span className="source-label">
                         {article.source?.name || ''}
                     </span>
+                    <span className="time">· {formatRelativeTime(article.publishedAt)}</span>
                 </span>
 
                 <div className="card-top-right">
                     {sourceCount > 1 && (
                         <span className="multi-source-badge">
-                            <i className="ti ti-layers-intersect" aria-hidden="true" />
                             {sourceCount} منبع
                         </span>
                     )}
                     <span className={`badge ${badgeClass}`} aria-label={`امتیاز اعتبار ${score} درصد`}>
                         {score}%
                     </span>
+                    <button
+                        type="button"
+                        className="x-dots-btn"
+                        aria-label="گزینه‌های بازخورد کارت"
+                        onClick={(e) => { e.stopPropagation(); setMenuOpen(prev => !prev); }}
+                    >
+                        <svg className="x-svg" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="1.3" />
+                            <circle cx="19" cy="12" r="1.3" />
+                            <circle cx="5" cy="12" r="1.3" />
+                        </svg>
+                    </button>
                 </div>
             </div>
+
+            {/* منوی بازشونده بازخورد منفی به سبک X */}
+            {menuOpen && (
+                <div className="x-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                    {article.category && (
+                        <button type="button" className="x-dropdown-item danger" onClick={(e) => handleNegativeAction(e, 'DISLIKE_TOPIC')}>
+                            <svg className="x-svg-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                            <span>عدم علاقه به حوزه «{article.category}»</span>
+                        </button>
+                    )}
+                    {article.source?.name && (
+                        <button type="button" className="x-dropdown-item danger" onClick={(e) => handleNegativeAction(e, 'MUTE_SOURCE')}>
+                            <svg className="x-svg-sm" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                            <span>عدم نمایش اخبار «{article.source.name}»</span>
+                        </button>
+                    )}
+                    <button type="button" className="x-dropdown-item" onClick={(e) => handleNegativeAction(e, 'HIDE_CLUSTER')}>
+                        <svg className="x-svg-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        <span>پنهان کردن این خبر</span>
+                    </button>
+                </div>
+            )}
 
             <h2 className="card-title">
                 <a
@@ -64,8 +162,49 @@ function NewsCard({ article, onOpen }) {
                 </a>
             </h2>
 
-            <div className="card-bottom">
-                <span className="time">{formatRelativeTime(article.publishedAt)}</span>
+            {/* اکشن‌بار خطی و رسمی به سبک X (بدون ایموجی) */}
+            <div className="x-card-actions">
+                <div className="x-reaction-bar">
+                    <button
+                        type="button"
+                        className={`x-react-btn ${userReaction === 'LIKE' ? 'active-like' : ''}`}
+                        onClick={(e) => handleReactionClick(e, 'LIKE')}
+                        aria-label="مفید"
+                    >
+                        <svg className="x-svg-sm" viewBox="0 0 24 24">
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                        </svg>
+                        <span>مفید{likeCount > 0 ? ` · ${likeCount}` : ''}</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        className={`x-react-btn ${userReaction === 'HOT' ? 'active-hot' : ''}`}
+                        onClick={(e) => handleReactionClick(e, 'HOT')}
+                        aria-label="مهم"
+                    >
+                        <svg className="x-svg-sm" viewBox="0 0 24 24">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                            <polyline points="17 6 23 6 23 12"/>
+                        </svg>
+                        <span>مهم{hotCount > 0 ? ` · ${hotCount}` : ''}</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        className={`x-react-btn ${userReaction === 'DOUBT' ? 'active-doubt' : ''}`}
+                        onClick={(e) => handleReactionClick(e, 'DOUBT')}
+                        aria-label="تردید"
+                    >
+                        <svg className="x-svg-sm" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        <span>تردید{doubtCount > 0 ? ` · ${doubtCount}` : ''}</span>
+                    </button>
+                </div>
+
                 <i className="ti ti-external-link ext" aria-hidden="true" />
             </div>
         </article>
