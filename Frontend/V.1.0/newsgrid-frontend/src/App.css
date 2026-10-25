@@ -1188,3 +1188,109 @@ a {
 
 .prefs-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
 .prefs-subtitle { font-size: 12.5px; color: var(--label-2); line-height: 1.6; }
+/* ─── Google Sign-In Button & Live Password Criteria Checklist ─── */
+.google-auth-btn {
+    width: 100%;
+    padding: 11px 16px;
+    border-radius: 99px;
+    border: 1px solid var(--separator);
+    background: var(--bg);
+    color: var(--label);
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.google-auth-btn:hover {
+    background: var(--chip-bg);
+    border-color: var(--label-3);
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 16px 0;
+    color: var(--label-3);
+    font-size: 11.5px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px solid var(--separator);
+}
+
+.auth-divider span {
+    padding: 0 10px;
+}
+
+.pass-criteria-box {
+    background: var(--bg);
+    border: 1px solid var(--separator);
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+
+.pass-strength-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--label-2);
+    margin-bottom: 8px;
+}
+
+.pass-meter-track {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.pass-meter-bar {
+    height: 4px;
+    border-radius: 99px;
+    transition: background 0.2s ease;
+}
+
+.pass-criteria-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+    font-size: 11.5px;
+    color: var(--label-3);
+}
+
+@media (max-width: 440px) {
+    .pass-criteria-list { grid-template-columns: 1fr; }
+}
+
+.pass-criteria-list li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.15s;
+}
+
+.pass-criteria-list li.ok {
+    color: var(--green);
+    font-weight: 600;
+}
+
+.crit-dot {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.auth-submit-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
