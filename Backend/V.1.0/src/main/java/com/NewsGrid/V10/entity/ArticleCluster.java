@@ -1,5 +1,6 @@
 package com.NewsGrid.V10.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -21,6 +22,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ArticleCluster {
 
     @Id
@@ -36,18 +38,17 @@ public class ArticleCluster {
     @Column(nullable = false)
     private int sourceCount = 1;
 
-    // Phase 2 Denormalized Engagement Counters (Zero COUNT(*) query overhead)
     @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
     private int viewCount = 0;
 
     @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
-    private int likeCount = 0; // مفید
+    private int likeCount = 0;
 
     @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
-    private int hotCount = 0;  // مهم
+    private int hotCount = 0;
 
     @Column(nullable = false, columnDefinition = "INT DEFAULT 0")
-    private int doubtCount = 0; // تردید
+    private int doubtCount = 0;
 
     @Column(nullable = false, columnDefinition = "DOUBLE PRECISION DEFAULT 0.0")
     private double hotScore = 0.0;
@@ -55,8 +56,9 @@ public class ArticleCluster {
     private ZonedDateTime createdAt;
     private ZonedDateTime updatedAt;
 
+    // FIXED: @JsonIgnore prevents LazyInitializationException during Map JSON serialization
+    @JsonIgnore
     @OneToMany(mappedBy = "cluster", fetch = FetchType.LAZY)
-    @JsonIgnoreProperties({"cluster"})
     private List<Article> articles = new ArrayList<>();
 
     @PrePersist
