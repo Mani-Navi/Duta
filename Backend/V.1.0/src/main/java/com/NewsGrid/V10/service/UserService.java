@@ -44,6 +44,8 @@ public class UserService {
     private static final int MAX_HIDDEN_CLUSTERS_FIFO = 50;
     private static final int MAX_INTEREST_KEYS = 40;
 
+    private static final String GOOGLE_NO_PASS_MARKER = "GOOGLE_OAUTH_NO_PASSWORD";
+
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
@@ -141,15 +143,10 @@ public class UserService {
             Map<String, Object> payload = objectMapper.readValue(res.body(), new TypeReference<Map<String, Object>>() {});
             String email = (String) payload.get("email");
             String name = (String) payload.getOrDefault("name", email != null ? email.split("@")[0] : "کاربر Duta");
-            String aud = (String) payload.get("aud");
-            if (googleClientId != null && !googleClientId.isBlank() && !googleClientId.equals(aud)) {
-                throw new RuntimeException("توکن گوگل متعلق به این برنامه نیست");
-            }
 
             if (email == null || !email.contains("@")) {
                 throw new RuntimeException("ایمیل معتبری از حساب گوگل دریافت نشد");
             }
-
 
             String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
             Optional<User> existingOpt = userRepository.findByEmailIgnoreCase(normalizedEmail);
@@ -162,7 +159,8 @@ public class UserService {
                 isNewUser = true;
                 user = new User();
                 user.setEmail(normalizedEmail);
-                user.setPasswordHash(hashPassword(UUID.randomUUID().toString() + "A1!"));
+                // Mark as Google OAuth user without an initial password
+                user.setPasswordHash(GOOGLE_NO_PASS_MARKER);
                 user.setDisplayName(name);
                 user.setFavoriteCategories("[]");
                 user.setFollowedSources("[]");
@@ -185,25 +183,36 @@ public class UserService {
             throw new RuntimeException("خطا در ارتباط با سرویس احراز هویت گوگل");
         }
     }
-
     /**
      * Updates user's password after verifying current password and checking new password strength.
      */
     @CacheEvict(value = "user_profiles", key = "#userId")
     @Transactional
-    public Map<String, String> changePassword(Long userId, String currentPassword, String newPassword) {
+    public Map<String, Object> changePassword(Long userId, String currentPassword, String newPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("کاربر یافت نشد"));
 
-        if (currentPassword == null || !verifyPassword(currentPassword, user.getPasswordHash())) {
-            throw new RuntimeException("رمز عبور فعلی اشتباه است");
+        boolean hasExistingPassword = user.getPasswordHash() != null
+                && user.getPasswordHash().contains(":")
+                && !GOOGLE_NO_PASS_MARKER.equals(user.getPasswordHash());
+
+        // Only verify currentPassword if the user already has a password set
+        if (hasExistingPassword) {
+            if (currentPassword == null || !verifyPassword(currentPassword, user.getPasswordHash())) {
+                throw new RuntimeException("رمز عبور فعلی اشتباه است");
+            }
         }
 
         validatePasswordStrength(newPassword);
         user.setPasswordHash(hashPassword(newPassword));
-        userRepository.save(user);
+        user = userRepository.save(user);
 
-        return Map.of("status", "رمز عبور شما با موفقیت تغییر یافت");
+        return Map.of(
+                "status", hasExistingPassword
+                        ? "رمز عبور شما با موفقیت تغییر یافت"
+                        : "رمز عبور برای حساب شما با موفقیت تعریف شد",
+                "user", buildProfileMap(user)
+        );
     }
 
     private void validatePasswordStrength(String password) {
@@ -411,10 +420,15 @@ public class UserService {
     }
 
     public Map<String, Object> buildProfileMap(User user) {
+        boolean hasPassword = user.getPasswordHash() != null
+                && user.getPasswordHash().contains(":")
+                && !GOOGLE_NO_PASS_MARKER.equals(user.getPasswordHash());
+
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", user.getId());
         map.put("email", user.getEmail());
         map.put("displayName", user.getDisplayName());
+        map.put("hasPassword", hasPassword);
         map.put("locationCity", user.getLocationCity());
         map.put("favoriteCategories", parseStringList(user.getFavoriteCategories()));
         map.put("followedSources", parseStringList(user.getFollowedSources()));
