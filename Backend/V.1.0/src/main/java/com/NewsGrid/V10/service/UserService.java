@@ -369,7 +369,8 @@ public class UserService {
         return Map.of(
                 "cities", IRAN_CITIES,
                 "categories", mainCategories,
-                "sourcesByCategory", sourcesByCategory
+                "sourcesByCategory", sourcesByCategory,
+                "googleClientId", googleClientId != null ? googleClientId : ""
         );
     }
 
