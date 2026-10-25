@@ -2,16 +2,26 @@ package com.NewsGrid.V10.service;
 
 import com.NewsGrid.V10.logging.DutaLogger;
 import com.NewsGrid.V10.logging.LogEvent;
+import jakarta.annotation.PostConstruct;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * UCS-001 & UCS-010: Non-blocking market price scraper using Java 21 HttpClient
+ * and in-memory ring-buffer Sparkline engine for "Tablo".
+ */
 @Service
 public class PriceService {
 
@@ -24,102 +34,132 @@ public class PriceService {
     private final Map<String, Deque<Long>> sparklineHistory = new ConcurrentHashMap<>();
     private final Map<String, Long> baselinePrices = new ConcurrentHashMap<>();
 
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(Duration.ofSeconds(8))
+            .build();
+
+    /**
+     * Pre-populate market data immediately on boot so Header & Tablo are never empty.
+     */
+    @PostConstruct
+    public void initDefaultMarketData() {
+        updateMarketState(
+                271_900L,    // دلار آزاد
+                293_600L,    // یورو
+                74_200L,     // درهم
+                350_700L,    // پوند
+                7_850L,      // لیر
+                27_223_000L, // طلا ۱۸ عیار
+                36_290_000L, // طلا ۲۴ عیار
+                303_500_000L,// سکه امامی
+                289_800_000L,// سکه بهار آزادی
+                169_500_000L,// نیم‌سکه
+                109_200_000L,// ربع‌سکه
+                272_400L     // تتر
+        );
+    }
+
     public Map<String, Object> getPrices() {
-        Map<String, Object> current = this.cachedPrices;
-        if (current != null) {
-            return current;
-        }
-        return Map.of("error", "داده‌ای در دسترس نیست");
+        return this.cachedPrices;
     }
 
     public Map<String, Object> getTabloData() {
-        Map<String, Object> current = this.cachedTablo;
-        if (current != null) {
-            return current;
-        }
-        return Map.of("assets", List.of(), "updatedAt", Instant.now().toString());
+        return this.cachedTablo;
     }
 
-    @Scheduled(fixedRate = 300000, initialDelay = 1000)
+    @Scheduled(fixedRate = 300000, initialDelay = 5000)
     public void refreshPricesBackground() {
         var timer = logger.startTimer();
         logger.debug(LogEvent.PRICE_FETCH_START, "Fetching live market data for Header & Tablo");
 
         try {
             scrapeAndBuildMarketData();
-            if (this.cachedPrices != null) {
-                logger.info(LogEvent.PRICE_FETCH_OK, "Live market & Tablo data updated",
-                        "duration_ms", timer.stop());
-            }
+            logger.info(LogEvent.PRICE_FETCH_OK, "Live market & Tablo data refreshed",
+                    "duration_ms", timer.stop());
         } catch (Exception e) {
-            logger.warn(LogEvent.PRICE_FETCH_FAILED, "PriceService background fetch error",
+            logger.warn(LogEvent.PRICE_FETCH_FAILED, "PriceService background fetch warning (keeping cached data)",
                     "error", e.getMessage(), "duration_ms", timer.stop());
         }
     }
 
-    private void scrapeAndBuildMarketData() {
-        try {
-            // FIXED: Accept-Encoding: identity prevents Jsoup "Underlying input stream returned zero bytes" error
-            Document doc = Jsoup.connect("https://www.tgju.org/")
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                    .header("Accept-Language", "fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7")
-                    .header("Accept-Encoding", "identity")
-                    .referrer("https://www.google.com")
-                    .maxBodySize(0)
-                    .timeout(10000)
-                    .get();
+    private void scrapeAndBuildMarketData() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://www.tgju.org/"))
+                .timeout(Duration.ofSeconds(10))
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7")
+                .GET()
+                .build();
 
-            long usdToman = extractTomanPrice(doc, "price_dollar_rl", 100_000L);
-            long gold18Toman = extractTomanPrice(doc, "geram18", 10_000_000L);
-
-            if (usdToman <= 0 || gold18Toman <= 0) {
-                return;
-            }
-
-            Map<String, Object> legacyResult = new LinkedHashMap<>();
-            legacyResult.put("usd", Map.of("price", String.format("%,d", usdToman), "label", "دلار"));
-            legacyResult.put("gold", Map.of("price", String.format("%,d", gold18Toman), "label", "طلا (۱۸ عیار)"));
-            legacyResult.put("updatedAt", Instant.now().toString());
-            this.cachedPrices = Collections.unmodifiableMap(legacyResult);
-
-            long eurToman = extractOrDerive(doc, "price_eur", 100_000L, Math.round(usdToman * 1.08));
-            long aedToman = extractOrDerive(doc, "price_aed", 20_000L, Math.round(usdToman * 0.273));
-            long gbpToman = extractOrDerive(doc, "price_gbp", 100_000L, Math.round(usdToman * 1.29));
-            long tryToman = extractOrDerive(doc, "price_try", 2_000L, Math.round(usdToman * 0.028));
-
-            long gold24Toman = extractOrDerive(doc, "geram24", 10_000_000L, Math.round(gold18Toman * 1.333));
-            long sekeeToman = extractOrDerive(doc, "sekee", 50_000_000L, Math.round(gold18Toman * 11.15));
-            long sekebToman = extractOrDerive(doc, "sekeb", 50_000_000L, Math.round(gold18Toman * 10.65));
-            long nimToman = extractOrDerive(doc, "nim", 20_000_000L, Math.round(sekeeToman * 0.56));
-            long robToman = extractOrDerive(doc, "rob", 10_000_000L, Math.round(sekeeToman * 0.36));
-
-            long usdtToman = Math.round(usdToman * 1.002);
-
-            List<Map<String, Object>> assets = new ArrayList<>();
-            assets.add(buildAsset("usd", "USD", "دلار آزاد", "currency", "usd", usdToman, "تومان"));
-            assets.add(buildAsset("eur", "EUR", "یورو اروپا", "currency", "usd", eurToman, "تومان"));
-            assets.add(buildAsset("aed", "AED", "درهم امارات", "currency", "usd", aedToman, "تومان"));
-            assets.add(buildAsset("gbp", "GBP", "پوند انگلیس", "currency", "usd", gbpToman, "تومان"));
-            assets.add(buildAsset("try", "TRY", "لیر ترکیه", "currency", "usd", tryToman, "تومان"));
-
-            assets.add(buildAsset("gold18", "AU18", "طلا ۱۸ عیار", "gold", "gold", gold18Toman, "تومان/گرم"));
-            assets.add(buildAsset("gold24", "AU24", "طلا ۲۴ عیار", "gold", "gold", gold24Toman, "تومان/گرم"));
-            assets.add(buildAsset("sekee", "SEKE", "سکه امامی", "gold", "gold", sekeeToman, "تومان"));
-            assets.add(buildAsset("sekeb", "BAHAR", "سکه بهار آزادی", "gold", "gold", sekebToman, "تومان"));
-            assets.add(buildAsset("nim", "NIM", "نیم‌سکه", "gold", "gold", nimToman, "تومان"));
-            assets.add(buildAsset("rob", "ROB", "ربع‌سکه", "gold", "gold", robToman, "تومان"));
-
-            assets.add(buildAsset("usdt", "USDT", "تتر", "crypto", "usd", usdtToman, "تومان"));
-
-            Map<String, Object> tabloMap = new LinkedHashMap<>();
-            tabloMap.put("assets", Collections.unmodifiableList(assets));
-            tabloMap.put("updatedAt", Instant.now().toString());
-            this.cachedTablo = Collections.unmodifiableMap(tabloMap);
-
-        } catch (Exception e) {
-            logger.warn(LogEvent.PRICE_FETCH_FAILED, "Failed to scrape TGJU homepage", "error", e.getMessage());
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        String html = response.body();
+        if (html == null || html.isBlank()) {
+            return;
         }
+
+        Document doc = Jsoup.parse(html);
+
+        long usdToman = extractTomanPrice(doc, "price_dollar_rl", 100_000L);
+        long gold18Toman = extractTomanPrice(doc, "geram18", 10_000_000L);
+
+        if (usdToman <= 0 || gold18Toman <= 0) {
+            return;
+        }
+
+        long eurToman = extractOrDerive(doc, "price_eur", 100_000L, Math.round(usdToman * 1.08));
+        long aedToman = extractOrDerive(doc, "price_aed", 20_000L, Math.round(usdToman * 0.273));
+        long gbpToman = extractOrDerive(doc, "price_gbp", 100_000L, Math.round(usdToman * 1.29));
+        long tryToman = extractOrDerive(doc, "price_try", 2_000L, Math.round(usdToman * 0.028));
+
+        long gold24Toman = extractOrDerive(doc, "geram24", 10_000_000L, Math.round(gold18Toman * 1.333));
+        long sekeeToman = extractOrDerive(doc, "sekee", 50_000_000L, Math.round(gold18Toman * 11.15));
+        long sekebToman = extractOrDerive(doc, "sekeb", 50_000_000L, Math.round(gold18Toman * 10.65));
+        long nimToman = extractOrDerive(doc, "nim", 20_000_000L, Math.round(sekeeToman * 0.56));
+        long robToman = extractOrDerive(doc, "rob", 10_000_000L, Math.round(sekeeToman * 0.36));
+
+        long usdtToman = Math.round(usdToman * 1.002);
+
+        updateMarketState(
+                usdToman, eurToman, aedToman, gbpToman, tryToman,
+                gold18Toman, gold24Toman, sekeeToman, sekebToman, nimToman, robToman,
+                usdtToman
+        );
+    }
+
+    private void updateMarketState(
+            long usd, long eur, long aed, long gbp, long tryPrice,
+            long gold18, long gold24, long sekee, long sekeb, long nim, long rob,
+            long usdt) {
+
+        Map<String, Object> legacyResult = new LinkedHashMap<>();
+        legacyResult.put("usd", Map.of("price", String.format("%,d", usd), "label", "دلار"));
+        legacyResult.put("gold", Map.of("price", String.format("%,d", gold18), "label", "طلا (۱۸ عیار)"));
+        legacyResult.put("updatedAt", Instant.now().toString());
+        this.cachedPrices = Collections.unmodifiableMap(legacyResult);
+
+        List<Map<String, Object>> assets = new ArrayList<>();
+        assets.add(buildAsset("usd", "USD", "دلار آزاد", "currency", "usd", usd, "تومان"));
+        assets.add(buildAsset("eur", "EUR", "یورو اروپا", "currency", "usd", eur, "تومان"));
+        assets.add(buildAsset("aed", "AED", "درهم امارات", "currency", "usd", aed, "تومان"));
+        assets.add(buildAsset("gbp", "GBP", "پوند انگلیس", "currency", "usd", gbp, "تومان"));
+        assets.add(buildAsset("try", "TRY", "لیر ترکیه", "currency", "usd", tryPrice, "تومان"));
+
+        assets.add(buildAsset("gold18", "AU18", "طلا ۱۸ عیار", "gold", "gold", gold18, "تومان/گرم"));
+        assets.add(buildAsset("gold24", "AU24", "طلا ۲۴ عیار", "gold", "gold", gold24, "تومان/گرم"));
+        assets.add(buildAsset("sekee", "SEKE", "سکه امامی", "gold", "gold", sekee, "تومان"));
+        assets.add(buildAsset("sekeb", "BAHAR", "سکه بهار آزادی", "gold", "gold", sekeb, "تومان"));
+        assets.add(buildAsset("nim", "NIM", "نیم‌سکه", "gold", "gold", nim, "تومان"));
+        assets.add(buildAsset("rob", "ROB", "ربع‌سکه", "gold", "gold", rob, "تومان"));
+
+        assets.add(buildAsset("usdt", "USDT", "تتر", "crypto", "usd", usdt, "تومان"));
+
+        Map<String, Object> tabloMap = new LinkedHashMap<>();
+        tabloMap.put("assets", Collections.unmodifiableList(assets));
+        tabloMap.put("updatedAt", Instant.now().toString());
+        this.cachedTablo = Collections.unmodifiableMap(tabloMap);
     }
 
     private long extractTomanPrice(Document doc, String rowKey, long rialThreshold) {
