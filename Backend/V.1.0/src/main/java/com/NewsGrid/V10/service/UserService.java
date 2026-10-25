@@ -11,16 +11,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Manages user authentication, cached personalization profiles, cascading onboarding catalog,
- * and in-place behavioral interest aggregation (~200B per user with zero row growth).
+ * Manages user authentication (native Java 21 PBKDF2-HMAC-SHA256 password hashing),
+ * cached personalization profiles, cascading onboarding catalog, and in-place behavioral scoring.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,7 +36,9 @@ public class UserService {
     private final JwtService jwtService;
     private final ObjectMapper objectMapper;
 
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final int PBKDF2_ITERATIONS = 65536;
+    private static final int KEY_LENGTH = 256;
 
     private static final int MAX_HIDDEN_CLUSTERS_FIFO = 50;
     private static final int MAX_INTEREST_KEYS = 40;
@@ -57,7 +62,7 @@ public class UserService {
 
         User user = new User();
         user.setEmail(normalizedEmail);
-        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setPasswordHash(hashPassword(password));
         user.setDisplayName(displayName != null && !displayName.isBlank()
                 ? displayName.trim()
                 : normalizedEmail.split("@")[0]);
@@ -89,7 +94,7 @@ public class UserService {
         User user = userRepository.findByEmailIgnoreCase(email.trim().toLowerCase(Locale.ROOT))
                 .orElseThrow(() -> new RuntimeException("ایمیل یا رمز عبور اشتباه است"));
 
-        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+        if (!verifyPassword(password, user.getPasswordHash())) {
             logger.warn(LogEvent.AUTH_FAILED, "Invalid password attempt", "email", email);
             throw new RuntimeException("ایمیل یا رمز عبور اشتباه است");
         }
@@ -146,10 +151,6 @@ public class UserService {
         return buildProfileMap(user);
     }
 
-    /**
-     * UCS-009: Records positive meaningful engagement (+1 dwell, +3 source click/reaction, +4 share)
-     * or negative feedback (-25 topic block, source mute, or cluster hide) IN-PLACE without adding DB rows.
-     */
     @CacheEvict(value = "user_profiles", key = "#userId")
     @Transactional
     public Map<String, Object> recordEngagementOrFeedback(Long userId,
@@ -206,7 +207,6 @@ public class UserService {
                     List<Long> hidden = new ArrayList<>(parseLongList(user.getHiddenClusterIds()));
                     hidden.remove(clusterId);
                     hidden.add(clusterId);
-                    // FIFO Bound: keep only last 50 hidden cluster IDs
                     if (hidden.size() > MAX_HIDDEN_CLUSTERS_FIFO) {
                         hidden = hidden.subList(hidden.size() - MAX_HIDDEN_CLUSTERS_FIFO, hidden.size());
                     }
@@ -215,7 +215,6 @@ public class UserService {
             }
         }
 
-        // Bound interestScores map to top 40 entries so JSON stays ~200 bytes forever
         if (scores.size() > MAX_INTEREST_KEYS) {
             scores = scores.entrySet().stream()
                     .sorted((a, b) -> Integer.compare(Math.abs(b.getValue()), Math.abs(a.getValue())))
@@ -233,10 +232,6 @@ public class UserService {
         return buildProfileMap(user);
     }
 
-    /**
-     * UCS-007: Builds the 3-layer cascading onboarding catalog (Categories -> Specialized Sources -> Similar Sources)
-     * directly from the active sources table sorted by credibility.
-     */
     @Cacheable(value = "categories", key = "'discovery_catalog'")
     @Transactional(readOnly = true)
     public Map<String, Object> getDiscoveryCatalog() {
@@ -269,10 +264,39 @@ public class UserService {
         );
     }
 
+    // ── Native Java 21 Salted PBKDF2-HMAC-SHA256 Password Hashing ──
+    private String hashPassword(String password) {
+        try {
+            byte[] salt = new byte[16];
+            SECURE_RANDOM.nextBytes(salt);
+            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, KEY_LENGTH);
+            SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            byte[] hash = skf.generateSecret(spec).getEncoded();
+            return Base64.getEncoder().encodeToString(salt) + ":" + Base64.getEncoder().encodeToString(hash);
+        } catch (Exception e) {
+            throw new IllegalStateException("Password hashing error", e);
+        }
+    }
+
+    private boolean verifyPassword(String password, String stored) {
+        try {
+            if (stored == null || !stored.contains(":")) return false;
+            String[] parts = stored.split(":");
+            byte[] salt = Base64.getDecoder().decode(parts[0]);
+            byte[] expectedHash = Base64.getDecoder().decode(parts[1]);
+
+            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, KEY_LENGTH);
+            SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            byte[] testHash = skf.generateSecret(spec).getEncoded();
+            return MessageDigest.isEqual(expectedHash, testHash);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private void adjustScore(Map<String, Integer> scores, String key, int delta) {
         if (key == null || key.endsWith(":null") || key.endsWith(":")) return;
         int current = scores.getOrDefault(key, 0);
-        // If user previously explicitly blocked a topic (-25), don't auto-boost it from accidental reads
         if (current <= -20 && delta > 0) return;
         scores.put(key, Math.min(100, current + delta));
     }
