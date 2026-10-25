@@ -53,6 +53,9 @@ public class UserService {
             "قم", "کرمانشاه", "ارومیه", "یزد", "کرمان", "همدان", "بندرعباس", "ساری", "بوشهر", "زنجان", "قزوین", "اردبیل"
     );
 
+    @org.springframework.beans.factory.annotation.Value("${GOOGLE_CLIENT_ID:}")
+    private String googleClientId;
+
     @Transactional
     public Map<String, Object> register(String email, String password, String displayName, String locationCity,
                                         List<String> favoriteCategories, List<String> followedSources) {
@@ -138,10 +141,15 @@ public class UserService {
             Map<String, Object> payload = objectMapper.readValue(res.body(), new TypeReference<Map<String, Object>>() {});
             String email = (String) payload.get("email");
             String name = (String) payload.getOrDefault("name", email != null ? email.split("@")[0] : "کاربر Duta");
+            String aud = (String) payload.get("aud");
+            if (googleClientId != null && !googleClientId.isBlank() && !googleClientId.equals(aud)) {
+                throw new RuntimeException("توکن گوگل متعلق به این برنامه نیست");
+            }
 
             if (email == null || !email.contains("@")) {
                 throw new RuntimeException("ایمیل معتبری از حساب گوگل دریافت نشد");
             }
+
 
             String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
             Optional<User> existingOpt = userRepository.findByEmailIgnoreCase(normalizedEmail);
