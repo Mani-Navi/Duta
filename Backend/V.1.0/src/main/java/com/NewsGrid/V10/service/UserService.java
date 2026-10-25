@@ -9,6 +9,7 @@ import com.NewsGrid.V10.repository.UserRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -17,9 +18,11 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -45,6 +48,10 @@ public class UserService {
     private static final int MAX_INTEREST_KEYS = 40;
 
     private static final String GOOGLE_NO_PASS_MARKER = "GOOGLE_OAUTH_NO_PASSWORD";
+    private static final Set<String> VALID_GOOGLE_ISSUERS = Set.of(
+            "accounts.google.com",
+            "https://accounts.google.com"
+    );
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
@@ -55,7 +62,7 @@ public class UserService {
             "قم", "کرمانشاه", "ارومیه", "یزد", "کرمان", "همدان", "بندرعباس", "ساری", "بوشهر", "زنجان", "قزوین", "اردبیل"
     );
 
-    @org.springframework.beans.factory.annotation.Value("${GOOGLE_CLIENT_ID:}")
+    @Value("${GOOGLE_CLIENT_ID:}")
     private String googleClientId;
 
     @Transactional
@@ -120,7 +127,7 @@ public class UserService {
     }
 
     /**
-     * Verifies Google OAuth2 ID Token (credential) and logs in or auto-registers the user.
+     * Verifies Google OAuth2 ID Token (credential) including audience (aud), issuer (iss), and email_verified.
      */
     @Transactional
     public Map<String, Object> loginWithGoogle(String credential) {
@@ -129,8 +136,9 @@ public class UserService {
         }
 
         try {
+            String encodedToken = URLEncoder.encode(credential.trim(), StandardCharsets.UTF_8);
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?id_token=" + credential.trim()))
+                    .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodedToken))
                     .timeout(Duration.ofSeconds(6))
                     .GET()
                     .build();
@@ -141,6 +149,26 @@ public class UserService {
             }
 
             Map<String, Object> payload = objectMapper.readValue(res.body(), new TypeReference<Map<String, Object>>() {});
+
+            // SECURITY FIX (BUG-01): Validate Audience (aud), Issuer (iss), and Email Verification
+            String aud = payload.get("aud") != null ? String.valueOf(payload.get("aud")).trim() : "";
+            String iss = payload.get("iss") != null ? String.valueOf(payload.get("iss")).trim() : "";
+            boolean emailVerified = "true".equalsIgnoreCase(String.valueOf(payload.get("email_verified")));
+
+            if (googleClientId != null && !googleClientId.isBlank() && !googleClientId.trim().equals(aud)) {
+                logger.warn(LogEvent.AUTH_FAILED, "Rejected Google token with mismatched audience", "aud", aud);
+                throw new RuntimeException("توکن گوگل متعلق به این سامانه نیست");
+            }
+
+            if (!iss.isEmpty() && !VALID_GOOGLE_ISSUERS.contains(iss)) {
+                logger.warn(LogEvent.AUTH_FAILED, "Rejected Google token with invalid issuer", "iss", iss);
+                throw new RuntimeException("صادرکننده توکن گوگل معتبر نیست");
+            }
+
+            if (!emailVerified) {
+                throw new RuntimeException("ایمیل حساب گوگل شما تایید نشده است");
+            }
+
             String email = (String) payload.get("email");
             String name = (String) payload.getOrDefault("name", email != null ? email.split("@")[0] : "کاربر Duta");
 
@@ -159,7 +187,6 @@ public class UserService {
                 isNewUser = true;
                 user = new User();
                 user.setEmail(normalizedEmail);
-                // Mark as Google OAuth user without an initial password
                 user.setPasswordHash(GOOGLE_NO_PASS_MARKER);
                 user.setDisplayName(name);
                 user.setFavoriteCategories("[]");
@@ -172,6 +199,8 @@ public class UserService {
             }
 
             String token = jwtService.generateToken(user.getId(), user.getEmail());
+            logger.info(LogEvent.AUTH_SUCCESS, "Google OAuth login success", "userId", user.getId(), "isNewUser", isNewUser);
+
             return Map.of(
                     "token", token,
                     "user", buildProfileMap(user),
@@ -183,9 +212,7 @@ public class UserService {
             throw new RuntimeException("خطا در ارتباط با سرویس احراز هویت گوگل");
         }
     }
-    /**
-     * Updates user's password after verifying current password and checking new password strength.
-     */
+
     @CacheEvict(value = "user_profiles", key = "#userId")
     @Transactional
     public Map<String, Object> changePassword(Long userId, String currentPassword, String newPassword) {
@@ -196,7 +223,6 @@ public class UserService {
                 && user.getPasswordHash().contains(":")
                 && !GOOGLE_NO_PASS_MARKER.equals(user.getPasswordHash());
 
-        // Only verify currentPassword if the user already has a password set
         if (hasExistingPassword) {
             if (currentPassword == null || !verifyPassword(currentPassword, user.getPasswordHash())) {
                 throw new RuntimeException("رمز عبور فعلی اشتباه است");

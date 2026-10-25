@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -35,7 +37,7 @@ public class ArticleController {
     private final CategoryClassifierService categoryClassifier;
     private final LocationClassifierService locationClassifier;
 
-    @Value("${ADMIN_SECRET:duta_prod_secret_key_2026_secure!}")
+    @Value("${ADMIN_SECRET:}")
     private String adminSecret;
 
     private static final int MAX_PAGE_SIZE = 100;
@@ -78,13 +80,11 @@ public class ArticleController {
         return articleService.getAllArticles(Math.max(page, 0), safeSize);
     }
 
-    // Phase 2 (UCS-008): Top 4 Hot News of the Day
     @GetMapping("/hot")
     public List<Article> getHotArticles() {
         return personalizationService.getHotArticlesOfTheDay();
     }
 
-    // Phase 2 (UCS-008 & UCS-011): 85/15 Personalized Feed ("فید من")
     @GetMapping("/personalized")
     public ResponseEntity<?> getPersonalizedFeed(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -101,7 +101,6 @@ public class ArticleController {
         return ResponseEntity.ok(personalizationService.getPersonalizedFeed(userId, Math.max(page, 0), safeSize));
     }
 
-    // Phase 2 (UCS-008): General Newspaper Feed ("روزنامه") with user reaction state attached
     @GetMapping("/newspaper")
     public Page<Map<String, Object>> getNewspaperFeed(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -143,21 +142,27 @@ public class ArticleController {
     }
 
     @GetMapping("/{id}")
-    public Article getArticleById(@PathVariable Long id) {
+    public Map<String, Object> getArticleById(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Article article = articleService.getArticleById(id);
         if (article.getCluster() != null) {
-            personalizationService.incrementClusterViewAsync(article.getCluster().getId());
+            personalizationService.incrementClusterView(article.getCluster().getId());
         }
-        return article;
+        Long userId = jwtService.extractUserIdFromHeader(authHeader);
+        return personalizationService.getEnrichedArticleDetail(article, userId);
     }
 
     @GetMapping("/slug/{slug}")
-    public Article getArticleBySlug(@PathVariable String slug) {
+    public Map<String, Object> getArticleBySlug(
+            @PathVariable String slug,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Article article = articleService.getArticleBySlug(slug);
         if (article.getCluster() != null) {
-            personalizationService.incrementClusterViewAsync(article.getCluster().getId());
+            personalizationService.incrementClusterView(article.getCluster().getId());
         }
-        return article;
+        Long userId = jwtService.extractUserIdFromHeader(authHeader);
+        return personalizationService.getEnrichedArticleDetail(article, userId);
     }
 
     @GetMapping("/{id}/source")
@@ -226,6 +231,11 @@ public class ArticleController {
 
     private boolean isAuthorizedAdmin(String headerKey, String paramKey) {
         if (adminSecret == null || adminSecret.isBlank()) return false;
-        return adminSecret.equals(headerKey) || adminSecret.equals(paramKey);
+        byte[] secretBytes = adminSecret.trim().getBytes(StandardCharsets.UTF_8);
+
+        if (headerKey != null && MessageDigest.isEqual(secretBytes, headerKey.trim().getBytes(StandardCharsets.UTF_8))) {
+            return true;
+        }
+        return paramKey != null && MessageDigest.isEqual(secretBytes, paramKey.trim().getBytes(StandardCharsets.UTF_8));
     }
 }

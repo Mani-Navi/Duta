@@ -11,7 +11,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +19,8 @@ import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * UCS-008, UCS-009, UCS-011: In-memory personalization engine, Hot News ranker, and cluster reaction manager.
@@ -35,6 +37,9 @@ public class PersonalizationService {
 
     private static final int IMPLICIT_INTEREST_THRESHOLD = 15;
     private static final int DISCOVERY_CREDIBILITY_MIN = 82;
+
+    // SCALE-01 FIX: Lock-free in-memory view counter buffer to prevent DB row-lock storms during viral news spikes
+    private final ConcurrentHashMap<Long, LongAdder> pendingClusterViews = new ConcurrentHashMap<>();
 
     /**
      * UCS-008: Returns the top 4 Hot News of the Day (last 24h) ranked by engagement, multi-source coverage, and freshness.
@@ -79,7 +84,6 @@ public class PersonalizationService {
             Long clusterId = a.getCluster() != null ? a.getCluster().getId() : null;
             String cat = a.getCategory() != null ? a.getCategory() : "سیاسی";
 
-            // Hard Red-Line Exclusions (Muted source, hidden cluster, or explicitly disliked category <= -20)
             if (mutedSources.contains(srcName)) continue;
             if (clusterId != null && hiddenClusters.contains(clusterId)) continue;
             if (interestScores.getOrDefault("cat:" + cat, 0) <= -20) continue;
@@ -129,23 +133,21 @@ public class PersonalizationService {
                 boolean isCivicOrPreferred = isFavCategory || isFollowedSource || isLearnedInterest
                         || a.isBreaking() || "اقتصادی".equals(cat) || "سیاسی".equals(cat);
                 if (isCivicOrPreferred) {
-                    score += 42; // Full synergy boost
+                    score += 42;
                     reasonType = "local";
                     reasonLabel = "خبر محلی · " + userCity;
                 } else {
-                    score += 10; // Dampened boost for unselected niche categories (e.g. Sports in Tehran)
+                    score += 10;
                 }
             }
 
             if (isColdStart) {
-                // Cold Start Exploration Mode: balance high-credibility news across all categories
                 if (cred >= 75) {
                     matchedPool.add(new ScoredArticle(a, score, "ai", "منتخب معتبر · " + cat));
                 }
             } else if (reasonType != null) {
                 matchedPool.add(new ScoredArticle(a, score, reasonType, reasonLabel));
             } else if (cred >= DISCOVERY_CREDIBILITY_MIN) {
-                // UCS-008 Rule 2: Eligible for 15% Discovery Quota (unselected neutral category with high credibility)
                 discoveryPool.add(new ScoredArticle(a, score, "discovery", "پیشنهاد از سایر حوزه‌ها · " + cat));
             }
         }
@@ -153,7 +155,6 @@ public class PersonalizationService {
         matchedPool.sort((x, y) -> Double.compare(y.score, x.score));
         discoveryPool.sort((x, y) -> Double.compare(y.score, x.score));
 
-        // Combine 85% Matched (17 per 20) + 15% Discovery (3 per 20)
         List<ScoredArticle> combined = new ArrayList<>();
         int mIdx = 0, dIdx = 0;
         while (mIdx < matchedPool.size() || dIdx < discoveryPool.size()) {
@@ -167,7 +168,6 @@ public class PersonalizationService {
             }
         }
 
-        // Attach current user's active reactions for the page slice
         int start = Math.min(page * size, combined.size());
         int end = Math.min(start + size, combined.size());
         List<ScoredArticle> pageSlice = combined.subList(start, end);
@@ -214,9 +214,26 @@ public class PersonalizationService {
     }
 
     /**
-     * UCS-009: Toggles or updates a user's reaction (LIKE, HOT, DOUBT) on a cluster and updates denormalized counters.
+     * BUG-05 FIX: Enriches a single Article with the logged-in user's active reaction without mutating cached entities.
      */
-    @CachingOnReaction
+    @Transactional(readOnly = true)
+    public Map<String, Object> getEnrichedArticleDetail(Article article, Long userId) {
+        Map<Long, String> userReactions = Map.of();
+        Long cid = article.getCluster() != null ? article.getCluster().getId() : null;
+        if (userId != null && cid != null) {
+            Optional<ArticleReaction> reactionOpt = reactionRepository.findByUserIdAndClusterId(userId, cid);
+            if (reactionOpt.isPresent()) {
+                userReactions = Map.of(cid, reactionOpt.get().getReactionType());
+            }
+        }
+        return toEnrichedArticleMap(article, null, null, userReactions);
+    }
+
+    /**
+     * UCS-009 & BUG-02 FIX: Updates reaction in DB and patches in-memory cached cluster counters in-place
+     * without wiping the global articles/sitemap/seo caches!
+     */
+    @CacheEvict(value = "hot_articles", allEntries = true)
     @Transactional
     public Map<String, Object> toggleReaction(Long userId, Long clusterId, String reactionType) {
         String normalizedType = reactionType != null ? reactionType.trim().toUpperCase(Locale.ROOT) : "";
@@ -235,10 +252,8 @@ public class PersonalizationService {
             decrementCounter(cluster, existing.getReactionType());
 
             if (existing.getReactionType().equals(normalizedType)) {
-                // Clicking the same reaction removes it
                 reactionRepository.delete(existing);
             } else {
-                // Switching reaction type
                 existing.setReactionType(normalizedType);
                 reactionRepository.save(existing);
                 incrementCounter(cluster, normalizedType);
@@ -253,7 +268,6 @@ public class PersonalizationService {
             incrementCounter(cluster, normalizedType);
             activeUserReaction = normalizedType;
 
-            // If positive reaction (LIKE or HOT), boost user's permanent 200B interestScores map!
             if ("LIKE".equals(normalizedType) || "HOT".equals(normalizedType)) {
                 List<Article> clusterArticles = articleService.getClusterArticles(clusterId);
                 if (!clusterArticles.isEmpty()) {
@@ -266,7 +280,9 @@ public class PersonalizationService {
 
         cluster.setHotScore(calculateClusterHotScore(cluster));
         clusterRepository.save(cluster);
-        articleService.evictArticlesCache();
+
+        // Patch in-memory cached cluster counters in-place (0ms, zero cache thrashing!)
+        syncCachedClusterCountersInPlace(cluster);
 
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("clusterId", cluster.getId());
@@ -277,15 +293,62 @@ public class PersonalizationService {
         return res;
     }
 
-    @Async
-    @Transactional
-    public void incrementClusterViewAsync(Long clusterId) {
+    /**
+     * SCALE-01 FIX: Non-blocking O(1) in-memory view counter increment.
+     */
+    public void incrementClusterView(Long clusterId) {
         if (clusterId == null) return;
-        clusterRepository.findById(clusterId).ifPresent(c -> {
-            c.setViewCount(c.getViewCount() + 1);
-            c.setHotScore(calculateClusterHotScore(c));
-            clusterRepository.save(c);
-        });
+        pendingClusterViews.computeIfAbsent(clusterId, k -> new LongAdder()).increment();
+    }
+
+    public void incrementClusterViewAsync(Long clusterId) {
+        incrementClusterView(clusterId);
+    }
+
+    /**
+     * SCALE-01 FIX: Flushes accumulated view counts to PostgreSQL in batch every 60 seconds.
+     */
+    @Scheduled(fixedRate = 60000)
+    @Transactional
+    public void flushPendingClusterViews() {
+        if (pendingClusterViews.isEmpty()) return;
+
+        Map<Long, Long> snapshot = new HashMap<>();
+        for (Long clusterId : new ArrayList<>(pendingClusterViews.keySet())) {
+            LongAdder adder = pendingClusterViews.remove(clusterId);
+            if (adder != null) {
+                long delta = adder.sum();
+                if (delta > 0) {
+                    snapshot.put(clusterId, delta);
+                }
+            }
+        }
+
+        if (snapshot.isEmpty()) return;
+
+        List<ArticleCluster> clusters = clusterRepository.findAllById(snapshot.keySet());
+        for (ArticleCluster c : clusters) {
+            long delta = snapshot.getOrDefault(c.getId(), 0L);
+            if (delta > 0) {
+                c.setViewCount((int) Math.min(Integer.MAX_VALUE, c.getViewCount() + delta));
+                c.setHotScore(calculateClusterHotScore(c));
+            }
+        }
+        clusterRepository.saveAll(clusters);
+    }
+
+    private void syncCachedClusterCountersInPlace(ArticleCluster updated) {
+        try {
+            List<Article> pool = articleService.getRecentRepresentativePool();
+            for (Article a : pool) {
+                if (a.getCluster() != null && Objects.equals(a.getCluster().getId(), updated.getId())) {
+                    a.getCluster().setLikeCount(updated.getLikeCount());
+                    a.getCluster().setHotCount(updated.getHotCount());
+                    a.getCluster().setDoubtCount(updated.getDoubtCount());
+                    a.getCluster().setHotScore(updated.getHotScore());
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     private void incrementCounter(ArticleCluster c, String type) {
@@ -366,9 +429,6 @@ public class PersonalizationService {
         map.put("userReaction", cid != null ? userReactions.get(cid) : null);
         return map;
     }
-
-    @CacheEvict(value = "hot_articles", allEntries = true)
-    private @interface CachingOnReaction {}
 
     private record ScoredArticle(Article article, double score, String reasonType, String reasonLabel) {}
 }

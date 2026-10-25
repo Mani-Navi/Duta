@@ -1,5 +1,7 @@
 package com.NewsGrid.V10.service;
 
+import com.NewsGrid.V10.logging.DutaLogger;
+import com.NewsGrid.V10.logging.LogEvent;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
@@ -11,6 +13,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Map;
 
@@ -21,7 +24,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class JwtService {
 
-    @Value("${jwt.secret:duta_prod_secret_key_2026_secure!}")
+    private static final DutaLogger logger = DutaLogger.of(JwtService.class);
+
+    @Value("${jwt.secret:}")
     private String rawSecret;
 
     private final ObjectMapper objectMapper;
@@ -34,8 +39,16 @@ public class JwtService {
     @PostConstruct
     public void initKey() {
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] keyBytes = digest.digest(rawSecret.getBytes(StandardCharsets.UTF_8));
+            byte[] keyBytes;
+            if (rawSecret == null || rawSecret.isBlank()) {
+                logger.warn(LogEvent.SYSTEM_STARTUP,
+                        "JWT_SECRET environment variable is not set! Using an ephemeral random 256-bit key.");
+                keyBytes = new byte[32];
+                new SecureRandom().nextBytes(keyBytes);
+            } else {
+                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                keyBytes = digest.digest(rawSecret.trim().getBytes(StandardCharsets.UTF_8));
+            }
             this.secretKeySpec = new SecretKeySpec(keyBytes, "HmacSHA256");
         } catch (Exception e) {
             throw new IllegalStateException("Failed to initialize JWT signing key", e);
@@ -72,7 +85,7 @@ public class JwtService {
 
     public Long extractUserId(String token) {
         try {
-            if (token == null) return null;
+            if (token == null || token.isBlank()) return null;
             String[] parts = token.split("\\.");
             if (parts.length != 3) return null;
 

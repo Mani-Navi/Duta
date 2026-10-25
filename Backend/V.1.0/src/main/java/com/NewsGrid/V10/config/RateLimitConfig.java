@@ -13,16 +13,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Lock-free IP rate limiter backed by Caffeine's O(1) Window TinyLFU cache.
+ * Lock-free dual-tier IP rate limiter backed by Caffeine's O(1) Window TinyLFU cache.
+ * Enforces 120 req/min globally and a strict 10 req/min limit on /api/auth/* against Brute-Force attacks.
  */
 @Component
 public class RateLimitConfig implements HandlerInterceptor {
 
     private static final DutaLogger logger = DutaLogger.of(RateLimitConfig.class);
     private static final int MAX_REQUESTS_PER_MINUTE = 120;
+    private static final int MAX_AUTH_REQUESTS_PER_MINUTE = 10;
 
     private final Cache<String, AtomicInteger> ipRequestCounts = Caffeine.newBuilder()
             .maximumSize(10_000)
+            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .build();
+
+    private final Cache<String, AtomicInteger> authIpRequestCounts = Caffeine.newBuilder()
+            .maximumSize(5_000)
             .expireAfterWrite(1, TimeUnit.MINUTES)
             .build();
 
@@ -37,17 +44,31 @@ public class RateLimitConfig implements HandlerInterceptor {
         }
 
         String ip = getClientIP(request);
-        AtomicInteger counter = ipRequestCounts.get(ip, k -> new AtomicInteger(0));
 
+        // Strict tier for authentication endpoints (/api/auth/login, /register, /google)
+        if (path != null && path.startsWith("/api/auth/")) {
+            AtomicInteger authCounter = authIpRequestCounts.get(ip, k -> new AtomicInteger(0));
+            if (authCounter.incrementAndGet() > MAX_AUTH_REQUESTS_PER_MINUTE) {
+                logger.warn(LogEvent.RATE_LIMIT_EXCEEDED, "Client exceeded strict auth rate limit", "ip", ip, "path", path);
+                writeRateLimitResponse(response, "تعداد تلاش‌های ورود بیش از حد مجاز است. لطفاً یک دقیقه صبر کنید.");
+                return false;
+            }
+        }
+
+        AtomicInteger counter = ipRequestCounts.get(ip, k -> new AtomicInteger(0));
         if (counter.incrementAndGet() > MAX_REQUESTS_PER_MINUTE) {
-            logger.warn(LogEvent.RATE_LIMIT_EXCEEDED, "Client exceeded rate limit", "ip", ip, "path", path);
-            response.setStatus(429);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"error\":\"تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً یک دقیقه صبر کنید.\"}");
+            logger.warn(LogEvent.RATE_LIMIT_EXCEEDED, "Client exceeded global rate limit", "ip", ip, "path", path);
+            writeRateLimitResponse(response, "تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً یک دقیقه صبر کنید.");
             return false;
         }
 
         return true;
+    }
+
+    private void writeRateLimitResponse(HttpServletResponse response, String message) throws Exception {
+        response.setStatus(429);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"error\":\"" + message + "\"}");
     }
 
     private String getClientIP(HttpServletRequest request) {
