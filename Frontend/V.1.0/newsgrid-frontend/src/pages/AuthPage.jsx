@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { useUser } from '../context/UserContext';
@@ -6,7 +6,7 @@ import DutaLogo from '../components/DutaLogo';
 
 const DEFAULT_CITIES = ['تهران', 'شیراز', 'اصفهان', 'مشهد', 'تبریز', 'کرج', 'اهواز', 'رشت', 'قم', 'کرمانشاه', 'یزد', 'بوشهر'];
 const DEFAULT_CATEGORIES = ['اقتصادی', 'تکنولوژی', 'سیاسی', 'ورزشی', 'جهانی', 'سرگرمی'];
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
 function PasswordCriteriaChecklist({ password, confirmPassword }) {
     const checks = useMemo(() => {
         const lenOk = password.length >= 8;
@@ -73,9 +73,9 @@ function PasswordCriteriaChecklist({ password, confirmPassword }) {
 function AuthPage({ onPreferencesSaved }) {
     const navigate = useNavigate();
     const { user, isLoggedIn, loginSuccess, logout, savePreferences } = useUser();
+    const googleBtnRef = useRef(null);
 
-    // حالت‌های صفحه ورود/ثبت‌نام
-    const [authTab, setAuthTab] = useState('login'); // 'login' | 'register'
+    const [authTab, setAuthTab] = useState('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -83,8 +83,9 @@ function AuthPage({ onPreferencesSaved }) {
     const [showPassword, setShowPassword] = useState(false);
     const [authError, setAuthError] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [googleReady, setGoogleReady] = useState(false);
+    const [googleClientId, setGoogleClientId] = useState(import.meta.env.VITE_GOOGLE_CLIENT_ID || '');
 
-    // حالت‌های پنل کاربری پس از ورود: 'feed_prefs' | 'profile_security'
     const [memberTab, setMemberTab] = useState('feed_prefs');
     const [profileName, setProfileName] = useState('');
     const [currentPass, setCurrentPass] = useState('');
@@ -93,7 +94,6 @@ function AuthPage({ onPreferencesSaved }) {
     const [secMessage, setSecMessage] = useState({ type: '', text: '' });
     const [savedNotice, setSavedNotice] = useState(false);
 
-    // کاتالوگ کشف آبشاری منابع
     const [catalog, setCatalog] = useState({
         cities: DEFAULT_CITIES,
         categories: DEFAULT_CATEGORIES,
@@ -123,14 +123,18 @@ function AuthPage({ onPreferencesSaved }) {
                         categories: res.data.categories || DEFAULT_CATEGORIES,
                         sourcesByCategory: res.data.sourcesByCategory || {}
                     });
+                    if (res.data.googleClientId && !googleClientId) {
+                        setGoogleClientId(res.data.googleClientId);
+                    }
                 }
             })
             .catch(() => {});
     }, [user]);
 
-    // راه‌اندازی Google Identity Services (در صورت تنظیم VITE_GOOGLE_CLIENT_ID)
+    // بارگذاری اسکریپت گوگل و رندر لایه پاپ‌آپ رسمی روی دکمه سفارشی
     useEffect(() => {
-        if (isLoggedIn || !GOOGLE_CLIENT_ID) return;
+        if (isLoggedIn || !googleClientId) return;
+
         const scriptId = 'google-gsi-client';
         if (!document.getElementById(scriptId)) {
             const script = document.createElement('script');
@@ -138,39 +142,56 @@ function AuthPage({ onPreferencesSaved }) {
             script.src = 'https://accounts.google.com/gsi/client';
             script.async = true;
             script.defer = true;
-            script.onload = initGoogleButton;
+            script.onload = initGoogle;
+            script.onerror = () => setGoogleReady(false);
             document.body.appendChild(script);
         } else {
-            initGoogleButton();
+            initGoogle();
         }
 
-        function initGoogleButton() {
+        function initGoogle() {
             if (!window.google?.accounts?.id) return;
-            window.google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: async (response) => {
-                    if (!response.credential) return;
-                    setSubmitting(true);
-                    setAuthError('');
-                    try {
-                        const res = await api.post('/auth/google', { credential: response.credential });
-                        loginSuccess(res.data.token, res.data.user);
-                        if (!res.data.isNewUser) navigate('/');
-                    } catch (err) {
-                        setAuthError(err.response?.data?.error || 'خطا در ورود با حساب گوگل');
-                    } finally {
-                        setSubmitting(false);
+            try {
+                window.google.accounts.id.initialize({
+                    client_id: googleClientId,
+                    callback: async (response) => {
+                        if (!response.credential) return;
+                        setSubmitting(true);
+                        setAuthError('');
+                        try {
+                            const res = await api.post('/auth/google', { credential: response.credential });
+                            loginSuccess(res.data.token, res.data.user);
+                            if (!res.data.isNewUser) navigate('/');
+                        } catch (err) {
+                            setAuthError(err.response?.data?.error || 'خطا در ورود با حساب گوگل');
+                        } finally {
+                            setSubmitting(false);
+                        }
                     }
-                }
-            });
-        }
-    }, [isLoggedIn, loginSuccess, navigate]);
+                });
 
-    const handleGoogleButtonClick = () => {
-        if (window.google?.accounts?.id && GOOGLE_CLIENT_ID) {
+                if (googleBtnRef.current) {
+                    googleBtnRef.current.innerHTML = '';
+                    window.google.accounts.id.renderButton(googleBtnRef.current, {
+                        type: 'standard',
+                        theme: 'outline',
+                        size: 'large',
+                        shape: 'pill',
+                        width: 380
+                    });
+                }
+                setGoogleReady(true);
+            } catch {
+                setGoogleReady(false);
+            }
+        }
+    }, [isLoggedIn, googleClientId, authTab, loginSuccess, navigate]);
+
+    const handleFallbackGoogleClick = () => {
+        if (window.google?.accounts?.id && googleClientId) {
             window.google.accounts.id.prompt();
         } else {
-            setAuthError('برای فعال‌سازی ورود با گوگل، شناسه VITE_GOOGLE_CLIENT_ID را در تنظیمات محیطی قرار دهید.');
+            setAuthError('ارتباط با سرویس گوگل برقرار نشد؛ لطفاً اتصال اینترنت خود را بررسی کنید یا با ایمیل وارد شوید.');
         }
     };
 
@@ -332,7 +353,6 @@ function AuthPage({ onPreferencesSaved }) {
         });
     }
 
-    // ══════════════════ ۱. نمای ورود و ثبت‌نام (کاربر مهمان) ══════════════════
     if (!isLoggedIn) {
         return (
             <div className="auth-page-wrap">
@@ -364,20 +384,34 @@ function AuthPage({ onPreferencesSaved }) {
                         </button>
                     </div>
 
-                    {/* دکمه رسمی ورود با گوگل */}
-                    <button
-                        type="button"
-                        className="google-auth-btn"
-                        onClick={handleGoogleButtonClick}
-                    >
-                        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                            <path fill="#34A853" d="M12 24c3.3 0 6.08-1.09 8.11-2.96l-3.88-3.05c-1.1.74-2.51 1.18-4.23 1.18-3.25 0-6.01-2.2-7-5.15H1.01v3.14C3.03 21.2 7.21 24 12 24z"/>
-                            <path fill="#FBBC05" d="M5 14.02c-.25-.74-.39-1.54-.39-2.37s.14-1.63.39-2.37V6.14H1.01C.37 7.41 0 8.85 0 11.65s.37 4.24 1.01 5.51l3.99-3.14z"/>
-                            <path fill="#EA4335" d="M12 4.75c1.8 0 3.42.62 4.69 1.84l3.51-3.51C18.07 1.19 15.3 0 12 0 7.21 0 3.03 2.8 1.01 6.86l3.99 3.14c.99-2.95 3.75-5.25 7-5.25z"/>
-                        </svg>
-                        <span>ادامه با حساب گوگل (Google)</span>
-                    </button>
+                    {/* دکمه ورود با گوگل با لایه پاپ‌آپ رسمی */}
+                    <div style={{ position: 'relative', width: '100%' }}>
+                        <button
+                            type="button"
+                            className="google-auth-btn"
+                            onClick={handleFallbackGoogleClick}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                                <path fill="#34A853" d="M12 24c3.3 0 6.08-1.09 8.11-2.96l-3.88-3.05c-1.1.74-2.51 1.18-4.23 1.18-3.25 0-6.01-2.2-7-5.15H1.01v3.14C3.03 21.2 7.21 24 12 24z"/>
+                                <path fill="#FBBC05" d="M5 14.02c-.25-.74-.39-1.54-.39-2.37s.14-1.63.39-2.37V6.14H1.01C.37 7.41 0 8.85 0 11.65s.37 4.24 1.01 5.51l3.99-3.14z"/>
+                                <path fill="#EA4335" d="M12 4.75c1.8 0 3.42.62 4.69 1.84l3.51-3.51C18.07 1.19 15.3 0 12 0 7.21 0 3.03 2.8 1.01 6.86l3.99 3.14c.99-2.95 3.75-5.25 7-5.25z"/>
+                            </svg>
+                            <span>ادامه با حساب گوگل (Google)</span>
+                        </button>
+                        <div
+                            ref={googleBtnRef}
+                            style={{
+                                position: 'absolute',
+                                inset: 0,
+                                opacity: 0.01,
+                                overflow: 'hidden',
+                                display: googleReady ? 'flex' : 'none',
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                            }}
+                        />
+                    </div>
 
                     <div className="auth-divider">
                         <span>یا با ایمیل</span>
@@ -476,7 +510,6 @@ function AuthPage({ onPreferencesSaved }) {
         );
     }
 
-    // ══════════════════ ۲. مرکز حساب کاربری (سلیقه خبری + تنظیمات پروفایل و امنیت) ══════════════════
     return (
         <div className="page-content" style={{ maxWidth: '680px' }}>
             <div className="prefs-card">
@@ -497,7 +530,6 @@ function AuthPage({ onPreferencesSaved }) {
                     </button>
                 </div>
 
-                {/* تب‌بندی خطی به سبک X بین «سلیقه خبری» و «پروفایل و امنیت» */}
                 <div className="x-tabs-bar" style={{ marginTop: '14px', marginBottom: '18px' }}>
                     <div className="x-tabs">
                         <button
@@ -519,7 +551,6 @@ function AuthPage({ onPreferencesSaved }) {
 
                 {memberTab === 'feed_prefs' ? (
                     <div>
-                        {/* لایه ۱: شهر */}
                         <div className="x-layer-box" style={{ borderTop: 'none', marginTop: 0, paddingTop: 0 }}>
                             <div className="x-layer-label">۱. موقعیت مکانی شما (اولویت اخبار محلی)</div>
                             <div className="x-pill-cloud">
@@ -543,7 +574,6 @@ function AuthPage({ onPreferencesSaved }) {
                             </div>
                         </div>
 
-                        {/* لایه ۲: دسته‌بندی‌ها */}
                         <div className="x-layer-box">
                             <div className="x-layer-label">۲. حوزه‌های خبری مورد علاقه</div>
                             <div className="x-pill-cloud">
@@ -563,7 +593,6 @@ function AuthPage({ onPreferencesSaved }) {
                             </div>
                         </div>
 
-                        {/* لایه ۳: خبرگزاری‌های تخصصی بازشده */}
                         {availableSources.length > 0 && (
                             <div className="x-layer-box">
                                 <div className="x-layer-label">۳. خبرگزاری‌های تخصصی پیشنهادی (بر اساس انتخاب شما)</div>
@@ -587,7 +616,6 @@ function AuthPage({ onPreferencesSaved }) {
                             </div>
                         )}
 
-                        {/* لایه ۴: پیشنهاد زنجیره‌ای منابع مشابه */}
                         {similarSources.length > 0 && (
                             <div className="x-layer-box" style={{ background: 'rgba(29, 155, 240, 0.06)', padding: '14px', borderRadius: '14px', border: '1px solid rgba(29, 155, 240, 0.2)' }}>
                                 <div className="x-layer-label" style={{ color: 'var(--blue)', marginBottom: '10px' }}>
@@ -636,7 +664,6 @@ function AuthPage({ onPreferencesSaved }) {
                         </div>
                     </div>
                 ) : (
-                    /* ─── تب ۲: تنظیمات پروفایل و تغییر رمز عبور ─── */
                     <div>
                         {secMessage.text && (
                             <div
