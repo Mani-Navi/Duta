@@ -6,7 +6,6 @@ import PriceTicker from './components/PriceTicker';
 import Home from './pages/Home';
 import ErrorBoundary from './components/ErrorBoundary';
 import DutaLogo from './components/DutaLogo';
-import OnboardingModal from './components/OnboardingModal';
 import { UserProvider } from './context/UserContext';
 import api from './api/axiosConfig';
 import { getArticleScore } from './utils/articleHelpers';
@@ -14,6 +13,7 @@ import './App.css';
 
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
 const Tablo = lazy(() => import('./pages/Tablo'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
 const Features = lazy(() => import('./pages/Features'));
 const Credibility = lazy(() => import('./pages/Credibility'));
 const About = lazy(() => import('./pages/About'));
@@ -77,16 +77,16 @@ function PrivacyPage() {
         {
             icon: "ti-shield-lock",
             title: "عدم دریافت اطلاعات هویتی",
-            desc: "استفاده از پلتفرم خبری Duta کاملاً آزاد و رایگان است و برای مطالعه اخبار، جستجو یا بررسی اعتبار منابع نیازی به ثبت‌نام یا ارائه اطلاعات شخصی نیست."
+            desc: "استفاده از پلتفرم خبری Duta کاملاً آزاد و رایگان است و برای مطالعه اخبار، جستجو یا بررسی اعتبار منابع نیازی به ارائه اطلاعات شخصی حساس نیست."
         },
         {
             icon: "ti-chart-bar",
             title: "داده‌های آماری و کوکی‌ها",
-            desc: "ما صرفاً از کوکی‌های استاندارد تحلیلی (Google Analytics) به صورت ناشناس برای سنجش سرعت بارگذاری صفحات و بهبود تجربه کاربری استفاده می‌کنیم."
+            desc: "ما صرفاً از کوکی‌های استاندارد تحلیلی به صورت ناشناس برای سنجش سرعت بارگذاری صفحات و بهبود تجربه کاربری استفاده می‌کنیم."
         },
         {
             icon: "ti-lock",
-            title: "امنیت ارتباطات و عدم اشتراک‌گذاری",
+            title: "امنیت ارتباطات و رمزنگاری",
             desc: "تمامی ارتباطات شما با سرورهای Duta از طریق پروتکل امن HTTPS (TLS 1.3) رمزنگاری می‌شود و هیچ داده‌ای با اشخاص ثالث به اشتراک گذاشته نمی‌شود."
         }
     ];
@@ -274,6 +274,12 @@ function AppLayout() {
                 description: 'نرخ لحظه‌ای دلار، یورو، طلای ۱۸ عیار، سکه امامی و تتر به همراه نمودار تغییرات در تابلو بازار Duta.',
                 canonicalUrl: 'https://duta.ir/tablo'
             });
+        } else if (location.pathname === '/auth') {
+            syncDocumentSeoTags({
+                title: 'حساب کاربری و شخصی‌سازی فید | Duta',
+                description: 'ورود به حساب کاربری Duta و شخصی‌سازی خبرگزاری‌ها، حوزه‌های مورد علاقه و اخبار شهر شما.',
+                canonicalUrl: 'https://duta.ir/auth'
+            });
         } else if (location.pathname === '/features') {
             syncDocumentSeoTags({
                 title: 'ویژگی‌های پلتفرم خبری Duta | خوشه‌بندی و سنجش اعتبار خبر',
@@ -317,10 +323,11 @@ function AppLayout() {
     const isDetail = location.pathname.startsWith('/article/');
     const view = isDetail ? 'detail'
         : location.pathname === '/tablo' ? 'tablo'
-            : location.pathname === '/features' ? 'features'
-                : location.pathname === '/credibility' ? 'credibility'
-                    : location.pathname === '/about' ? 'about'
-                        : isHome ? 'home' : 'other';
+            : location.pathname === '/auth' ? 'auth'
+                : location.pathname === '/features' ? 'features'
+                    : location.pathname === '/credibility' ? 'credibility'
+                        : location.pathname === '/about' ? 'about'
+                            : isHome ? 'home' : 'other';
 
     const handleSearch = useCallback((keyword) => {
         setSearchKeyword(prev => {
@@ -422,6 +429,7 @@ function AppLayout() {
                             <Route path="/" element={null} />
                             <Route path="/article/:slug" element={<ArticleDetailPage />} />
                             <Route path="/tablo" element={<Tablo />} />
+                            <Route path="/auth" element={<AuthPage onPreferencesSaved={() => setFeedRefreshCounter(c => c + 1)} />} />
                             <Route path="/features" element={<Features />} />
                             <Route path="/credibility" element={<Credibility />} />
                             <Route path="/about" element={<About />} />
@@ -432,16 +440,14 @@ function AppLayout() {
                     </Suspense>
                 </main>
 
-                <OnboardingModal onPreferencesSaved={() => setFeedRefreshCounter(c => c + 1)} />
-
                 <footer className="footer-note" style={{ padding: '28px 20px 90px', textAlign: 'center' }} role="contentinfo">
                     <nav aria-label="لینک‌های فوتر" style={{ display: 'flex', justifyContent: 'center', gap: '18px', flexWrap: 'wrap', marginBottom: '12px', fontWeight: 600 }}>
                         <a href="/tablo" onClick={(e) => { e.preventDefault(); handleNavigate('tablo'); }}>تابلو بازار</a>
-                        <a href="/about" onClick={(e) => { e.preventDefault(); handleNavigate('about'); }}>درباره ما</a>
+                        <a href="/features" onClick={(e) => { e.preventDefault(); handleNavigate('features'); }}>ویژگی‌ها</a>
                         <a href="/credibility" onClick={(e) => { e.preventDefault(); handleNavigate('credibility'); }}>روش سنجش اعتبار</a>
+                        <a href="/about" onClick={(e) => { e.preventDefault(); handleNavigate('about'); }}>درباره ما</a>
                         <a href="/privacy" onClick={(e) => { e.preventDefault(); handleNavigate('privacy'); }}>حریم خصوصی</a>
                         <a href="/terms" onClick={(e) => { e.preventDefault(); handleNavigate('terms'); }}>قوانین و سلب مسئولیت</a>
-                        <a href="mailto:info@duta.ir">info@duta.ir</a>
                     </nav>
                     <div style={{ opacity: 0.75 }}>
                         تمامی حقوق برای Duta محفوظ است © {new Date().getFullYear()} — ایران، تهران

@@ -1,9 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
 
 const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
+    const navigate = useNavigate();
+
     const [user, setUser] = useState(() => {
         try {
             const saved = localStorage.getItem('duta_user');
@@ -13,9 +16,6 @@ export function UserProvider({ children }) {
         }
     });
 
-    const [modalState, setModalState] = useState({ open: false, mode: 'auth', title: '' });
-
-    // همگام‌سازی پروفایل کاربر با سرور در بدو ورود
     useEffect(() => {
         const token = localStorage.getItem('duta_token');
         if (!token) return;
@@ -36,34 +36,21 @@ export function UserProvider({ children }) {
             });
     }, []);
 
-    const openModal = useCallback((mode = 'prefs', title = '') => {
-        setModalState({
-            open: true,
-            mode: user ? mode : 'auth',
-            title
-        });
-    }, [user]);
+    const openModal = useCallback(() => {
+        window.scrollTo(0, 0);
+        navigate('/auth');
+    }, [navigate]);
 
-    const closeModal = useCallback(() => {
-        setModalState(prev => ({ ...prev, open: false }));
-    }, []);
-
-    const loginSuccess = useCallback((token, userData, openOnboarding = false) => {
+    const loginSuccess = useCallback((token, userData) => {
         localStorage.setItem('duta_token', token);
         localStorage.setItem('duta_user', JSON.stringify(userData));
         setUser(userData);
-        if (openOnboarding) {
-            setModalState({ open: true, mode: 'prefs', title: 'شخصی‌سازی فید خبری شما' });
-        } else {
-            setModalState({ open: false, mode: 'prefs', title: '' });
-        }
     }, []);
 
     const logout = useCallback(() => {
         localStorage.removeItem('duta_token');
         localStorage.removeItem('duta_user');
         setUser(null);
-        setModalState({ open: false, mode: 'auth', title: '' });
     }, []);
 
     const savePreferences = useCallback(async (prefsPayload) => {
@@ -75,7 +62,7 @@ export function UserProvider({ children }) {
 
     const togglePinTicker = useCallback(async (assetId) => {
         if (!user) {
-            openModal('auth', 'ورود به حساب برای شخصی‌سازی نوار قیمت');
+            navigate('/auth');
             return;
         }
         const current = Array.isArray(user.pinnedTickers) && user.pinnedTickers.length > 0
@@ -84,10 +71,10 @@ export function UserProvider({ children }) {
 
         const idx = current.indexOf(assetId);
         if (idx > -1) {
-            if (current.length <= 1) return; // حداقل ۱ دارایی در هدر باقی بماند
+            if (current.length <= 1) return;
             current.splice(idx, 1);
         } else {
-            if (current.length >= 4) current.shift(); // حداکثر ۴ کپسول در هدر
+            if (current.length >= 4) current.shift();
             current.push(assetId);
         }
 
@@ -98,9 +85,8 @@ export function UserProvider({ children }) {
         try {
             await savePreferences({ pinnedTickers: current });
         } catch {}
-    }, [user, openModal, savePreferences]);
+    }, [user, navigate, savePreferences]);
 
-    // UCS-009: ثبت تعامل معنادار (SOURCE_CLICK, SHARE, QUALIFIED_READ) یا بازخورد منفی (DISLIKE_TOPIC, MUTE_SOURCE, HIDE_CLUSTER)
     const sendFeedback = useCallback(async (actionType, category, sourceName, clusterId) => {
         if (!user) return null;
         try {
@@ -124,9 +110,7 @@ export function UserProvider({ children }) {
         <UserContext.Provider value={{
             user,
             isLoggedIn: !!user,
-            modalState,
             openModal,
-            closeModal,
             loginSuccess,
             logout,
             savePreferences,
