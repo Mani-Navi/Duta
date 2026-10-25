@@ -16,6 +16,7 @@ function NewsCard({ article, onOpen, onHideCard }) {
     const [hotCount, setHotCount] = useState(article.cluster?.hotCount || 0);
     const [doubtCount, setDoubtCount] = useState(article.cluster?.doubtCount || 0);
     const [userReaction, setUserReaction] = useState(article.userReaction || null);
+    const [animatingType, setAnimatingType] = useState(null);
 
     const score = getArticleScore(article);
     const sourceCount = getArticleSourceCount(article);
@@ -28,11 +29,14 @@ function NewsCard({ article, onOpen, onHideCard }) {
     const handleReactionClick = async (e, type) => {
         e.stopPropagation();
         if (!isLoggedIn) {
-            openModal('auth', 'ورود به حساب برای ثبت بازخورد');
+            openModal('auth');
             return;
         }
         const clusterId = article.cluster?.id;
         if (!clusterId) return;
+
+        setAnimatingType(type);
+        setTimeout(() => setAnimatingType(null), 650);
 
         try {
             const res = await api.post(`/clusters/${clusterId}/reactions`, { type });
@@ -49,7 +53,7 @@ function NewsCard({ article, onOpen, onHideCard }) {
         e.stopPropagation();
         setMenuOpen(false);
         if (!isLoggedIn) {
-            openModal('auth', 'ورود به حساب برای شخصی‌سازی فید');
+            openModal('auth');
             return;
         }
         if (onHideCard) {
@@ -73,14 +77,12 @@ function NewsCard({ article, onOpen, onHideCard }) {
                 </div>
             )}
 
-            {/* تگ ظریف دلیل پیشنهاد (فقط در فید شخصی) */}
             {article.reasonLabel && (
                 <div className={`x-card-signal ${article.reasonType === 'local' ? 'local' : article.reasonType === 'source' ? 'accent' : ''}`}>
                     <span>{article.reasonLabel}</span>
                 </div>
             )}
 
-            {/* هدر خلوت کارت: نام کامل منبع در راست | اعتبار و منو در چپ */}
             <div className="card-top">
                 <div className="src-group">
                     <span className="src-badge" style={{ background: srcColor }} aria-hidden="true">
@@ -146,14 +148,13 @@ function NewsCard({ article, onOpen, onHideCard }) {
                 </a>
             </h2>
 
-            {/* فوتر مینیمال به سبک X: زمان انتشار در راست | آیکون‌های خطی بازخورد در چپ */}
             <div className="x-card-actions">
                 <span className="time">{formatRelativeTime(article.publishedAt)}</span>
 
                 <div className="x-reaction-bar">
                     <button
                         type="button"
-                        className={`x-react-btn ${userReaction === 'LIKE' ? 'active-like' : ''}`}
+                        className={`x-react-btn ${userReaction === 'LIKE' ? 'active-like' : ''} ${animatingType === 'LIKE' ? 'anim-like' : ''}`}
                         onClick={(e) => handleReactionClick(e, 'LIKE')}
                         title="مفید"
                         aria-label="مفید"
@@ -166,7 +167,7 @@ function NewsCard({ article, onOpen, onHideCard }) {
 
                     <button
                         type="button"
-                        className={`x-react-btn ${userReaction === 'HOT' ? 'active-hot' : ''}`}
+                        className={`x-react-btn ${userReaction === 'HOT' ? 'active-hot' : ''} ${animatingType === 'HOT' ? 'anim-hot' : ''}`}
                         onClick={(e) => handleReactionClick(e, 'HOT')}
                         title="مهم"
                         aria-label="مهم"
@@ -180,7 +181,7 @@ function NewsCard({ article, onOpen, onHideCard }) {
 
                     <button
                         type="button"
-                        className={`x-react-btn ${userReaction === 'DOUBT' ? 'active-doubt' : ''}`}
+                        className={`x-react-btn ${userReaction === 'DOUBT' ? 'active-doubt' : ''} ${animatingType === 'DOUBT' ? 'anim-doubt' : ''}`}
                         onClick={(e) => handleReactionClick(e, 'DOUBT')}
                         title="تردید در اعتبار"
                         aria-label="تردید"

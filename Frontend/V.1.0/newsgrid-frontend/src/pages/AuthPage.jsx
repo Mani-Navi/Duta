@@ -83,7 +83,6 @@ function AuthPage({ onPreferencesSaved }) {
     const [showPassword, setShowPassword] = useState(false);
     const [authError, setAuthError] = useState('');
     const [submitting, setSubmitting] = useState(false);
-    const [googleReady, setGoogleReady] = useState(false);
     const [googleClientId, setGoogleClientId] = useState(import.meta.env.VITE_GOOGLE_CLIENT_ID || '');
 
     const [memberTab, setMemberTab] = useState('feed_prefs');
@@ -131,11 +130,15 @@ function AuthPage({ onPreferencesSaved }) {
             .catch(() => {});
     }, [user]);
 
-    // بارگذاری اسکریپت گوگل و رندر لایه پاپ‌آپ رسمی روی دکمه سفارشی
     useEffect(() => {
-        if (isLoggedIn || !googleClientId) return;
+        if (isLoggedIn || !googleClientId) {
+            if (googleBtnRef.current) googleBtnRef.current.innerHTML = '';
+            return;
+        }
 
+        let cancelled = false;
         const scriptId = 'google-gsi-client';
+
         if (!document.getElementById(scriptId)) {
             const script = document.createElement('script');
             script.id = scriptId;
@@ -143,14 +146,13 @@ function AuthPage({ onPreferencesSaved }) {
             script.async = true;
             script.defer = true;
             script.onload = initGoogle;
-            script.onerror = () => setGoogleReady(false);
             document.body.appendChild(script);
         } else {
             initGoogle();
         }
 
         function initGoogle() {
-            if (!window.google?.accounts?.id) return;
+            if (cancelled || isLoggedIn || !window.google?.accounts?.id) return;
             try {
                 window.google.accounts.id.initialize({
                     client_id: googleClientId,
@@ -160,6 +162,7 @@ function AuthPage({ onPreferencesSaved }) {
                         setAuthError('');
                         try {
                             const res = await api.post('/auth/google', { credential: response.credential });
+                            if (googleBtnRef.current) googleBtnRef.current.innerHTML = '';
                             loginSuccess(res.data.token, res.data.user);
                             if (!res.data.isNewUser) navigate('/');
                         } catch (err) {
@@ -174,26 +177,24 @@ function AuthPage({ onPreferencesSaved }) {
                     googleBtnRef.current.innerHTML = '';
                     window.google.accounts.id.renderButton(googleBtnRef.current, {
                         type: 'standard',
-                        theme: 'outline',
+                        theme: 'filled_black',
                         size: 'large',
                         shape: 'pill',
-                        width: 380
+                        text: 'continue_with',
+                        locale: 'fa',
+                        width: 360
                     });
                 }
-                setGoogleReady(true);
-            } catch {
-                setGoogleReady(false);
-            }
+            } catch {}
         }
-    }, [isLoggedIn, googleClientId, authTab, loginSuccess, navigate]);
 
-    const handleFallbackGoogleClick = () => {
-        if (window.google?.accounts?.id && googleClientId) {
-            window.google.accounts.id.prompt();
-        } else {
-            setAuthError('ارتباط با سرویس گوگل برقرار نشد؛ لطفاً اتصال اینترنت خود را بررسی کنید یا با ایمیل وارد شوید.');
-        }
-    };
+        return () => {
+            cancelled = true;
+            if (googleBtnRef.current) {
+                googleBtnRef.current.innerHTML = '';
+            }
+        };
+    }, [isLoggedIn, googleClientId, authTab, loginSuccess, navigate]);
 
     const isRegisterValid = useMemo(() => {
         return (
@@ -353,9 +354,10 @@ function AuthPage({ onPreferencesSaved }) {
         });
     }
 
+    // ─── حالت ۱: فرم ورود و ثبت‌نام (با key اختصاصی برای تخریب کامل DOM پس از ورود) ───
     if (!isLoggedIn) {
         return (
-            <div className="auth-page-wrap">
+            <div key="guest-auth-view" className="auth-page-wrap">
                 <div className="auth-card">
                     <div className="auth-brand-head">
                         <DutaLogo />
@@ -384,34 +386,16 @@ function AuthPage({ onPreferencesSaved }) {
                         </button>
                     </div>
 
-                    {/* دکمه ورود با گوگل با لایه پاپ‌آپ رسمی */}
-                    <div style={{ position: 'relative', width: '100%' }}>
-                        <button
-                            type="button"
-                            className="google-auth-btn"
-                            onClick={handleFallbackGoogleClick}
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                                <path fill="#34A853" d="M12 24c3.3 0 6.08-1.09 8.11-2.96l-3.88-3.05c-1.1.74-2.51 1.18-4.23 1.18-3.25 0-6.01-2.2-7-5.15H1.01v3.14C3.03 21.2 7.21 24 12 24z"/>
-                                <path fill="#FBBC05" d="M5 14.02c-.25-.74-.39-1.54-.39-2.37s.14-1.63.39-2.37V6.14H1.01C.37 7.41 0 8.85 0 11.65s.37 4.24 1.01 5.51l3.99-3.14z"/>
-                                <path fill="#EA4335" d="M12 4.75c1.8 0 3.42.62 4.69 1.84l3.51-3.51C18.07 1.19 15.3 0 12 0 7.21 0 3.03 2.8 1.01 6.86l3.99 3.14c.99-2.95 3.75-5.25 7-5.25z"/>
-                            </svg>
-                            <span>ادامه با حساب گوگل (Google)</span>
-                        </button>
-                        <div
-                            ref={googleBtnRef}
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                opacity: 0.01,
-                                overflow: 'hidden',
-                                display: googleReady ? 'flex' : 'none',
-                                justifyContent: 'center',
-                                alignItems: 'center'
-                            }}
-                        />
-                    </div>
+                    {/* کانتینر اختصاصی دکمه گوگل */}
+                    <div
+                        ref={googleBtnRef}
+                        style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            minHeight: '42px',
+                            marginBottom: '4px'
+                        }}
+                    />
 
                     <div className="auth-divider">
                         <span>یا با ایمیل</span>
@@ -510,8 +494,9 @@ function AuthPage({ onPreferencesSaved }) {
         );
     }
 
+    // ─── حالت ۲: پنل حساب کاربری و علایق (با key مجزا) ───
     return (
-        <div className="page-content" style={{ maxWidth: '680px' }}>
+        <div key="member-account-view" className="page-content" style={{ maxWidth: '680px' }}>
             <div className="prefs-card">
                 <div className="prefs-top-bar">
                     <div>
