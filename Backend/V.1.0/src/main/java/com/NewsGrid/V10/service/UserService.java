@@ -16,15 +16,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Manages user authentication (native Java 21 PBKDF2-HMAC-SHA256 password hashing),
- * cached personalization profiles, cascading onboarding catalog, and in-place behavioral scoring.
- */
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -43,6 +44,10 @@ public class UserService {
     private static final int MAX_HIDDEN_CLUSTERS_FIFO = 50;
     private static final int MAX_INTEREST_KEYS = 40;
 
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
+
     private static final List<String> IRAN_CITIES = List.of(
             "تهران", "شیراز", "اصفهان", "مشهد", "تبریز", "کرج", "اهواز", "رشت",
             "قم", "کرمانشاه", "ارومیه", "یزد", "کرمان", "همدان", "بندرعباس", "ساری", "بوشهر", "زنجان", "قزوین", "اردبیل"
@@ -51,9 +56,10 @@ public class UserService {
     @Transactional
     public Map<String, Object> register(String email, String password, String displayName, String locationCity,
                                         List<String> favoriteCategories, List<String> followedSources) {
-        if (email == null || !email.contains("@") || password == null || password.length() < 6) {
-            throw new RuntimeException("ایمیل معتبر و رمز عبور حداقل ۶ کاراکتری الزامی است");
+        if (email == null || !email.contains("@")) {
+            throw new RuntimeException("لطفاً یک آدرس ایمیل معتبر وارد کنید");
         }
+        validatePasswordStrength(password);
 
         String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
@@ -106,6 +112,101 @@ public class UserService {
                 "token", token,
                 "user", buildProfileMap(user)
         );
+    }
+
+    /**
+     * Verifies Google OAuth2 ID Token (credential) and logs in or auto-registers the user.
+     */
+    @Transactional
+    public Map<String, Object> loginWithGoogle(String credential) {
+        if (credential == null || credential.isBlank()) {
+            throw new RuntimeException("توکن گوگل ارسال نشده است");
+        }
+
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?id_token=" + credential.trim()))
+                    .timeout(Duration.ofSeconds(6))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> res = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (res.statusCode() != 200) {
+                throw new RuntimeException("اعتبارسنجی حساب گوگل ناموفق بود");
+            }
+
+            Map<String, Object> payload = objectMapper.readValue(res.body(), new TypeReference<Map<String, Object>>() {});
+            String email = (String) payload.get("email");
+            String name = (String) payload.getOrDefault("name", email != null ? email.split("@")[0] : "کاربر Duta");
+
+            if (email == null || !email.contains("@")) {
+                throw new RuntimeException("ایمیل معتبری از حساب گوگل دریافت نشد");
+            }
+
+            String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+            Optional<User> existingOpt = userRepository.findByEmailIgnoreCase(normalizedEmail);
+            boolean isNewUser = false;
+
+            User user;
+            if (existingOpt.isPresent()) {
+                user = existingOpt.get();
+            } else {
+                isNewUser = true;
+                user = new User();
+                user.setEmail(normalizedEmail);
+                user.setPasswordHash(hashPassword(UUID.randomUUID().toString() + "A1!"));
+                user.setDisplayName(name);
+                user.setFavoriteCategories("[]");
+                user.setFollowedSources("[]");
+                user.setMutedSources("[]");
+                user.setHiddenClusterIds("[]");
+                user.setPinnedTickers("[\"usd\",\"gold18\"]");
+                user.setInterestScores("{}");
+                user = userRepository.save(user);
+            }
+
+            String token = jwtService.generateToken(user.getId(), user.getEmail());
+            return Map.of(
+                    "token", token,
+                    "user", buildProfileMap(user),
+                    "isNewUser", isNewUser
+            );
+        } catch (RuntimeException re) {
+            throw re;
+        } catch (Exception e) {
+            throw new RuntimeException("خطا در ارتباط با سرویس احراز هویت گوگل");
+        }
+    }
+
+    /**
+     * Updates user's password after verifying current password and checking new password strength.
+     */
+    @CacheEvict(value = "user_profiles", key = "#userId")
+    @Transactional
+    public Map<String, String> changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("کاربر یافت نشد"));
+
+        if (currentPassword == null || !verifyPassword(currentPassword, user.getPasswordHash())) {
+            throw new RuntimeException("رمز عبور فعلی اشتباه است");
+        }
+
+        validatePasswordStrength(newPassword);
+        user.setPasswordHash(hashPassword(newPassword));
+        userRepository.save(user);
+
+        return Map.of("status", "رمز عبور شما با موفقیت تغییر یافت");
+    }
+
+    private void validatePasswordStrength(String password) {
+        if (password == null || password.length() < 8) {
+            throw new RuntimeException("رمز عبور باید حداقل ۸ کاراکتر باشد");
+        }
+        boolean hasLetter = password.chars().anyMatch(Character::isLetter);
+        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
+        if (!hasLetter || !hasDigit) {
+            throw new RuntimeException("رمز عبور باید ترکیبی از حروف انگلیسی و اعداد باشد");
+        }
     }
 
     @Cacheable(value = "user_profiles", key = "#userId")
@@ -264,7 +365,6 @@ public class UserService {
         );
     }
 
-    // ── Native Java 21 Salted PBKDF2-HMAC-SHA256 Password Hashing ──
     private String hashPassword(String password) {
         try {
             byte[] salt = new byte[16];

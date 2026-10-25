@@ -36,6 +36,11 @@ public class AuthAndUserController {
         return userService.login(req.getEmail(), req.getPassword());
     }
 
+    @PostMapping("/auth/google")
+    public Map<String, Object> googleAuth(@RequestBody GoogleAuthRequest req) {
+        return userService.loginWithGoogle(req.getCredential());
+    }
+
     @GetMapping("/user/me")
     public ResponseEntity<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         Long userId = jwtService.extractUserIdFromHeader(authHeader);
@@ -67,6 +72,24 @@ public class AuthAndUserController {
                 req.getPinnedTickers()
         );
         return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping("/user/password")
+    public ResponseEntity<?> changePassword(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody ChangePasswordRequest req) {
+
+        Long userId = jwtService.extractUserIdFromHeader(authHeader);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "لطفاً وارد حساب کاربری خود شوید"));
+        }
+
+        return ResponseEntity.ok(userService.changePassword(
+                userId,
+                req.getCurrentPassword(),
+                req.getNewPassword()
+        ));
     }
 
     @PostMapping("/user/feedback")
@@ -112,6 +135,17 @@ public class AuthAndUserController {
     }
 
     @Data
+    public static class GoogleAuthRequest {
+        private String credential;
+    }
+
+    @Data
+    public static class ChangePasswordRequest {
+        private String currentPassword;
+        private String newPassword;
+    }
+
+    @Data
     public static class PreferencesRequest {
         private String displayName;
         private String locationCity;
@@ -123,7 +157,6 @@ public class AuthAndUserController {
 
     @Data
     public static class FeedbackRequest {
-        // SOURCE_CLICK, SHARE, QUALIFIED_READ, DISLIKE_TOPIC, MUTE_SOURCE, UNMUTE_SOURCE, HIDE_CLUSTER
         private String actionType;
         private String category;
         private String sourceName;
