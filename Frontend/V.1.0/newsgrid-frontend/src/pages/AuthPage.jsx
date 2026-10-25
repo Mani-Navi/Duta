@@ -280,6 +280,8 @@ function AuthPage({ onPreferencesSaved }) {
         }
     };
 
+    const hasPassword = user?.hasPassword !== false;
+
     const handleChangePassword = async (e) => {
         e.preventDefault();
         setSecMessage({ type: '', text: '' });
@@ -289,20 +291,23 @@ function AuthPage({ onPreferencesSaved }) {
             return;
         }
         if (newPass.length < 8 || !/[a-zA-Z]/.test(newPass) || !/\d/.test(newPass)) {
-            setSecMessage({ type: 'error', text: 'رمز عبور جدید باید حداقل ۸ کاراکتر و شامل حروف انگلیسی و عدد باشد.' });
+            setSecMessage({ type: 'error', text: 'رمز عبور باید حداقل ۸ کاراکتر و شامل حروف انگلیسی و عدد باشد.' });
             return;
         }
 
         setSubmitting(true);
         try {
             const res = await api.put('/user/password', {
-                currentPassword: currentPass,
+                currentPassword: hasPassword ? currentPass : '',
                 newPassword: newPass
             });
             setCurrentPass('');
             setNewPass('');
             setConfirmNewPass('');
-            setSecMessage({ type: 'success', text: res.data?.status || 'رمز عبور با موفقیت تغییر یافت.' });
+            if (res.data?.user) {
+                loginSuccess(localStorage.getItem('duta_token'), res.data.user);
+            }
+            setSecMessage({ type: 'success', text: res.data?.status || 'رمز عبور با موفقیت ثبت شد.' });
         } catch (err) {
             setSecMessage({ type: 'error', text: err.response?.data?.error || 'رمز عبور فعلی اشتباه است.' });
         } finally {
@@ -689,24 +694,34 @@ function AuthPage({ onPreferencesSaved }) {
                         </form>
 
                         <form onSubmit={handleChangePassword} className="auth-form">
-                            <div className="x-layer-label" style={{ marginBottom: '4px' }}>تغییر رمز عبور</div>
-
-                            <div className="auth-field">
-                                <label htmlFor="cur-pass">رمز عبور فعلی</label>
-                                <input
-                                    id="cur-pass"
-                                    type={showPassword ? 'text' : 'password'}
-                                    dir="ltr"
-                                    placeholder="••••••••"
-                                    value={currentPass}
-                                    onChange={e => setCurrentPass(e.target.value)}
-                                    required
-                                />
+                            <div className="x-layer-label" style={{ marginBottom: '4px' }}>
+                                {hasPassword ? 'تغییر رمز عبور' : 'تعریف رمز عبور برای حساب گوگل'}
                             </div>
+
+                            {!hasPassword && (
+                                <p style={{ fontSize: '12.5px', color: 'var(--label-2)', marginBottom: '6px', lineHeight: 1.6 }}>
+                                    حساب شما از طریق گوگل ساخته شده است. با تعریف رمز عبور، علاوه بر دکمه گوگل می‌توانید با ایمیل و رمز عبور نیز وارد شوید.
+                                </p>
+                            )}
+
+                            {hasPassword && (
+                                <div className="auth-field">
+                                    <label htmlFor="cur-pass">رمز عبور فعلی</label>
+                                    <input
+                                        id="cur-pass"
+                                        type={showPassword ? 'text' : 'password'}
+                                        dir="ltr"
+                                        placeholder="••••••••"
+                                        value={currentPass}
+                                        onChange={e => setCurrentPass(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                            )}
 
                             <div className="auth-field">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <label htmlFor="new-pass">رمز عبور جدید</label>
+                                    <label htmlFor="new-pass">{hasPassword ? 'رمز عبور جدید' : 'رمز عبور'}</label>
                                     <button type="button" className="auth-pass-toggle" onClick={() => setShowPassword(p => !p)}>
                                         {showPassword ? 'پنهان کردن رمز' : 'نمایش رمز'}
                                     </button>
@@ -723,12 +738,12 @@ function AuthPage({ onPreferencesSaved }) {
                             </div>
 
                             <div className="auth-field">
-                                <label htmlFor="conf-new-pass">تکرار رمز عبور جدید</label>
+                                <label htmlFor="conf-new-pass">{hasPassword ? 'تکرار رمز عبور جدید' : 'تکرار رمز عبور'}</label>
                                 <input
                                     id="conf-new-pass"
                                     type={showPassword ? 'text' : 'password'}
                                     dir="ltr"
-                                    placeholder="تکرار رمز عبور جدید"
+                                    placeholder="تکرار رمز عبور"
                                     value={confirmNewPass}
                                     onChange={e => setConfirmNewPass(e.target.value)}
                                     required
@@ -745,9 +760,9 @@ function AuthPage({ onPreferencesSaved }) {
                                     type="submit"
                                     className="auth-submit-btn"
                                     style={{ width: 'auto', padding: '11px 28px' }}
-                                    disabled={submitting || !currentPass || newPass.length < 8 || newPass !== confirmNewPass}
+                                    disabled={submitting || (hasPassword && !currentPass) || newPass.length < 8 || newPass !== confirmNewPass}
                                 >
-                                    {submitting ? 'در حال ثبت...' : 'تغییر رمز عبور'}
+                                    {submitting ? 'در حال ثبت...' : (hasPassword ? 'تغییر رمز عبور' : 'ثبت رمز عبور')}
                                 </button>
                             </div>
                         </form>
