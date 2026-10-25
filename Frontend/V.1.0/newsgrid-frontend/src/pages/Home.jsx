@@ -5,7 +5,7 @@ import HotNewsPanel from '../components/HotNewsPanel';
 import { useUser } from '../context/UserContext';
 
 function Home({ onOpenArticle, searchKeyword, refreshTrigger }) {
-    const { user, isLoggedIn, openModal } = useUser();
+    const { isLoggedIn, openModal } = useUser();
     const [feedTab, setFeedTab] = useState(() => (isLoggedIn ? 'myfeed' : 'newspaper'));
     const [activeCategory, setActiveCategory] = useState(null);
 
@@ -25,16 +25,12 @@ function Home({ onOpenArticle, searchKeyword, refreshTrigger }) {
         setFeedTab(tab);
     };
 
-    const favCats = Array.isArray(user?.favoriteCategories) ? user.favoriteCategories : [];
-    const followedSrcs = Array.isArray(user?.followedSources) ? user.followedSources : [];
-
     return (
         <section aria-label="صفحه اصلی اخبار Duta">
             {!searchKeyword && (
                 <div className="home-top-container">
                     <HotNewsPanel onOpenArticle={onOpenArticle} />
 
-                    {/* نوار تب‌های خطی به سبک X (فید من | روزنامه) */}
                     <div className="x-tabs-bar">
                         <div className="x-tabs">
                             <button
@@ -64,41 +60,17 @@ function Home({ onOpenArticle, searchKeyword, refreshTrigger }) {
                                 <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
                                 <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
                             </svg>
-                            <span>مدیریت منابع و علایق</span>
+                            <span>تنظیم علایق</span>
                         </button>
                     </div>
-
-                    {/* نوار وضعیت فیلترهای فعال در تب «فید من» */}
-                    {feedTab === 'myfeed' && isLoggedIn && (
-                        <div className="x-context-strip">
-                            <div className="x-context-chips">
-                                {user?.locationCity && (
-                                    <span className="x-ctx-chip">موقعیت: {user.locationCity}</span>
-                                )}
-                                {favCats.map(c => (
-                                    <span key={c} className="x-ctx-chip">{c}</span>
-                                ))}
-                                {followedSrcs.slice(0, 4).map(s => (
-                                    <span key={s} className="x-ctx-chip">{s}</span>
-                                ))}
-                                {!user?.locationCity && favCats.length === 0 && followedSrcs.length === 0 && (
-                                    <span style={{ color: 'var(--label-3)', fontSize: '12px' }}>
-                                        حالت کاوش فعال است — برای دقت بیشتر، حوزه‌های مورد علاقه خود را انتخاب کنید.
-                                    </span>
-                                )}
-                            </div>
-                            <span className="x-ctx-meta">ترکیب ۸۵٪ علایق شما + ۱۵٪ کشف</span>
-                        </div>
-                    )}
-
-                    {/* نوار دسته‌بندی‌ها در تب «روزنامه» */}
-                    {feedTab === 'newspaper' && (
-                        <CategoryBar
-                            activeCategory={activeCategory}
-                            onSelectCategory={setActiveCategory}
-                        />
-                    )}
                 </div>
+            )}
+
+            {!searchKeyword && feedTab === 'newspaper' && (
+                <CategoryBar
+                    activeCategory={activeCategory}
+                    onSelectCategory={setActiveCategory}
+                />
             )}
 
             <NewsGrid

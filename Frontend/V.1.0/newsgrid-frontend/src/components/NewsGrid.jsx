@@ -5,10 +5,9 @@ import NewsCardSkeleton from './NewsCardSkeleton';
 import api from '../api/axiosConfig';
 
 function getColumnCountForWidth(w) {
-    if (w <= 440) return 1;
-    if (w <= 768) return 2;
-    if (w <= 1024) return 3;
-    return 4;
+    if (w <= 560) return 1;
+    if (w <= 920) return 2;
+    return 3; // 3 spacious columns on desktop matching the Apple + X prototype
 }
 
 function NewsGrid({ feedMode = 'newspaper', activeCategory, onOpenArticle, searchKeyword, refreshTrigger }) {
