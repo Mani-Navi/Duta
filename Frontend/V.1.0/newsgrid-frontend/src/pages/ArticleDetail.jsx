@@ -14,17 +14,14 @@ import {
 
 function ArticleDetail({ article }) {
     const t = strings.fa;
-    const { user, isLoggedIn, openModal, savePreferences, sendFeedback } = useUser();
+    const { user, isLoggedIn, openModal, savePreferences, sendFeedback, getReactionData, reactToCluster } = useUser();
 
     const [clusterArticles, setClusterArticles] = useState([]);
     const [copied, setCopied] = useState(false);
-
-    // وضعیت زنده ری‌اکشن‌ها و انیمیشن در صفحه خبر
-    const [likeCount, setLikeCount] = useState(article.cluster?.likeCount || 0);
-    const [hotCount, setHotCount] = useState(article.cluster?.hotCount || 0);
-    const [doubtCount, setDoubtCount] = useState(article.cluster?.doubtCount || 0);
-    const [userReaction, setUserReaction] = useState(article.userReaction || null);
     const [animatingType, setAnimatingType] = useState(null);
+
+    // خواندن مستقیم وضعیت و شمارنده‌های ری‌اکشن از استور مشترک
+    const { likeCount, hotCount, doubtCount, userReaction } = getReactionData(article);
 
     const shareUrl = `https://duta.ir/article/${article.slug || article.id}`;
     const categoryName = article.category || article.source?.category?.nameFa;
@@ -33,11 +30,6 @@ function ArticleDetail({ article }) {
     const mainSourceInitials = article.source?.initials || mainSourceName.substring(0, 2);
 
     useEffect(() => {
-        setLikeCount(article.cluster?.likeCount || 0);
-        setHotCount(article.cluster?.hotCount || 0);
-        setDoubtCount(article.cluster?.doubtCount || 0);
-        setUserReaction(article.userReaction || null);
-
         if (article.cluster?.id) {
             api.get(`/clusters/${article.cluster.id}/articles`)
                 .then(res => setClusterArticles(res.data.filter(a => a.id !== article.id)))
@@ -45,7 +37,6 @@ function ArticleDetail({ article }) {
         }
     }, [article]);
 
-    // فیلتر مکث ۱۲ ثانیه‌ای (Dwell Time) برای ثبت مطالعه واقعی
     useEffect(() => {
         if (!isLoggedIn) return;
         const timer = setTimeout(() => {
@@ -59,22 +50,9 @@ function ArticleDetail({ article }) {
             openModal('auth');
             return;
         }
-        const clusterId = article.cluster?.id;
-        if (!clusterId) return;
-
-        // اجرای انیمیشن اختصاصی متناسب با نوع ری‌اکشن
         setAnimatingType(type);
         setTimeout(() => setAnimatingType(null), 650);
-
-        try {
-            const res = await api.post(`/clusters/${clusterId}/reactions`, { type });
-            if (res.data) {
-                setLikeCount(res.data.likeCount ?? 0);
-                setHotCount(res.data.hotCount ?? 0);
-                setDoubtCount(res.data.doubtCount ?? 0);
-                setUserReaction(res.data.userReaction ?? null);
-            }
-        } catch {}
+        await reactToCluster(article, type);
     };
 
     const handleSourceClick = (srcObj) => {
@@ -202,7 +180,6 @@ function ArticleDetail({ article }) {
             </script>
 
             <article className="x-detail-article-card">
-                {/* ۱. هدر رسانه منتشرکننده + دکمه برجسته دنبال کردن (به سبک X) */}
                 <header className="x-publisher-bar">
                     <div className="x-publisher-info">
                         <div className="x-publisher-avatar" style={{ background: mainSourceColor }}>
@@ -247,7 +224,6 @@ function ArticleDetail({ article }) {
                     </button>
                 </header>
 
-                {/* ۲. نشان خبر فوری، تیتر اصلی و باکس خلاصه خبر */}
                 {article.breaking && (
                     <div className="detail-breaking">
                         <span className="pulse-dot" aria-hidden="true" />
@@ -261,7 +237,6 @@ function ArticleDetail({ article }) {
                     <p className="detail-description">{article.description}</p>
                 )}
 
-                {/* ۳. داک ری‌اکشن‌های تعاملی با انیمیشن اختصاصی برای هر واکنش */}
                 <div className="x-detail-reactions-dock" role="group" aria-label="ثبت واکنش به خبر">
                     <button
                         type="button"
@@ -310,7 +285,6 @@ function ArticleDetail({ article }) {
                 </div>
             </article>
 
-            {/* ۴. کارت سنجش اعتبار کلستر */}
             <div className="group-card">
                 <div className="cred-row">
                     <div className="cred-ring-wrap" style={{ width: '58px', height: '58px' }}>
@@ -326,7 +300,6 @@ function ArticleDetail({ article }) {
                 </div>
             </div>
 
-            {/* ۵. لیست منابع مستقل پوشش‌دهنده این خبر */}
             <div className="sources-title">{t.sourcesCoveredBy(sourceCount)}</div>
 
             <div className="source-list">
@@ -364,7 +337,6 @@ function ArticleDetail({ article }) {
                 })}
             </div>
 
-            {/* ۶. نوار اشتراک‌گذاری */}
             <div className="share-inline-bar">
                 <span className="share-inline-label">اشتراک‌گذاری خبر</span>
                 <div className="share-inline-btns">

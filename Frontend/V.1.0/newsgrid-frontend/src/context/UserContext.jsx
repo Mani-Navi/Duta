@@ -16,6 +16,16 @@ export function UserProvider({ children }) {
         }
     });
 
+    // استور مشترک ری‌اکشن‌های کلستر برای سینک آنی بین کارت خبر و صفحه جزئیات خبر
+    const [clusterReactions, setClusterReactions] = useState(() => {
+        try {
+            const saved = localStorage.getItem('duta_cluster_reactions');
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
+
     useEffect(() => {
         const token = localStorage.getItem('duta_token');
         if (!token) return;
@@ -50,7 +60,9 @@ export function UserProvider({ children }) {
     const logout = useCallback(() => {
         localStorage.removeItem('duta_token');
         localStorage.removeItem('duta_user');
+        localStorage.removeItem('duta_cluster_reactions');
         setUser(null);
+        setClusterReactions({});
     }, []);
 
     const savePreferences = useCallback(async (prefsPayload) => {
@@ -106,6 +118,78 @@ export function UserProvider({ children }) {
         }
     }, [user]);
 
+    // خواندن وضعیت لحظه‌ای ری‌اکشن یک خبر (مشترک بین NewsCard و ArticleDetail)
+    const getReactionData = useCallback((article) => {
+        const cid = article?.cluster?.id;
+        const synced = cid ? clusterReactions[cid] : null;
+
+        return {
+            likeCount: synced?.likeCount ?? article?.cluster?.likeCount ?? 0,
+            hotCount: synced?.hotCount ?? article?.cluster?.hotCount ?? 0,
+            doubtCount: synced?.doubtCount ?? article?.cluster?.doubtCount ?? 0,
+            userReaction: synced !== undefined && 'userReaction' in synced
+                ? synced.userReaction
+                : (article?.userReaction ?? null)
+        };
+    }, [clusterReactions]);
+
+    // ثبت و همگام‌سازی آنی ری‌اکشن در کل سایت
+    const reactToCluster = useCallback(async (article, type) => {
+        if (!user) {
+            navigate('/auth');
+            return null;
+        }
+        const cid = article?.cluster?.id;
+        if (!cid) return null;
+
+        // ۱. آپدیت Optimistic فوری در ۰ میلی‌ثانیه
+        const current = getReactionData(article);
+        let { likeCount, hotCount, doubtCount, userReaction } = current;
+
+        if (userReaction === type) {
+            if (type === 'LIKE') likeCount = Math.max(0, likeCount - 1);
+            if (type === 'HOT') hotCount = Math.max(0, hotCount - 1);
+            if (type === 'DOUBT') doubtCount = Math.max(0, doubtCount - 1);
+            userReaction = null;
+        } else {
+            if (userReaction === 'LIKE') likeCount = Math.max(0, likeCount - 1);
+            if (userReaction === 'HOT') hotCount = Math.max(0, hotCount - 1);
+            if (userReaction === 'DOUBT') doubtCount = Math.max(0, doubtCount - 1);
+
+            if (type === 'LIKE') likeCount++;
+            if (type === 'HOT') hotCount++;
+            if (type === 'DOUBT') doubtCount++;
+            userReaction = type;
+        }
+
+        const optimisticEntry = { likeCount, hotCount, doubtCount, userReaction };
+        setClusterReactions(prev => {
+            const next = { ...prev, [cid]: optimisticEntry };
+            localStorage.setItem('duta_cluster_reactions', JSON.stringify(next));
+            return next;
+        });
+
+        // ۲. همگام‌سازی با سرور
+        try {
+            const res = await api.post(`/clusters/${cid}/reactions`, { type });
+            if (res.data) {
+                const confirmed = {
+                    likeCount: res.data.likeCount ?? likeCount,
+                    hotCount: res.data.hotCount ?? hotCount,
+                    doubtCount: res.data.doubtCount ?? doubtCount,
+                    userReaction: res.data.userReaction ?? null
+                };
+                setClusterReactions(prev => {
+                    const next = { ...prev, [cid]: confirmed };
+                    localStorage.setItem('duta_cluster_reactions', JSON.stringify(next));
+                    return next;
+                });
+                return confirmed;
+            }
+        } catch {}
+        return optimisticEntry;
+    }, [user, navigate, getReactionData]);
+
     return (
         <UserContext.Provider value={{
             user,
@@ -115,7 +199,9 @@ export function UserProvider({ children }) {
             logout,
             savePreferences,
             togglePinTicker,
-            sendFeedback
+            sendFeedback,
+            getReactionData,
+            reactToCluster
         }}>
             {children}
         </UserContext.Provider>

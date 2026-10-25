@@ -1,5 +1,4 @@
 import { memo, useState } from 'react';
-import api from '../api/axiosConfig';
 import { useUser } from '../context/UserContext';
 import {
     getArticleScore,
@@ -9,14 +8,12 @@ import {
 } from '../utils/articleHelpers';
 
 function NewsCard({ article, onOpen, onHideCard }) {
-    const { isLoggedIn, openModal, sendFeedback } = useUser();
+    const { isLoggedIn, openModal, sendFeedback, getReactionData, reactToCluster } = useUser();
 
     const [menuOpen, setMenuOpen] = useState(false);
-    const [likeCount, setLikeCount] = useState(article.cluster?.likeCount || 0);
-    const [hotCount, setHotCount] = useState(article.cluster?.hotCount || 0);
-    const [doubtCount, setDoubtCount] = useState(article.cluster?.doubtCount || 0);
-    const [userReaction, setUserReaction] = useState(article.userReaction || null);
     const [animatingType, setAnimatingType] = useState(null);
+
+    const { likeCount, hotCount, doubtCount, userReaction } = getReactionData(article);
 
     const score = getArticleScore(article);
     const sourceCount = getArticleSourceCount(article);
@@ -32,21 +29,9 @@ function NewsCard({ article, onOpen, onHideCard }) {
             openModal('auth');
             return;
         }
-        const clusterId = article.cluster?.id;
-        if (!clusterId) return;
-
         setAnimatingType(type);
         setTimeout(() => setAnimatingType(null), 650);
-
-        try {
-            const res = await api.post(`/clusters/${clusterId}/reactions`, { type });
-            if (res.data) {
-                setLikeCount(res.data.likeCount ?? 0);
-                setHotCount(res.data.hotCount ?? 0);
-                setDoubtCount(res.data.doubtCount ?? 0);
-                setUserReaction(res.data.userReaction ?? null);
-            }
-        } catch {}
+        await reactToCluster(article, type);
     };
 
     const handleNegativeAction = async (e, actionType) => {
