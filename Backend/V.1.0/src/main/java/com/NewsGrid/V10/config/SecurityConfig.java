@@ -23,8 +23,6 @@ public class SecurityConfig implements WebMvcConfigurer {
                         "https://duta.ir",
                         "https://www.duta.ir",
                         "https://*.duta.ir",
-                        "https://news-grid-pi.vercel.app",
-                        "https://*.vercel.app",
                         "http://localhost:5173",
                         "http://localhost:4173"
                 )
@@ -43,17 +41,17 @@ public class SecurityConfig implements WebMvcConfigurer {
 
                 response.setHeader("X-Frame-Options", "DENY");
                 response.setHeader("X-Content-Type-Options", "nosniff");
-                response.setHeader("X-XSS-Protection", "1; mode=block");
                 response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
                 response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
 
                 response.setHeader("Content-Security-Policy",
                         "default-src 'self'; " +
-                                "script-src 'self' 'unsafe-inline'; " +
-                                "style-src 'self' 'unsafe-inline'; " +
+                                "script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.googletagmanager.com; " +
+                                "style-src 'self' 'unsafe-inline' https://accounts.google.com; " +
                                 "img-src 'self' data: https: http:; " +
                                 "font-src 'self' data: https:; " +
-                                "connect-src 'self' https://duta.ir https://*.duta.ir https://newsgrid-production-16cb.up.railway.app https://*.up.railway.app; " +
+                                "frame-src 'self' https://accounts.google.com; " +
+                                "connect-src 'self' https://duta.ir https://*.duta.ir https://accounts.google.com https://www.google-analytics.com; " +
                                 "frame-ancestors 'none';");
 
                 response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");

@@ -9,7 +9,9 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,23 +31,33 @@ public class ArticleService {
 
     @Cacheable(value = "articles", key = "'all-' + #page + '-' + #size")
     public Page<Article> getAllArticles(int page, int size) {
-        return articleRepository.findRepresentativeArticles(PageRequest.of(page, size));
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Long> idPage = articleRepository.findRepresentativeArticleIds(pageable);
+        return hydrateArticlePage(idPage, pageable);
     }
 
-    @Cacheable(value = "articles", key = "'pool-recent-300'")
+    /**
+     * SCALE-04 & BUG-03 FIX: 500-article in-memory pool hydrated with zero N+1 queries.
+     */
+    @Cacheable(value = "articles", key = "'pool-recent-500'")
     public List<Article> getRecentRepresentativePool() {
-        return articleRepository.findRepresentativeArticles(PageRequest.of(0, 300)).getContent();
+        Page<Long> idPage = articleRepository.findRepresentativeArticleIds(PageRequest.of(0, 500));
+        if (idPage.isEmpty()) return List.of();
+        return articleRepository.findByIdInWithDetails(idPage.getContent());
     }
 
     @Cacheable(value = "articles", key = "'cat-' + #categoryName + '-' + #page + '-' + #size")
     public Page<Article> getArticlesByCategory(String categoryName, int page, int size) {
-        return articleRepository.findRepresentativeByCategory(
-                categoryName, PageRequest.of(page, size));
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Long> idPage = articleRepository.findRepresentativeIdsByCategory(categoryName, pageable);
+        return hydrateArticlePage(idPage, pageable);
     }
 
     @Cacheable(value = "articles", key = "'breaking-' + #page + '-' + #size")
     public Page<Article> getBreakingArticles(int page, int size) {
-        return articleRepository.findRepresentativeBreaking(PageRequest.of(page, size));
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Long> idPage = articleRepository.findRepresentativeIdsBreaking(pageable);
+        return hydrateArticlePage(idPage, pageable);
     }
 
     @Cacheable(value = "article_detail", key = "'id-' + #id")
@@ -74,8 +86,9 @@ public class ArticleService {
     }
 
     public Page<Article> searchArticles(String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
         if (keyword == null || keyword.isBlank()) {
-            return Page.empty(PageRequest.of(page, size));
+            return Page.empty(pageable);
         }
 
         String cleanKeyword = keyword.trim()
@@ -83,7 +96,16 @@ public class ArticleService {
                 .replace('ك', 'ک')
                 .replaceAll("([\\\\.*+?^${}()|\\[\\]])", "\\\\$1");
 
-        return articleRepository.searchByKeyword(cleanKeyword, PageRequest.of(page, size));
+        Page<Long> idPage = articleRepository.searchRepresentativeIdsByKeyword(cleanKeyword, pageable);
+        return hydrateArticlePage(idPage, pageable);
+    }
+
+    private Page<Article> hydrateArticlePage(Page<Long> idPage, Pageable pageable) {
+        if (idPage.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        List<Article> hydrated = articleRepository.findByIdInWithDetails(idPage.getContent());
+        return new PageImpl<>(hydrated, pageable, idPage.getTotalElements());
     }
 
     @Caching(evict = {
@@ -158,7 +180,7 @@ public class ArticleService {
 
     @Cacheable(value = "sitemap", key = "'xml'")
     public String generateNewsSitemapXml() {
-        List<Article> recentArticles = articleRepository.findTop1000ByOrderByPublishedAtDesc();
+        List<Article> recentArticles = articleRepository.findRecentForSitemap(PageRequest.of(0, 1000));
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         ZonedDateTime googleNewsCutoff = now.minusHours(48);
 
@@ -168,6 +190,7 @@ public class ArticleService {
         xml.append("xmlns:news=\"http://www.google.com/schemas/sitemap-news/0.9\">\n");
 
         appendStaticUrl(xml, "https://duta.ir/", "always", "1.0");
+        appendStaticUrl(xml, "https://duta.ir/tablo", "always", "0.9");
         appendStaticUrl(xml, "https://duta.ir/features", "monthly", "0.8");
         appendStaticUrl(xml, "https://duta.ir/credibility", "monthly", "0.8");
         appendStaticUrl(xml, "https://duta.ir/about", "monthly", "0.7");
