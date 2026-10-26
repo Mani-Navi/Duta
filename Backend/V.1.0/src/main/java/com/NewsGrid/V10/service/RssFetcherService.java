@@ -15,15 +15,20 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
-import com.rometools.rome.io.XmlReader;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.net.ssl.*;
+import java.io.InputStream;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -33,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.GZIPInputStream;
 
 @Service
 public class RssFetcherService {
@@ -124,7 +130,7 @@ public class RssFetcherService {
                                 totalNewArticles.addAndGet(saved);
                                 successCount.incrementAndGet();
                             }, rssTaskExecutor)
-                            .orTimeout(20, TimeUnit.SECONDS)
+                            .orTimeout(25, TimeUnit.SECONDS)
                             .exceptionally(ex -> {
                                 logger.warn(LogEvent.FETCH_FAILED, "RSS fetch timed out or failed",
                                         "source", source.getName(), "error", ex.getMessage());
@@ -174,72 +180,73 @@ public class RssFetcherService {
 
     private int fetchSingleRssSource(Source source) {
         var fetchTimer = logger.startTimer();
-        logger.debug(LogEvent.FETCH_START, "Fetching single RSS source", "source", source.getName());
         int savedCount = 0;
         int duplicateCount = 0;
 
         try {
-            URL feedUrl = new URL(source.getRssUrl());
-            HttpURLConnection conn = (HttpURLConnection) feedUrl.openConnection(proxyConfig.getProxy());
-
-            if (conn instanceof HttpsURLConnection httpsConn && rssSslSocketFactory != null) {
-                httpsConn.setSSLSocketFactory(rssSslSocketFactory);
-                httpsConn.setHostnameVerifier(RSS_HOSTNAME_VERIFIER);
+            String rawPayload = downloadFeedOrPage(source.getRssUrl());
+            if (rawPayload == null || rawPayload.isBlank()) {
+                return 0;
             }
 
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36");
-            conn.setRequestProperty("Accept", "text/xml, application/xml, application/rss+xml, */*");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-
-            try (XmlReader reader = new XmlReader(conn)) {
-                SyndFeed feed = new SyndFeedInput().build(reader);
+            int xmlStart = findXmlRootStart(rawPayload);
+            if (xmlStart >= 0) {
+                String cleanXml = rawPayload.substring(xmlStart).trim();
+                SyndFeed feed = new SyndFeedInput().build(new StringReader(cleanXml));
 
                 for (SyndEntry entry : feed.getEntries()) {
                     try {
                         String link = entry.getLink() != null ? entry.getLink().trim() : null;
                         String title = entry.getTitle() != null ? entry.getTitle().trim() : null;
+                        if (link == null || link.isBlank() || title == null || title.isBlank()) continue;
 
-                        if (link == null || link.isBlank() || title == null || title.isBlank()) {
-                            continue;
-                        }
-
-                        if (seenUrlsCache.getIfPresent(link) != null) {
-                            duplicateCount++;
-                            continue;
-                        }
-
-                        if (articleRepository.existsByUrl(link)) {
-                            seenUrlsCache.put(link, Boolean.TRUE);
+                        if (isDuplicateUrl(link)) {
                             duplicateCount++;
                             continue;
                         }
 
                         String cleanDesc = extractCleanDescription(entry);
+                        ZonedDateTime pubAt = entry.getPublishedDate() != null
+                                ? entry.getPublishedDate().toInstant().atZone(ZoneOffset.UTC)
+                                : ZonedDateTime.now(ZoneOffset.UTC);
 
-                        Article article = new Article();
-                        article.setTitle(title);
-                        article.setDescription(cleanDesc);
-                        article.setUrl(link);
+                        saveAndClusterArticle(source, title, cleanDesc, link, pubAt);
+                        savedCount++;
+                    } catch (Throwable ignored) {}
+                }
+            } else {
+                // پشتیبانی خودکار از صفحات دسته‌بندی HTML (مانند متادرس و سایت‌های بدون XML)
+                Document doc = Jsoup.parse(rawPayload, source.getRssUrl());
+                Elements links = doc.select("article h2 a, article h3 a, .entry-title a, .post-title a, h2.title a, h3.title a");
+                if (links.isEmpty()) {
+                    links = doc.select("h2 a[href], h3 a[href]");
+                }
 
-                        if (entry.getPublishedDate() != null) {
-                            article.setPublishedAt(entry.getPublishedDate().toInstant().atZone(ZoneOffset.UTC));
-                        } else {
-                            article.setPublishedAt(ZonedDateTime.now(ZoneOffset.UTC));
+                int count = 0;
+                for (Element aTag : links) {
+                    if (count >= 25) break;
+                    try {
+                        String link = aTag.absUrl("href").trim();
+                        String title = aTag.text().trim();
+                        if (link.isBlank() || title.length() < 12) continue;
+
+                        if (isDuplicateUrl(link)) {
+                            duplicateCount++;
+                            continue;
                         }
 
-                        article.setSource(source);
-                        article.setBreaking(isBreaking(title));
-                        article.setCategory(categoryClassifier.classify(title, source));
-                        article.setLocation(locationClassifier.detectLocation(title, cleanDesc));
-                        article.setSlug(slugService.generateSlug(title, articleRepository));
+                        String summary = null;
+                        Element articleParent = aTag.closest("article, .post, .item");
+                        if (articleParent != null) {
+                            Element p = articleParent.selectFirst("p, .entry-summary, .excerpt");
+                            if (p != null && !p.text().isBlank()) {
+                                summary = trimSummary(p.text().trim());
+                            }
+                        }
 
-                        articleRepository.save(article);
-                        seenUrlsCache.put(link, Boolean.TRUE);
-                        clusteringService.clusterArticle(article);
-
-                        logger.debug(LogEvent.ARTICLE_SAVED, "New article saved", "title", article.getTitle());
+                        saveAndClusterArticle(source, title, summary, link, ZonedDateTime.now(ZoneOffset.UTC));
                         savedCount++;
+                        count++;
                     } catch (Throwable ignored) {}
                 }
             }
@@ -261,21 +268,106 @@ public class RssFetcherService {
         return savedCount;
     }
 
+    private String downloadFeedOrPage(String urlStr) throws Exception {
+        String currentUrl = urlStr;
+        for (int redirect = 0; redirect < 4; redirect++) {
+            URL feedUrl = new URL(currentUrl);
+            HttpURLConnection conn = (HttpURLConnection) feedUrl.openConnection(proxyConfig.getProxy());
+
+            if (conn instanceof HttpsURLConnection httpsConn && rssSslSocketFactory != null) {
+                httpsConn.setSSLSocketFactory(rssSslSocketFactory);
+                httpsConn.setHostnameVerifier(RSS_HOSTNAME_VERIFIER);
+            }
+
+            conn.setInstanceFollowRedirects(true);
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+            conn.setRequestProperty("Accept", "application/rss+xml, application/xml, text/xml, text/html, */*");
+            conn.setRequestProperty("Accept-Language", "fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7");
+            conn.setRequestProperty("Accept-Encoding", "gzip, identity");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(12000);
+
+            int status = conn.getResponseCode();
+            if (status == HttpURLConnection.HTTP_MOVED_PERM || status == HttpURLConnection.HTTP_MOVED_TEMP
+                    || status == 307 || status == 308) {
+                String loc = conn.getHeaderField("Location");
+                if (loc != null && !loc.isBlank()) {
+                    currentUrl = new URL(feedUrl, loc).toString();
+                    continue;
+                }
+            }
+
+            try (InputStream rawStream = conn.getInputStream();
+                 InputStream in = "gzip".equalsIgnoreCase(conn.getContentEncoding())
+                         ? new GZIPInputStream(rawStream)
+                         : rawStream) {
+                return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            }
+        }
+        return null;
+    }
+
+    private int findXmlRootStart(String body) {
+        int xmlDecl = body.indexOf("<?xml");
+        int rssTag = body.indexOf("<rss");
+        int feedTag = body.indexOf("<feed");
+
+        int best = -1;
+        for (int idx : new int[]{xmlDecl, rssTag, feedTag}) {
+            if (idx >= 0 && (best == -1 || idx < best)) {
+                best = idx;
+            }
+        }
+        return (best >= 0 && best < 500) ? best : -1;
+    }
+
+    private boolean isDuplicateUrl(String link) {
+        if (seenUrlsCache.getIfPresent(link) != null) {
+            return true;
+        }
+        if (articleRepository.existsByUrl(link)) {
+            seenUrlsCache.put(link, Boolean.TRUE);
+            return true;
+        }
+        return false;
+    }
+
+    private void saveAndClusterArticle(Source source, String title, String cleanDesc, String link, ZonedDateTime pubAt) {
+        Article article = new Article();
+        article.setTitle(title);
+        article.setDescription(cleanDesc);
+        article.setUrl(link);
+        article.setPublishedAt(pubAt);
+        article.setSource(source);
+        article.setBreaking(isBreaking(title));
+        article.setCategory(categoryClassifier.classify(title, source));
+        article.setLocation(locationClassifier.detectLocation(title, cleanDesc));
+        article.setSlug(slugService.generateSlug(title, articleRepository));
+
+        articleRepository.save(article);
+        seenUrlsCache.put(link, Boolean.TRUE);
+        clusteringService.clusterArticle(article);
+    }
+
     private String extractCleanDescription(SyndEntry entry) {
         try {
             if (entry.getDescription() == null || entry.getDescription().getValue() == null) {
                 return null;
             }
             String clean = Jsoup.parse(entry.getDescription().getValue()).text().trim();
-            if (clean.isBlank()) return null;
-            if (clean.length() > 350) {
-                int lastSpace = clean.substring(0, 350).lastIndexOf(' ');
-                return (lastSpace > 100) ? clean.substring(0, lastSpace) + "..." : clean.substring(0, 347) + "...";
-            }
-            return clean;
+            return trimSummary(clean);
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private String trimSummary(String clean) {
+        if (clean == null || clean.isBlank()) return null;
+        if (clean.length() > 350) {
+            int lastSpace = clean.substring(0, 350).lastIndexOf(' ');
+            return (lastSpace > 100) ? clean.substring(0, lastSpace) + "..." : clean.substring(0, 347) + "...";
+        }
+        return clean;
     }
 
     private boolean isBreaking(String title) {
