@@ -47,7 +47,7 @@ a {
     cursor: pointer;
 }
 
-/* ─── Desktop Navbar ─── */
+/* ─── Desktop Navbar (100% No-Wrap & Overflow-Safe) ─── */
 .navbar {
     position: sticky;
     top: 0;
@@ -56,18 +56,19 @@ a {
     -webkit-backdrop-filter: blur(18px) saturate(180%);
     backdrop-filter: blur(18px) saturate(180%);
     border-bottom: 1px solid var(--separator);
-    min-height: 54px;
+    min-height: 56px;
     transform: translateZ(0);
 }
 
 .nav-row {
-    max-width: 1120px;
+    max-width: 1160px;
     margin: 0 auto;
     padding: 10px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 14px;
+    flex-wrap: nowrap;
 }
 
 .logo {
@@ -107,16 +108,25 @@ a {
 .nav-right {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .nav-links {
     display: flex;
     align-items: center;
-    gap: 18px;
-    font-size: 13.5px;
+    gap: 16px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--label-2);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.nav-links a {
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .nav-links a:hover { color: var(--label); }
@@ -124,7 +134,9 @@ a {
 .nav-tools {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .tool-btn, .toggle-btn {
@@ -142,36 +154,52 @@ a {
     flex-shrink: 0;
 }
 
-/* ─── Header Price Ticker Capsules (Classic Green & Gold Tinted Glass) ─── */
+/* ─── Header Price Ticker Capsules (Adaptive 1–4 Assets without Clipping) ─── */
 .nav-center {
+    flex: 1;
+    min-width: 0;
     min-height: 34px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
+.nav-center::-webkit-scrollbar { display: none; }
 
 .price-ticker-wrapper {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
+    gap: 7px;
     white-space: nowrap;
+    margin: 0 auto;
+    width: max-content;
 }
 
 .price-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 13px;
+    padding: 5px 12px;
     border-radius: 99px;
     font-size: 12px;
     flex-shrink: 0;
+    white-space: nowrap;
 }
 
-.chip-label { font-weight: 700; font-size: 11px; }
-.chip-value { font-weight: 800; color: var(--label); font-variant-numeric: tabular-nums; letter-spacing: -0.2px; }
-.chip-unit { font-size: 10px; color: var(--label-3); font-weight: 500; }
+.price-ticker-wrapper.is-compact {
+    gap: 5px;
+}
+
+.price-ticker-wrapper.is-compact .price-chip {
+    padding: 4px 10px;
+    font-size: 11.5px;
+    gap: 5px;
+}
+
+.chip-label { font-weight: 700; font-size: 11px; white-space: nowrap; }
+.chip-value { font-weight: 800; color: var(--label); font-variant-numeric: tabular-nums; letter-spacing: -0.2px; white-space: nowrap; }
+.chip-unit { font-size: 10px; color: var(--label-3); font-weight: 500; white-space: nowrap; }
 
 .price-chip.usd {
     background: rgba(16, 185, 129, 0.1);
@@ -640,7 +668,7 @@ a {
     flex-shrink: 0;
 }
 
-/* ─── SVG Icons ─── */
+/* ─── SVG Icons & Header Pills ─── */
 .x-svg {
     width: 16px;
     height: 16px;
@@ -674,10 +702,18 @@ a {
     color: var(--label);
     border: 1px solid var(--separator);
     cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-family: inherit;
 }
 
 .x-auth-pill {
-    padding: 6px 14px;
+    display: inline-block;
+    max-width: 145px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 6px 13px;
     border-radius: 99px;
     font-size: 12px;
     font-weight: 700;
@@ -685,6 +721,9 @@ a {
     color: var(--bg);
     border: 1px solid var(--label);
     cursor: pointer;
+    flex-shrink: 0;
+    font-family: inherit;
+    line-height: 1.4;
 }
 .x-auth-pill.is-member {
     background: var(--chip-bg);
@@ -1416,7 +1455,6 @@ a {
     .mobile-only { display: block; }
     .desktop-only { display: none; }
 
-    /* 1. Unified Glassmorphic Mobile Header + Swipeable Market Strip */
     .mobile-top-glass {
         position: sticky;
         top: 0;
@@ -1460,6 +1498,7 @@ a {
         border: 1px solid rgba(0, 186, 124, 0.28);
         font-family: inherit;
         cursor: pointer;
+        white-space: nowrap;
     }
 
     .mobile-account-chip {
@@ -1472,6 +1511,10 @@ a {
         border: 1px solid var(--label);
         font-family: inherit;
         cursor: pointer;
+        white-space: nowrap;
+        max-width: 110px;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .mobile-account-chip.is-member {
         background: var(--chip-bg);
@@ -1490,6 +1533,7 @@ a {
 
     .mobile-ticker-strip .price-ticker-wrapper {
         justify-content: flex-start;
+        margin: 0;
         width: max-content;
         min-width: 100%;
         gap: 7px;
@@ -1500,7 +1544,6 @@ a {
         font-size: 11.5px;
     }
 
-    /* 2. Home Container & Horizontal Snap-Carousel for Hot News on Mobile */
     .home-top-container {
         padding: 10px 12px 0;
     }
@@ -1553,7 +1596,6 @@ a {
         overflow: hidden;
     }
 
-    /* 3. X-Style Balanced Mobile Feed Tabs */
     .x-tabs-bar {
         margin-bottom: 6px;
         gap: 8px;
@@ -1586,7 +1628,6 @@ a {
         font-size: 12px;
     }
 
-    /* 4. Mobile News Grid & Tactile iOS Card Physics */
     .masonry-grid {
         gap: 10px;
         padding: 6px 12px 96px;
@@ -1632,7 +1673,6 @@ a {
         height: 30px;
     }
 
-    /* 5. Mobile Article Detail & Reaction Dock Polish */
     .back-bar {
         padding: 10px 12px 0;
     }
@@ -1679,7 +1719,6 @@ a {
         justify-content: space-between;
     }
 
-    /* 6. Mobile Tablo & Auth Polish */
     .page-content {
         padding: 18px 12px 100px;
     }
@@ -1698,7 +1737,6 @@ a {
         border-radius: 18px;
     }
 
-    /* 7. Floating iOS Glass Dock BottomNav & Search Sheet */
     .bottom-nav {
         display: flex;
         position: fixed;

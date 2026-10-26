@@ -3,12 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
 import { useUser } from '../context/UserContext';
 
-// Module-level singleton store for Tablo & Header market data
 let sharedTabloAssets = null;
 let lastFetchTime = 0;
 let activePromise = null;
 const subscribers = new Set();
 const FETCH_INTERVAL_MS = 5 * 60 * 1000;
+
+const SHORT_NAMES = {
+    usd: 'دلار',
+    eur: 'یورو',
+    aed: 'درهم',
+    gbp: 'پوند',
+    try: 'لیر',
+    gold18: 'طلا ۱۸',
+    gold24: 'طلا ۲۴',
+    sekee: 'سکه امامی',
+    sekeb: 'سکه بهار',
+    nim: 'نیم‌سکه',
+    rob: 'ربع‌سکه',
+    usdt: 'تتر'
+};
 
 function notifySubscribers(assets) {
     sharedTabloAssets = assets;
@@ -29,12 +43,11 @@ export function fetchSharedMarketData(force = false) {
                 notifySubscribers(res.data.assets);
                 return res.data.assets;
             }
-            // Fallback to legacy /prices if /prices/tablo is not yet populated
             return api.get('/prices').then(legacy => {
                 if (legacy.data && !legacy.data.error) {
                     const fallbackList = [];
                     if (legacy.data.usd) {
-                        fallbackList.push({ id: 'usd', name: 'دلار', price: legacy.data.usd.price, unit: 'تومان', chipTheme: 'usd' });
+                        fallbackList.push({ id: 'usd', name: 'دلار آزاد', price: legacy.data.usd.price, unit: 'تومان', chipTheme: 'usd' });
                     }
                     if (legacy.data.gold) {
                         fallbackList.push({ id: 'gold18', name: 'طلا ۱۸ عیار', price: legacy.data.gold.price, unit: 'تومان/گرم', chipTheme: 'gold' });
@@ -76,9 +89,11 @@ function PriceTicker() {
         ? pinnedIds.map(id => assets.find(a => a.id === id)).filter(Boolean)
         : [];
 
+    const isCompact = displayedAssets.length >= 3;
+
     return (
         <div
-            className="price-ticker-wrapper"
+            className={`price-ticker-wrapper ${isCompact ? 'is-compact' : ''}`}
             dir="rtl"
             aria-label="نرخ زنده بازار — کلیک برای مشاهده تابلو"
             onClick={() => navigate('/tablo')}
@@ -86,13 +101,16 @@ function PriceTicker() {
             title="مشاهده تابلو کامل بازار"
         >
             {displayedAssets.length > 0 ? (
-                displayedAssets.map(item => (
-                    <div key={item.id} className={`price-chip ${item.chipTheme === 'gold' ? 'gold' : 'usd'}`}>
-                        <span className="chip-label">{item.name}</span>
-                        <span className="chip-value">{item.price}</span>
-                        <span className="chip-unit">{item.unit}</span>
-                    </div>
-                ))
+                displayedAssets.map(item => {
+                    const label = isCompact ? (SHORT_NAMES[item.id] || item.name) : item.name;
+                    return (
+                        <div key={item.id} className={`price-chip ${item.chipTheme === 'gold' ? 'gold' : 'usd'}`}>
+                            <span className="chip-label">{label}</span>
+                            <span className="chip-value">{item.price}</span>
+                            {!isCompact && <span className="chip-unit">{item.unit}</span>}
+                        </div>
+                    );
+                })
             ) : (
                 <>
                     <div className="price-chip usd skeleton-chip" aria-hidden="true" style={{ opacity: 0.4 }}>
