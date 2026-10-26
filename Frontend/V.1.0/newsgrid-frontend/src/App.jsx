@@ -4,6 +4,8 @@ import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import PriceTicker from './components/PriceTicker';
 import Home from './pages/Home';
+import Privacy from './pages/Privacy';
+import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 import DutaLogo from './components/DutaLogo';
 import { UserProvider } from './context/UserContext';
@@ -41,76 +43,6 @@ function syncDocumentSeoTags({ title, description, canonicalUrl }) {
         document.head.appendChild(canonicalEl);
     }
     canonicalEl.setAttribute('href', canonicalUrl || 'https://duta.ir/');
-}
-
-function NotFoundPage() {
-    const navigate = useNavigate();
-
-    return (
-        <div className="page-content" style={{ textAlign: 'center', padding: '80px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-                <DutaLogo breaking={true} />
-            </div>
-            <h1 style={{ fontSize: '64px', fontWeight: 800, color: 'var(--blue)', lineHeight: 1, marginBottom: '12px' }}>
-                404
-            </h1>
-            <h2 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '10px', color: 'var(--label)' }}>
-                صفحه یا خبر مورد نظر یافت نشد
-            </h2>
-            <p style={{ fontSize: '14.5px', color: 'var(--label-2)', maxWidth: '420px', margin: '0 auto 28px', lineHeight: 1.7 }}>
-                ممکن است آدرس صفحه را اشتباه وارد کرده باشید یا این خبر پس از گذشت ۳۰ روز از آرشیو خودکار Duta حذف شده باشد.
-            </p>
-            <button
-                className="retry-btn"
-                onClick={() => navigate('/')}
-                aria-label="بازگشت به صفحه اصلی اخبار"
-            >
-                <i className="ti ti-home" aria-hidden="true" />
-                مشاهده آخرین اخبار
-            </button>
-        </div>
-    );
-}
-
-function PrivacyPage() {
-    const sections = [
-        {
-            icon: "ti-shield-lock",
-            title: "عدم دریافت اطلاعات هویتی",
-            desc: "استفاده از پلتفرم خبری Duta کاملاً آزاد و رایگان است و برای مطالعه اخبار، جستجو یا بررسی اعتبار منابع نیازی به ارائه اطلاعات شخصی حساس نیست."
-        },
-        {
-            icon: "ti-chart-bar",
-            title: "داده‌های آماری و کوکی‌ها",
-            desc: "ما صرفاً از کوکی‌های استاندارد تحلیلی به صورت ناشناس برای سنجش سرعت بارگذاری صفحات و بهبود تجربه کاربری استفاده می‌کنیم."
-        },
-        {
-            icon: "ti-lock",
-            title: "امنیت ارتباطات و رمزنگاری",
-            desc: "تمامی ارتباطات شما با سرورهای Duta از طریق پروتکل امن HTTPS (TLS 1.3) رمزنگاری می‌شود و هیچ داده‌ای با اشخاص ثالث به اشتراک گذاشته نمی‌شود."
-        }
-    ];
-
-    return (
-        <div className="page-content">
-            <div className="page-header">
-                <h1>سیاست حفظ حریم خصوصی</h1>
-                <p>در Duta، احترام به حریم خصوصی و امنیت داده‌های کاربران اولویت اصلی ماست.</p>
-            </div>
-
-            <div className="feature-grid">
-                {sections.map((s, i) => (
-                    <div className="feature-card" key={i}>
-                        <div className="feature-icon">
-                            <i className={`ti ${s.icon}`} aria-hidden="true" />
-                        </div>
-                        <h3>{s.title}</h3>
-                        <p>{s.desc}</p>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
 }
 
 function TermsPage() {
@@ -229,7 +161,7 @@ function ArticleDetailPage() {
     }
 
     if (notFound || !article) {
-        return <NotFoundPage />;
+        return <NotFound />;
     }
 
     return (
@@ -433,9 +365,9 @@ function AppLayout() {
                             <Route path="/features" element={<Features />} />
                             <Route path="/credibility" element={<Credibility />} />
                             <Route path="/about" element={<About />} />
-                            <Route path="/privacy" element={<PrivacyPage />} />
+                            <Route path="/privacy" element={<Privacy />} />
                             <Route path="/terms" element={<TermsPage />} />
-                            <Route path="*" element={<NotFoundPage />} />
+                            <Route path="*" element={<NotFound />} />
                         </Routes>
                     </Suspense>
                 </main>

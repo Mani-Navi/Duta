@@ -3,6 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
 
 const UserContext = createContext(null);
+const MAX_STORED_CLUSTER_REACTIONS = 200;
+
+function pruneReactionsMap(mapObj) {
+    const keys = Object.keys(mapObj);
+    if (keys.length <= MAX_STORED_CLUSTER_REACTIONS) {
+        return mapObj;
+    }
+    const keysToKeep = keys.slice(keys.length - MAX_STORED_CLUSTER_REACTIONS);
+    const pruned = {};
+    for (const k of keysToKeep) {
+        pruned[k] = mapObj[k];
+    }
+    return pruned;
+}
 
 export function UserProvider({ children }) {
     const navigate = useNavigate();
@@ -16,11 +30,10 @@ export function UserProvider({ children }) {
         }
     });
 
-    // استور مشترک ری‌اکشن‌های کلستر برای سینک آنی بین کارت خبر و صفحه جزئیات خبر
     const [clusterReactions, setClusterReactions] = useState(() => {
         try {
             const saved = localStorage.getItem('duta_cluster_reactions');
-            return saved ? JSON.parse(saved) : {};
+            return saved ? pruneReactionsMap(JSON.parse(saved)) : {};
         } catch {
             return {};
         }
@@ -118,7 +131,6 @@ export function UserProvider({ children }) {
         }
     }, [user]);
 
-    // خواندن وضعیت لحظه‌ای ری‌اکشن یک خبر (مشترک بین NewsCard و ArticleDetail)
     const getReactionData = useCallback((article) => {
         const cid = article?.cluster?.id;
         const synced = cid ? clusterReactions[cid] : null;
@@ -133,7 +145,27 @@ export function UserProvider({ children }) {
         };
     }, [clusterReactions]);
 
-    // ثبت و همگام‌سازی آنی ری‌اکشن در کل سایت
+    const syncServerArticleReaction = useCallback((article) => {
+        const cid = article?.cluster?.id;
+        if (!cid) return;
+        if (article.userReaction === undefined && !article.cluster) return;
+
+        setClusterReactions(prev => {
+            const existing = prev[cid];
+            const entry = {
+                likeCount: article.cluster?.likeCount ?? existing?.likeCount ?? 0,
+                hotCount: article.cluster?.hotCount ?? existing?.hotCount ?? 0,
+                doubtCount: article.cluster?.doubtCount ?? existing?.doubtCount ?? 0,
+                userReaction: article.userReaction !== undefined
+                    ? article.userReaction
+                    : (existing?.userReaction ?? null)
+            };
+            const next = pruneReactionsMap({ ...prev, [cid]: entry });
+            localStorage.setItem('duta_cluster_reactions', JSON.stringify(next));
+            return next;
+        });
+    }, []);
+
     const reactToCluster = useCallback(async (article, type) => {
         if (!user) {
             navigate('/auth');
@@ -142,7 +174,6 @@ export function UserProvider({ children }) {
         const cid = article?.cluster?.id;
         if (!cid) return null;
 
-        // ۱. آپدیت Optimistic فوری در ۰ میلی‌ثانیه
         const current = getReactionData(article);
         let { likeCount, hotCount, doubtCount, userReaction } = current;
 
@@ -164,12 +195,11 @@ export function UserProvider({ children }) {
 
         const optimisticEntry = { likeCount, hotCount, doubtCount, userReaction };
         setClusterReactions(prev => {
-            const next = { ...prev, [cid]: optimisticEntry };
+            const next = pruneReactionsMap({ ...prev, [cid]: optimisticEntry });
             localStorage.setItem('duta_cluster_reactions', JSON.stringify(next));
             return next;
         });
 
-        // ۲. همگام‌سازی با سرور
         try {
             const res = await api.post(`/clusters/${cid}/reactions`, { type });
             if (res.data) {
@@ -180,7 +210,7 @@ export function UserProvider({ children }) {
                     userReaction: res.data.userReaction ?? null
                 };
                 setClusterReactions(prev => {
-                    const next = { ...prev, [cid]: confirmed };
+                    const next = pruneReactionsMap({ ...prev, [cid]: confirmed });
                     localStorage.setItem('duta_cluster_reactions', JSON.stringify(next));
                     return next;
                 });
@@ -201,6 +231,7 @@ export function UserProvider({ children }) {
             togglePinTicker,
             sendFeedback,
             getReactionData,
+            syncServerArticleReaction,
             reactToCluster
         }}>
             {children}

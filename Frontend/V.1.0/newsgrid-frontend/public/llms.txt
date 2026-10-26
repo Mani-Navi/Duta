@@ -1,14 +1,29 @@
-# Nitt — Smart Persian News Aggregator
+# Duta (دوتا — https://duta.ir) — پلتفرم هوشمند تجمیع، خوشه‌بندی و سنجش اعتبار اخبار فارسی
 
-> Nitt is an intelligent Persian news aggregator platform featuring real-time credibility scoring and automated article clustering.
+> Duta ("دو نگاه، یک حقیقت") is an intelligent Persian news aggregation, multi-source event clustering, and automated fact-checking/credibility scoring platform.
 
-## Core Features
-- [Home - Latest News](https://news-grid-pi.vercel.app/): Aggregated Persian news from trusted outlets.
-- [Features](https://news-grid-pi.vercel.app/features): Live credibility scores and rumor alerts.
-- [Credibility System](https://news-grid-pi.vercel.app/credibility): Transparent 3-step algorithm breakdown.
-- [About Nitt](https://news-grid-pi.vercel.app/about): Mission and contact information.
+## Core Capabilities & Methodology
+- **Multi-Source Jaccard Clustering**: Automatically groups related Persian news articles within a 6-hour window using normalized token Jaccard similarity (>= 25% overlap).
+- **Bayesian-Inspired Credibility Scoring (0–100%)**:
+  - **Verified (تأیید شده: 80–100%)**: Covered independently by multiple high-credibility outlets.
+  - **Under Review (در حال بررسی: 50–79%)**: Single source or awaiting independent corroboration.
+  - **Unverified (نامعتبر: <50%)**: Low-credibility source without independent verification.
+- **85/15 Personalized Feed & Local City Prioritization**: Combines 85% user-selected categories, followed sources, and local city news (31 Iranian provinces/cities) with a 15% high-credibility discovery quota.
+- **Live Market Tablo (`/tablo`)**: Real-time IRR/Toman exchange rates (USD, EUR, AED, GBP, TRY), Gold & Coins (18K Gold, Emami Coin), and USDT with ring-buffer SVG sparklines.
 
-## Primary Endpoints
-- GET /api/articles: Latest aggregated news with pagination and cluster scores.
-- GET /api/categories: News categories.
-- GET /api/prices: Real-time USD currency and Gold prices.
+## Canonical Pages
+- [صفحه اصلی و اخبار داغ روز](https://duta.ir/)
+- [تابلو زنده بازار ارز و طلا](https://duta.ir/tablo)
+- [روش سنجش اعتبار خبر](https://duta.ir/credibility)
+- [ویژگی‌های پلتفرم](https://duta.ir/features)
+- [درباره ما](https://duta.ir/about)
+- [حریم خصوصی](https://duta.ir/privacy)
+- [قوانین و سلب مسئولیت](https://duta.ir/terms)
+
+## Public API & Sitemap Endpoints
+- `GET https://duta.ir/sitemap.xml`: Google News XML Sitemap (48-hour `<news:news>` window + 30-day archive).
+- `GET https://duta.ir/api/articles/hot`: Top 4 Hot News of the last 24 hours.
+- `GET https://duta.ir/api/articles/newspaper?page=0&size=20`: Representative clustered news feed.
+- `GET https://duta.ir/api/articles/slug/{slug}`: Detailed article and cluster metadata.
+- `GET https://duta.ir/api/clusters/{clusterId}/articles`: All independent sources covering a news cluster.
+- `GET https://duta.ir/api/prices/tablo`: Live currency, gold, and crypto prices with sparkline history.

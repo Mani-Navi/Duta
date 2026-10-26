@@ -14,13 +14,21 @@ import {
 
 function ArticleDetail({ article }) {
     const t = strings.fa;
-    const { user, isLoggedIn, openModal, savePreferences, sendFeedback, getReactionData, reactToCluster } = useUser();
+    const {
+        user,
+        isLoggedIn,
+        openModal,
+        savePreferences,
+        sendFeedback,
+        getReactionData,
+        syncServerArticleReaction,
+        reactToCluster
+    } = useUser();
 
     const [clusterArticles, setClusterArticles] = useState([]);
     const [copied, setCopied] = useState(false);
     const [animatingType, setAnimatingType] = useState(null);
 
-    // خواندن مستقیم وضعیت و شمارنده‌های ری‌اکشن از استور مشترک
     const { likeCount, hotCount, doubtCount, userReaction } = getReactionData(article);
 
     const shareUrl = `https://duta.ir/article/${article.slug || article.id}`;
@@ -30,12 +38,13 @@ function ArticleDetail({ article }) {
     const mainSourceInitials = article.source?.initials || mainSourceName.substring(0, 2);
 
     useEffect(() => {
+        syncServerArticleReaction(article);
         if (article.cluster?.id) {
             api.get(`/clusters/${article.cluster.id}/articles`)
                 .then(res => setClusterArticles(res.data.filter(a => a.id !== article.id)))
                 .catch(() => {});
         }
-    }, [article]);
+    }, [article, syncServerArticleReaction]);
 
     useEffect(() => {
         if (!isLoggedIn) return;
