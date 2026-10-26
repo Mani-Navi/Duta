@@ -4,6 +4,7 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
         { label: 'اقتصادی', value: 'اقتصادی' },
         { label: 'سیاسی', value: 'سیاسی' },
         { label: 'تکنولوژی', value: 'تکنولوژی' },
+        { label: 'آموزشی', value: 'آموزشی' },
         { label: 'رمزارز', value: 'رمزارز' },
         { label: 'اجتماعی', value: 'اجتماعی' },
         { label: 'خودرو', value: 'خودرو' },

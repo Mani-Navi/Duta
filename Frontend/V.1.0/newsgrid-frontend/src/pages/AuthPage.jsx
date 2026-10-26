@@ -5,7 +5,10 @@ import { useUser } from '../context/UserContext';
 import DutaLogo from '../components/DutaLogo';
 
 const DEFAULT_CITIES = ['تهران', 'شیراز', 'اصفهان', 'مشهد', 'تبریز', 'کرج', 'اهواز', 'رشت', 'قم', 'کرمانشاه', 'یزد', 'بوشهر'];
-const DEFAULT_CATEGORIES = ['اقتصادی', 'تکنولوژی', 'سیاسی', 'ورزشی', 'جهانی', 'سرگرمی'];
+const DEFAULT_CATEGORIES = [
+    'اقتصادی', 'سیاسی', 'تکنولوژی', 'آموزشی', 'رمزارز', 'اجتماعی',
+    'خودرو', 'ورزشی', 'جهانی', 'سلامت', 'سرگرمی', 'فرهنگ و هنر'
+];
 
 function PasswordCriteriaChecklist({ password, confirmPassword }) {
     const checks = useMemo(() => {
