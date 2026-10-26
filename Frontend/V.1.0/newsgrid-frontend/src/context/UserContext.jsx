@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
+import { getSeededReactionBoost } from '../utils/articleHelpers';
 
 const UserContext = createContext(null);
 const MAX_STORED_CLUSTER_REACTIONS = 200;
@@ -30,6 +31,7 @@ export function UserProvider({ children }) {
         }
     });
 
+    // استور مشترک شمارنده‌های واقعی سرور + وضعیت ری‌اکشن کاربر
     const [clusterReactions, setClusterReactions] = useState(() => {
         try {
             const saved = localStorage.getItem('duta_cluster_reactions');
@@ -131,19 +133,48 @@ export function UserProvider({ children }) {
         }
     }, [user]);
 
-    const getReactionData = useCallback((article) => {
+    // محاسبه شمارنده واقعی (Real DB Count) بدون بوست نمایشی
+    const getRawReactionData = useCallback((article) => {
         const cid = article?.cluster?.id;
         const synced = cid ? clusterReactions[cid] : null;
 
-        return {
-            likeCount: synced?.likeCount ?? article?.cluster?.likeCount ?? 0,
-            hotCount: synced?.hotCount ?? article?.cluster?.hotCount ?? 0,
-            doubtCount: synced?.doubtCount ?? article?.cluster?.doubtCount ?? 0,
-            userReaction: synced !== undefined && 'userReaction' in synced
-                ? synced.userReaction
-                : (article?.userReaction ?? null)
-        };
+        const serverLike = article?.cluster?.likeCount ?? 0;
+        const serverHot = article?.cluster?.hotCount ?? 0;
+        const serverDoubt = article?.cluster?.doubtCount ?? 0;
+
+        // اگر کاربر در ۱۵ ثانیه اخیر خودش روی این کلستر کلیک کرده، مقدار Optimistic/Confirmed او اولویت دارد؛
+        // در غیر این صورت، بیشترین مقدار بین سرور و کش محلی نمایش داده می‌شود تا لایک سایر کاربران همیشه دیده شود.
+        const isRecentlyClicked = synced?.updatedAt && (Date.now() - synced.updatedAt < 15000);
+
+        const rawLike = isRecentlyClicked
+            ? synced.likeCount
+            : Math.max(synced?.likeCount ?? 0, serverLike);
+        const rawHot = isRecentlyClicked
+            ? synced.hotCount
+            : Math.max(synced?.hotCount ?? 0, serverHot);
+        const rawDoubt = isRecentlyClicked
+            ? synced.doubtCount
+            : Math.max(synced?.doubtCount ?? 0, serverDoubt);
+
+        const userReaction = synced !== undefined && 'userReaction' in synced
+            ? synced.userReaction
+            : (article?.userReaction ?? null);
+
+        return { rawLike, rawHot, rawDoubt, userReaction };
     }, [clusterReactions]);
+
+    // خواندن وضعیت نهایی ری‌اکشن برای نمایش در UI (شمارنده واقعی + بوست نمایشی)
+    const getReactionData = useCallback((article) => {
+        const { rawLike, rawHot, rawDoubt, userReaction } = getRawReactionData(article);
+        const boost = getSeededReactionBoost(article);
+
+        return {
+            likeCount: rawLike + boost.like,
+            hotCount: rawHot + boost.hot,
+            doubtCount: rawDoubt + boost.doubt,
+            userReaction
+        };
+    }, [getRawReactionData]);
 
     const syncServerArticleReaction = useCallback((article) => {
         const cid = article?.cluster?.id;
@@ -158,7 +189,8 @@ export function UserProvider({ children }) {
                 doubtCount: article.cluster?.doubtCount ?? existing?.doubtCount ?? 0,
                 userReaction: article.userReaction !== undefined
                     ? article.userReaction
-                    : (existing?.userReaction ?? null)
+                    : (existing?.userReaction ?? null),
+                updatedAt: Date.now()
             };
             const next = pruneReactionsMap({ ...prev, [cid]: entry });
             localStorage.setItem('duta_cluster_reactions', JSON.stringify(next));
@@ -174,8 +206,11 @@ export function UserProvider({ children }) {
         const cid = article?.cluster?.id;
         if (!cid) return null;
 
-        const current = getReactionData(article);
-        let { likeCount, hotCount, doubtCount, userReaction } = current;
+        const { rawLike, rawHot, rawDoubt, userReaction: currentReaction } = getRawReactionData(article);
+        let likeCount = rawLike;
+        let hotCount = rawHot;
+        let doubtCount = rawDoubt;
+        let userReaction = currentReaction;
 
         if (userReaction === type) {
             if (type === 'LIKE') likeCount = Math.max(0, likeCount - 1);
@@ -193,7 +228,7 @@ export function UserProvider({ children }) {
             userReaction = type;
         }
 
-        const optimisticEntry = { likeCount, hotCount, doubtCount, userReaction };
+        const optimisticEntry = { likeCount, hotCount, doubtCount, userReaction, updatedAt: Date.now() };
         setClusterReactions(prev => {
             const next = pruneReactionsMap({ ...prev, [cid]: optimisticEntry });
             localStorage.setItem('duta_cluster_reactions', JSON.stringify(next));
@@ -207,7 +242,8 @@ export function UserProvider({ children }) {
                     likeCount: res.data.likeCount ?? likeCount,
                     hotCount: res.data.hotCount ?? hotCount,
                     doubtCount: res.data.doubtCount ?? doubtCount,
-                    userReaction: res.data.userReaction ?? null
+                    userReaction: res.data.userReaction ?? null,
+                    updatedAt: Date.now()
                 };
                 setClusterReactions(prev => {
                     const next = pruneReactionsMap({ ...prev, [cid]: confirmed });
@@ -218,7 +254,7 @@ export function UserProvider({ children }) {
             }
         } catch {}
         return optimisticEntry;
-    }, [user, navigate, getReactionData]);
+    }, [user, navigate, getRawReactionData]);
 
     return (
         <UserContext.Provider value={{

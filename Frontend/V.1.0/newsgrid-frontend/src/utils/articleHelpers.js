@@ -1,3 +1,54 @@
+// ─── سوئیچ ری‌اکشن‌های نمایشی اولیه سایت (برای حذف کامل در آینده، این مقدار را false کنید) ───
+export const ENABLE_SEED_REACTIONS = true;
+
+export function getSeededReactionBoost(article) {
+    if (!ENABLE_SEED_REACTIONS || !article) {
+        return { like: 0, hot: 0, doubt: 0 };
+    }
+
+    const seedId = Number(article?.cluster?.id || article?.id || 0);
+    if (!seedId) {
+        return { like: 0, hot: 0, doubt: 0 };
+    }
+
+    // هش قطعی (Deterministic Hash) بر اساس شناسه خبر تا اعداد در کارت و داخل خبر همیشه یکسان باشند
+    let h = Math.imul(seedId ^ 0x9E3779B9, 0x85EBCA6B) >>> 0;
+    h = Math.imul(h ^ (h >>> 13), 0xC2B2AE35) >>> 0;
+    h = (h ^ (h >>> 16)) >>> 0;
+
+    const score = getArticleScore(article);
+    const sourceCount = getArticleSourceCount(article);
+
+    let like = 5 + (h % 19);               // پایه بین ۵ تا ۲۳
+    let hot = 2 + ((h >>> 5) % 12);        // پایه بین ۲ تا ۱۳
+    let doubt = score >= 80
+        ? ((h >>> 10) % 3)                 // برای اخبار معتبر: ۰ تا ۲ تردید
+        : (2 + ((h >>> 10) % 6));          // برای اخبار کم‌اعتبارتر: ۲ تا ۷ تردید
+
+    if (article.breaking) {
+        like += 9;
+        hot += 12;
+    }
+
+    if (sourceCount > 1) {
+        like += Math.min(14, (sourceCount - 1) * 3);
+        hot += Math.min(10, (sourceCount - 1) * 2);
+    }
+
+    // رشد تدریجی و طبیعی در ۴۵ دقیقه اول انتشار خبر
+    if (article.publishedAt) {
+        const ageMins = Math.max(1, (Date.now() - new Date(article.publishedAt).getTime()) / 60000);
+        if (ageMins < 45) {
+            const ramp = 0.25 + (ageMins / 45) * 0.75;
+            like = Math.max(1, Math.round(like * ramp));
+            hot = Math.max(1, Math.round(hot * ramp));
+            doubt = Math.round(doubt * ramp);
+        }
+    }
+
+    return { like, hot, doubt };
+}
+
 export function getArticleScore(article) {
     return article?.cluster?.credibilityScore ?? article?.source?.credibility ?? 0;
 }
