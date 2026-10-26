@@ -336,30 +336,30 @@ public class PersonalizationService {
     }
 
     public double calculateClusterHotScore(ArticleCluster c) {
-        long hours = c.getCreatedAt() != null
-                ? Math.max(0, Duration.between(c.getCreatedAt(), ZonedDateTime.now(ZoneOffset.UTC)).toHours())
-                : 1;
+        double hours = c.getCreatedAt() != null
+                ? Math.max(0.1, Duration.between(c.getCreatedAt(), ZonedDateTime.now(ZoneOffset.UTC)).toMinutes() / 60.0)
+                : 1.0;
         int totalReactions = c.getLikeCount() + c.getHotCount() + c.getDoubtCount();
         double raw = (c.getViewCount() * 1.0)
                 + (totalReactions * 6.0)
                 + (c.getSourceCount() * 10.0)
                 + (c.getCredibilityScore() * 0.15);
-        return raw / Math.pow(hours + 2.0, 1.4);
+        return raw / Math.pow(hours + 1.5, 1.4);
     }
 
     private double calculateLiveHotScore(Article a, ZonedDateTime now) {
-        long hours = a.getPublishedAt() != null
-                ? Math.max(0, Duration.between(a.getPublishedAt(), now).toHours())
-                : 2;
+        double hours = a.getPublishedAt() != null
+                ? Math.max(0.1, Duration.between(a.getPublishedAt(), now).toMinutes() / 60.0)
+                : 2.0;
         ArticleCluster c = a.getCluster();
         int views = c != null ? c.getViewCount() : 0;
         int reactions = c != null ? (c.getLikeCount() + c.getHotCount() + c.getDoubtCount()) : 0;
         int sources = c != null ? c.getSourceCount() : 1;
         int cred = c != null ? c.getCredibilityScore() : (a.getSource() != null && a.getSource().getCredibility() != null ? a.getSource().getCredibility() : 50);
-        double breakingBoost = a.isBreaking() ? 20.0 : 0.0;
+        double breakingBoost = a.isBreaking() ? 22.0 : 0.0;
 
         double raw = (views * 1.0) + (reactions * 6.0) + (sources * 10.0) + breakingBoost + (cred * 0.15);
-        return raw / Math.pow(hours + 2.0, 1.4);
+        return raw / Math.pow(hours + 1.5, 1.4);
     }
 
     private Map<Long, String> getUserReactionsForSlice(Long userId, List<ScoredArticle> slice) {
