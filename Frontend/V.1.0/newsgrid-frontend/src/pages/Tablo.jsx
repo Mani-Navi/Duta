@@ -19,16 +19,21 @@ function SparklineChart({ points = [], isUp = true }) {
     const strokeColor = isUp ? '#15803d' : '#be123c';
 
     return (
-        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
-            <polyline
-                fill="none"
-                stroke={strokeColor}
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={coords}
-            />
-        </svg>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+            <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+                <polyline
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    points={coords}
+                />
+            </svg>
+            <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--label-3)', whiteSpace: 'nowrap' }}>
+                روند ۲۴ ساعت اخیر
+            </span>
+        </div>
     );
 }
 
@@ -68,9 +73,28 @@ function Tablo() {
         <div className="page-content">
             <div className="tablo-header-row">
                 <div>
-                    <h1 className="tablo-main-title">تابلو بازار</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                        <h1 className="tablo-main-title" style={{ marginBottom: 0 }}>تابلو بازار</h1>
+                        <span
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '11.5px',
+                                fontWeight: 700,
+                                padding: '4px 11px',
+                                borderRadius: '99px',
+                                background: 'var(--chip-bg)',
+                                color: 'var(--label-2)',
+                                border: '1px solid var(--separator)'
+                            }}
+                        >
+                            <span className="pulse-dot" style={{ background: 'var(--green)' }} aria-hidden="true" />
+                            بازه تغییرات و نمودار: ۲۴ ساعت اخیر
+                        </span>
+                    </div>
                     <p className="tablo-subtitle">
-                        نرخ لحظه‌ای ارز، طلا، سکه و رمزارز به همراه نمودار تغییرات — حداکثر ۴ دارایی را برای نمایش در نوار بالای سایت پین کنید.
+                        نرخ لحظه‌ای ارز، طلا، سکه و رمزارز (به‌روزرسانی خودکار هر ۵ دقیقه) — حداکثر ۴ دارایی را برای نمایش در نوار بالای سایت پین کنید.
                     </p>
                 </div>
 
@@ -120,9 +144,12 @@ function Tablo() {
                                         <span className="tablo-price-val">{asset.price}</span>
                                         <span className="tablo-price-unit">{asset.unit}</span>
                                         {asset.change && (
-                                            <div>
-                                                <span className={`badge ${asset.up ? 'green' : 'red'}`} style={{ display: 'inline-block', marginTop: '6px', direction: 'ltr' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                                                <span className={`badge ${asset.up ? 'green' : 'red'}`} style={{ direction: 'ltr' }}>
                                                     {asset.change}
+                                                </span>
+                                                <span style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--label-3)' }}>
+                                                    ۲۴ ساعته
                                                 </span>
                                             </div>
                                         )}
