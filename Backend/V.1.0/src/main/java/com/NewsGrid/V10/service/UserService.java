@@ -386,7 +386,7 @@ public class UserService {
 
         Map<String, List<Map<String, Object>>> sourcesByCategory = new LinkedHashMap<>();
         List<String> mainCategories = List.of(
-                "اقتصادی", "سیاسی", "تکنولوژی", "رمزارز", "اجتماعی",
+                "اقتصادی", "سیاسی", "تکنولوژی", "آموزشی", "رمزارز", "اجتماعی",
                 "خودرو", "ورزشی", "جهانی", "سلامت", "سرگرمی", "فرهنگ و هنر"
         );
         mainCategories.forEach(c -> sourcesByCategory.put(c, new ArrayList<>()));

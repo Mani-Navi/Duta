@@ -14,7 +14,24 @@ public class CategoryClassifierService {
     private static final Pattern SUFFIX_PATTERN = Pattern.compile("(هایی|های|ها)(?=\\s|$)");
 
     static {
-        // ── ۱. رمزارز و فین‌تک ──
+        // ── ۱. آموزشی (کنکور، سازمان سنجش، کانون، مدارس و دانشگاه) ──
+        Map<String, Integer> edu = new HashMap<>();
+        edu.put("کنکور", 10); edu.put("سازمان سنجش", 10); edu.put("متادرس", 10);
+        edu.put("قلم چی", 10); edu.put("کانون فرهنگی آموزش", 10); edu.put("آموزش و پرورش", 10);
+        edu.put("امتحان نهایی", 10); edu.put("ترمیم معدل", 10); edu.put("انتخاب رشته", 10);
+        edu.put("کارت ورود به جلسه", 10); edu.put("رتبه برتر", 10); edu.put("تیزهوشان", 10);
+        edu.put("سمپاد", 10); edu.put("فرهنگیان", 9); edu.put("دانشگاه فرهنگیان", 10);
+        edu.put("هدایت تحصیلی", 10); edu.put("کارشناسی ارشد", 10); edu.put("آزمون دکتری", 10);
+        edu.put("دانشگاه آزاد", 10); edu.put("پیام نور", 9); edu.put("وزارت علوم", 10);
+        edu.put("دانش آموز", 9); edu.put("دانش آموزان", 9); edu.put("دانشجو", 9);
+        edu.put("دانشجویان", 9); edu.put("دانشگاه", 8); edu.put("مدارس", 9);
+        edu.put("مدرسه", 8); edu.put("معلم", 9); edu.put("فرهنگیان", 9);
+        edu.put("پایه دوازدهم", 10); edu.put("پایه یازدهم", 10); edu.put("پایه دهم", 10);
+        edu.put("امتحانات", 9); edu.put("کارنامه", 9); edu.put("المپیاد", 9);
+        edu.put("تحصیلی", 9); edu.put("کتاب درسی", 10); edu.put("سوالات امتحان", 10);
+        CATEGORY_KEYWORDS.put("آموزشی", edu);
+
+        // ── ۲. رمزارز و فین‌تک ──
         Map<String, Integer> crypto = new HashMap<>();
         crypto.put("بیت کوین", 10); crypto.put("اتریوم", 10); crypto.put("رمزارز", 10);
         crypto.put("ارز دیجیتال", 10); crypto.put("بلاکچین", 10); crypto.put("تتر", 9);
@@ -24,7 +41,7 @@ public class CategoryClassifierService {
         crypto.put("فین تک", 9); crypto.put("صرافی ارز", 10); crypto.put("کریپتو", 10);
         CATEGORY_KEYWORDS.put("رمزارز", crypto);
 
-        // ── ۲. خودرو و صنعت ──
+        // ── ۳. خودرو و صنعت ──
         Map<String, Integer> auto = new HashMap<>();
         auto.put("خودرو", 10); auto.put("ایران خودرو", 10); auto.put("سایپا", 10);
         auto.put("واردات خودرو", 10); auto.put("قیمت خودرو", 10); auto.put("پژو", 9);
@@ -36,7 +53,7 @@ public class CategoryClassifierService {
         auto.put("هیوندای", 8); auto.put("بنز", 8); auto.put("بی ام و", 8);
         CATEGORY_KEYWORDS.put("خودرو", auto);
 
-        // ── ۳. اقتصادی ──
+        // ── ۴. اقتصادی ──
         Map<String, Integer> eco = new HashMap<>();
         eco.put("بورس", 10); eco.put("سهام", 10); eco.put("بازار سرمایه", 10);
         eco.put("تورم", 9);  eco.put("نرخ ارز", 9); eco.put("دلار", 8);
@@ -52,7 +69,7 @@ public class CategoryClassifierService {
         eco.put("حقوق", 6);   eco.put("بازنشستگان", 8);
         CATEGORY_KEYWORDS.put("اقتصادی", eco);
 
-        // ── ۴. سیاسی ──
+        // ── ۵. سیاسی ──
         Map<String, Integer> pol = new HashMap<>();
         pol.put("مجلس", 10);      pol.put("نماینده", 8);   pol.put("انتخابات", 10);
         pol.put("رئیس جمهور", 10); pol.put("دولت", 8);     pol.put("وزیر", 9);
@@ -65,7 +82,7 @@ public class CategoryClassifierService {
         pol.put("ارتش", 8);       pol.put("انرژی هسته ای", 10); pol.put("پزشکیان", 9);
         CATEGORY_KEYWORDS.put("سیاسی", pol);
 
-        // ── ۵. اجتماعی و حوادث ──
+        // ── ۶. اجتماعی و حوادث ──
         Map<String, Integer> soc = new HashMap<>();
         soc.put("حوادث", 10); soc.put("حادثه", 8); soc.put("تصادف", 9);
         soc.put("آتش سوزی", 9); soc.put("زلزله", 10); soc.put("سیل", 9);
@@ -73,11 +90,11 @@ public class CategoryClassifierService {
         soc.put("قوه قضاییه", 9); soc.put("بازداشت", 8); soc.put("زندان", 8);
         soc.put("شهرداری", 8); soc.put("مترو", 8); soc.put("ترافیک", 8);
         soc.put("هواشناسی", 9); soc.put("بارش", 8); soc.put("آلودگی هوا", 10);
-        soc.put("محیط زیست", 9); soc.put("مدارس", 8); soc.put("دانش آموز", 8);
-        soc.put("تعطیلی", 8); soc.put("اجتماعی", 8); soc.put("اورژانس", 8);
+        soc.put("محیط زیست", 9); soc.put("تعطیلی", 8); soc.put("اجتماعی", 8);
+        soc.put("اورژانس", 8);
         CATEGORY_KEYWORDS.put("اجتماعی", soc);
 
-        // ── ۶. ورزشی ──
+        // ── ۷. ورزشی ──
         Map<String, Integer> sport = new HashMap<>();
         sport.put("فوتبال", 10); sport.put("لیگ", 9);      sport.put("گل", 7);
         sport.put("المپیک", 10); sport.put("جام جهانی", 10); sport.put("جام", 8);
@@ -90,7 +107,7 @@ public class CategoryClassifierService {
         sport.put("پرسپولیس", 10); sport.put("تراکتور", 9); sport.put("سپاهان", 9);
         CATEGORY_KEYWORDS.put("ورزشی", sport);
 
-        // ── ۷. تکنولوژی ──
+        // ── ۸. تکنولوژی ──
         Map<String, Integer> tech = new HashMap<>();
         tech.put("هوش مصنوعی", 10); tech.put("chatgpt", 10); tech.put("گوگل", 8);
         tech.put("اپل", 8);         tech.put("آیفون", 9);    tech.put("مایکروسافت", 8);
@@ -102,7 +119,7 @@ public class CategoryClassifierService {
         tech.put("سامسونگ", 8);     tech.put("شیائومی", 8);  tech.put("فیلترینگ", 8);
         CATEGORY_KEYWORDS.put("تکنولوژی", tech);
 
-        // ── ۸. سلامت و علمی ──
+        // ── ۹. سلامت و علمی ──
         Map<String, Integer> health = new HashMap<>();
         health.put("سلامت", 9); health.put("پزشکی", 10); health.put("بیماری", 8);
         health.put("بیمارستان", 8); health.put("دارو", 9); health.put("درمان", 8);
@@ -112,7 +129,7 @@ public class CategoryClassifierService {
         health.put("فضا", 7); health.put("علمی", 8); health.put("پژوهش", 7);
         CATEGORY_KEYWORDS.put("سلامت", health);
 
-        // ── ۹. جهانی ──
+        // ── ۱۰. جهانی ──
         Map<String, Integer> world = new HashMap<>();
         world.put("آمریکا", 8);    world.put("اروپا", 8);    world.put("چین", 8);
         world.put("روسیه", 8);     world.put("اسرائیل", 9);  world.put("غزه", 10);
@@ -123,7 +140,7 @@ public class CategoryClassifierService {
         world.put("کاخ سفید", 9);  world.put("اتحادیه اروپا", 9);
         CATEGORY_KEYWORDS.put("جهانی", world);
 
-        // ── ۱۰. سرگرمی (سینما، سریال و گیمینگ) ──
+        // ── ۱۱. سرگرمی (سینما، سریال و گیمینگ) ──
         Map<String, Integer> ent = new HashMap<>();
         ent.put("فیلم سینمایی", 10); ent.put("سریال", 10);   ent.put("سینما", 10);
         ent.put("سینمایی", 9);       ent.put("گیم", 9);      ent.put("بازی ویدئویی", 10);
@@ -134,7 +151,7 @@ public class CategoryClassifierService {
         ent.put("اسکار", 10);        ent.put("استیم", 8);    ent.put("گیمر", 8);
         CATEGORY_KEYWORDS.put("سرگرمی", ent);
 
-        // ── ۱۱. فرهنگ و هنر ──
+        // ── ۱۲. فرهنگ و هنر ──
         Map<String, Integer> cul = new HashMap<>();
         cul.put("کتاب", 9); cul.put("موسیقی", 10); cul.put("کنسرت", 10);
         cul.put("تئاتر", 10); cul.put("نمایشگاه", 8); cul.put("میراث فرهنگی", 10);
