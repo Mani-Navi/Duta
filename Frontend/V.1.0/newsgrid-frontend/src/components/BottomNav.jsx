@@ -6,12 +6,20 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
     const [searchOpen, setSearchOpen] = useState(false);
     const [keyword, setKeyword] = useState('');
     const debounceRef = useRef(null);
+    const inputRef = useRef(null);
 
     const closeSearch = () => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         setSearchOpen(false);
         setKeyword('');
         onSearch('');
+    };
+
+    const clearKeywordOnly = () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        setKeyword('');
+        onSearch('');
+        inputRef.current?.focus();
     };
 
     const handleSearch = (e) => {
@@ -39,20 +47,35 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
         <>
             {searchOpen && view !== 'detail' && (
                 <div className="bottom-search" role="search">
-                    <input
-                        autoFocus
-                        type="search"
-                        value={keyword}
-                        onChange={handleSearch}
-                        placeholder="جستجو در اخبار و منابع..."
-                        className="search-input"
-                        aria-label="جستجو در اخبار"
-                    />
+                    <div className="bottom-search-inner">
+                        <i className="ti ti-search bottom-search-lead-icon" aria-hidden="true" />
+                        <input
+                            ref={inputRef}
+                            autoFocus
+                            type="search"
+                            value={keyword}
+                            onChange={handleSearch}
+                            placeholder="جستجو در تیتر اخبار و منابع..."
+                            className="bottom-search-input"
+                            aria-label="جستجو در اخبار"
+                        />
+                        {keyword && (
+                            <button
+                                type="button"
+                                className="bottom-search-clear"
+                                onClick={clearKeywordOnly}
+                                aria-label="پاک کردن متن جستجو"
+                            >
+                                <i className="ti ti-x" aria-hidden="true" />
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
 
-            <nav className="bottom-nav" aria-label="منوی پایین">
+            <nav className="bottom-nav" aria-label="منوی پایین موبایل">
                 <button
+                    type="button"
                     className={`bottom-nav-item ${activeView === 'home' ? 'active' : ''}`}
                     onClick={() => { closeSearch(); onNavigate('home'); }}
                     aria-label="اخبار"
@@ -62,6 +85,7 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
                 </button>
 
                 <button
+                    type="button"
                     className={`bottom-nav-item ${activeView === 'tablo' ? 'active' : ''}`}
                     onClick={() => { closeSearch(); onNavigate('tablo'); }}
                     aria-label="تابلو بازار"
@@ -71,24 +95,27 @@ function BottomNav({ view, dark, onNavigate, onSearch, onToggleTheme }) {
                 </button>
 
                 <button
+                    type="button"
                     className={`bottom-nav-item ${activeView === 'search' ? 'active' : ''}`}
                     onClick={toggleSearch}
                     aria-label={searchOpen ? 'بستن جستجو' : 'جستجو'}
                 >
                     <i className={`ti ${searchOpen ? 'ti-x' : 'ti-search'}`} aria-hidden="true" />
-                    <span>جستجو</span>
+                    <span>{searchOpen ? 'بستن' : 'جستجو'}</span>
                 </button>
 
                 <button
-                    className="bottom-nav-item"
-                    onClick={() => openModal(isLoggedIn ? 'prefs' : 'auth')}
+                    type="button"
+                    className={`bottom-nav-item ${activeView === 'auth' ? 'active' : ''}`}
+                    onClick={() => { closeSearch(); openModal(isLoggedIn ? 'prefs' : 'auth'); }}
                     aria-label="حساب و علایق"
                 >
                     <i className="ti ti-shield-check" aria-hidden="true" />
-                    <span>{isLoggedIn ? (user.displayName?.slice(0, 8) || 'علایق') : 'ورود'}</span>
+                    <span>{isLoggedIn ? (user?.displayName?.slice(0, 8) || 'حساب من') : 'علایق'}</span>
                 </button>
 
                 <button
+                    type="button"
                     className="bottom-nav-item"
                     onClick={onToggleTheme}
                     aria-label={dark ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک'}

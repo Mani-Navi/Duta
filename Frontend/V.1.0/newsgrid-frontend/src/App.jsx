@@ -8,7 +8,7 @@ import Privacy from './pages/Privacy';
 import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 import DutaLogo from './components/DutaLogo';
-import { UserProvider } from './context/UserContext';
+import { UserProvider, useUser } from './context/UserContext';
 import api from './api/axiosConfig';
 import { getArticleScore } from './utils/articleHelpers';
 import './App.css';
@@ -180,6 +180,8 @@ function ArticleDetailPage() {
 function AppLayout() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { user, isLoggedIn, openModal } = useUser();
+
     const [dark, setDark] = useState(() =>
         window.matchMedia("(prefers-color-scheme: dark)").matches
     );
@@ -314,24 +316,49 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
-                <header className="mobile-only mobile-header-centered">
-                    <a
-                        href="/"
-                        className="logo"
-                        dir="ltr"
-                        onClick={(e) => { e.preventDefault(); handleNavigate('home'); }}
-                        aria-label="Duta - دو نگاه، یک حقیقت"
-                    >
-                        <DutaLogo />
-                        <span className="logo-text">Duta</span>
-                        <span className="logo-divider" aria-hidden="true" />
-                        <span className="logo-sub" dir="rtl">دو نگاه، یک حقیقت</span>
-                    </a>
-                </header>
+                {/* ─── Unified Native-Style Mobile Glass Header ─── */}
+                <header className="mobile-only mobile-top-glass">
+                    <div className="mobile-top-row">
+                        <a
+                            href="/"
+                            className="logo"
+                            dir="ltr"
+                            onClick={(e) => { e.preventDefault(); handleNavigate('home'); }}
+                            aria-label="Duta - دو نگاه، یک حقیقت"
+                        >
+                            <DutaLogo />
+                            <span className="logo-text">Duta</span>
+                            <span className="logo-divider" aria-hidden="true" />
+                            <span className="logo-sub" dir="rtl">دو نگاه، یک حقیقت</span>
+                        </a>
 
-                <div className="mobile-only" style={{ padding: '6px 0', background: 'var(--navbar-bg)' }}>
-                    <PriceTicker />
-                </div>
+                        <div className="mobile-top-actions">
+                            {isLoggedIn && user?.locationCity && (
+                                <button
+                                    type="button"
+                                    className="mobile-city-chip"
+                                    onClick={() => openModal('prefs')}
+                                    aria-label={`شهر انتخابی: ${user.locationCity}`}
+                                >
+                                    <i className="ti ti-map-pin" aria-hidden="true" />
+                                    <span>{user.locationCity}</span>
+                                </button>
+                            )}
+
+                            <button
+                                type="button"
+                                className={`mobile-account-chip ${isLoggedIn ? 'is-member' : ''}`}
+                                onClick={() => openModal(isLoggedIn ? 'prefs' : 'auth')}
+                            >
+                                {isLoggedIn ? (user?.displayName?.slice(0, 10) || 'حساب من') : 'ورود'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mobile-ticker-strip">
+                        <PriceTicker />
+                    </div>
+                </header>
 
                 <div className="desktop-only">
                     <Navbar
@@ -372,8 +399,8 @@ function AppLayout() {
                     </Suspense>
                 </main>
 
-                <footer className="footer-note" style={{ padding: '28px 20px 90px', textAlign: 'center' }} role="contentinfo">
-                    <nav aria-label="لینک‌های فوتر" style={{ display: 'flex', justifyContent: 'center', gap: '18px', flexWrap: 'wrap', marginBottom: '12px', fontWeight: 600 }}>
+                <footer className="footer-note" style={{ padding: '28px 20px 104px', textAlign: 'center' }} role="contentinfo">
+                    <nav aria-label="لینک‌های فوتر" style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '12px', fontWeight: 600 }}>
                         <a href="/tablo" onClick={(e) => { e.preventDefault(); handleNavigate('tablo'); }}>تابلو بازار</a>
                         <a href="/features" onClick={(e) => { e.preventDefault(); handleNavigate('features'); }}>ویژگی‌ها</a>
                         <a href="/credibility" onClick={(e) => { e.preventDefault(); handleNavigate('credibility'); }}>روش سنجش اعتبار</a>
