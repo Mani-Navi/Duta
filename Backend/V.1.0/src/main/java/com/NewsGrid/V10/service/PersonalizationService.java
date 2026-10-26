@@ -8,6 +8,7 @@ import com.NewsGrid.V10.repository.ArticleReactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -38,12 +39,8 @@ public class PersonalizationService {
     private static final int IMPLICIT_INTEREST_THRESHOLD = 15;
     private static final int DISCOVERY_CREDIBILITY_MIN = 82;
 
-    // SCALE-01 FIX: Lock-free in-memory view counter buffer to prevent DB row-lock storms during viral news spikes
     private final ConcurrentHashMap<Long, LongAdder> pendingClusterViews = new ConcurrentHashMap<>();
 
-    /**
-     * UCS-008: Returns the top 4 Hot News of the Day (last 24h) ranked by engagement, multi-source coverage, and freshness.
-     */
     @Cacheable(value = "hot_articles", key = "'top4'")
     @Transactional(readOnly = true)
     public List<Article> getHotArticlesOfTheDay() {
@@ -58,9 +55,6 @@ public class PersonalizationService {
                 .toList();
     }
 
-    /**
-     * UCS-008 & UCS-011: Generates the 85% Preference + 15% Discovery personalized feed in RAM (< 0.5ms).
-     */
     @Transactional(readOnly = true)
     public Page<Map<String, Object>> getPersonalizedFeed(Long userId, int page, int size) {
         Map<String, Object> profile = userService.getCachedUserProfile(userId);
@@ -128,7 +122,6 @@ public class PersonalizationService {
                 }
             }
 
-            // UCS-011 Rule 1: Contextual City Boost Matrix
             if (isCityMatch) {
                 boolean isCivicOrPreferred = isFavCategory || isFollowedSource || isLearnedInterest
                         || a.isBreaking() || "اقتصادی".equals(cat) || "سیاسی".equals(cat);
@@ -181,9 +174,6 @@ public class PersonalizationService {
         return new PageImpl<>(content, PageRequest.of(page, size), combined.size());
     }
 
-    /**
-     * UCS-008: Newspaper Tab ("روزنامه") — shows general news outside the user's strict filter bubble.
-     */
     @Transactional(readOnly = true)
     public Page<Map<String, Object>> getNewspaperFeed(Long userId, String category, int page, int size) {
         Page<Article> rawPage = (category != null && !category.isBlank() && !"all".equalsIgnoreCase(category))
@@ -213,9 +203,6 @@ public class PersonalizationService {
         return new PageImpl<>(enriched, rawPage.getPageable(), rawPage.getTotalElements());
     }
 
-    /**
-     * BUG-05 FIX: Enriches a single Article with the logged-in user's active reaction without mutating cached entities.
-     */
     @Transactional(readOnly = true)
     public Map<String, Object> getEnrichedArticleDetail(Article article, Long userId) {
         Map<Long, String> userReactions = Map.of();
@@ -230,10 +217,14 @@ public class PersonalizationService {
     }
 
     /**
-     * UCS-009 & BUG-02 FIX: Updates reaction in DB and patches in-memory cached cluster counters in-place
-     * without wiping the global articles/sitemap/seo caches!
+     * Evicts article feeds & detail caches (while keeping sitemap, seo, categories and user_profiles warm)
+     * so any user's reaction is immediately visible on all cards across the platform.
      */
-    @CacheEvict(value = "hot_articles", allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = "articles", allEntries = true),
+            @CacheEvict(value = "article_detail", allEntries = true),
+            @CacheEvict(value = "hot_articles", allEntries = true)
+    })
     @Transactional
     public Map<String, Object> toggleReaction(Long userId, Long clusterId, String reactionType) {
         String normalizedType = reactionType != null ? reactionType.trim().toUpperCase(Locale.ROOT) : "";
@@ -281,9 +272,6 @@ public class PersonalizationService {
         cluster.setHotScore(calculateClusterHotScore(cluster));
         clusterRepository.save(cluster);
 
-        // Patch in-memory cached cluster counters in-place (0ms, zero cache thrashing!)
-        syncCachedClusterCountersInPlace(cluster);
-
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("clusterId", cluster.getId());
         res.put("likeCount", cluster.getLikeCount());
@@ -293,9 +281,6 @@ public class PersonalizationService {
         return res;
     }
 
-    /**
-     * SCALE-01 FIX: Non-blocking O(1) in-memory view counter increment.
-     */
     public void incrementClusterView(Long clusterId) {
         if (clusterId == null) return;
         pendingClusterViews.computeIfAbsent(clusterId, k -> new LongAdder()).increment();
@@ -305,9 +290,6 @@ public class PersonalizationService {
         incrementClusterView(clusterId);
     }
 
-    /**
-     * SCALE-01 FIX: Flushes accumulated view counts to PostgreSQL in batch every 60 seconds.
-     */
     @Scheduled(fixedRate = 60000)
     @Transactional
     public void flushPendingClusterViews() {
@@ -335,20 +317,6 @@ public class PersonalizationService {
             }
         }
         clusterRepository.saveAll(clusters);
-    }
-
-    private void syncCachedClusterCountersInPlace(ArticleCluster updated) {
-        try {
-            List<Article> pool = articleService.getRecentRepresentativePool();
-            for (Article a : pool) {
-                if (a.getCluster() != null && Objects.equals(a.getCluster().getId(), updated.getId())) {
-                    a.getCluster().setLikeCount(updated.getLikeCount());
-                    a.getCluster().setHotCount(updated.getHotCount());
-                    a.getCluster().setDoubtCount(updated.getDoubtCount());
-                    a.getCluster().setHotScore(updated.getHotScore());
-                }
-            }
-        } catch (Exception ignored) {}
     }
 
     private void incrementCounter(ArticleCluster c, String type) {
