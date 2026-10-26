@@ -1,4 +1,4 @@
-/* Duta (https://duta.ir) — Native Web Push Service Worker (UCS-012) */
+/* Duta (https://duta.ir) — Native Web Push & Local Notification Service Worker (UCS-012) */
 
 self.addEventListener('install', () => {
     self.skipWaiting();
@@ -30,6 +30,8 @@ self.addEventListener('push', (event) => {
         badge: '/duta-logo.svg',
         dir: 'rtl',
         lang: 'fa-IR',
+        tag: payload.tag || 'duta-breaking',
+        renotify: true,
         data: { url: payload.url || 'https://duta.ir/' }
     };
 
@@ -40,13 +42,17 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const targetUrl = event.notification.data?.url || 'https://duta.ir/';
+    const targetUrl = event.notification.data?.url || '/';
 
     event.waitUntil(
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
             for (const client of windowClients) {
-                if (client.url === targetUrl && 'focus' in client) {
-                    return client.focus();
+                if ('focus' in client) {
+                    client.focus();
+                    if ('navigate' in client) {
+                        return client.navigate(targetUrl);
+                    }
+                    return;
                 }
             }
             if (self.clients.openWindow) {

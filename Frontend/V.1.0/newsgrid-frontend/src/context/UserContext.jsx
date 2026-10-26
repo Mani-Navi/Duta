@@ -1,10 +1,11 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axiosConfig';
-import { getSeededReactionBoost } from '../utils/articleHelpers';
+import { getSeededReactionBoost, getArticleScore } from '../utils/articleHelpers';
 
 const UserContext = createContext(null);
 const MAX_STORED_CLUSTER_REACTIONS = 200;
+const BREAKING_CHECK_INTERVAL_MS = 2 * 60 * 1000; // بررسی اخبار فوری جدید هر ۲ دقیقه
 
 function pruneReactionsMap(mapObj) {
     const keys = Object.keys(mapObj);
@@ -21,6 +22,7 @@ function pruneReactionsMap(mapObj) {
 
 export function UserProvider({ children }) {
     const navigate = useNavigate();
+    const swRegistrationRef = useRef(null);
 
     const [user, setUser] = useState(() => {
         try {
@@ -31,7 +33,6 @@ export function UserProvider({ children }) {
         }
     });
 
-    // استور مشترک شمارنده‌های واقعی سرور + وضعیت ری‌اکشن کاربر
     const [clusterReactions, setClusterReactions] = useState(() => {
         try {
             const saved = localStorage.getItem('duta_cluster_reactions');
@@ -40,6 +41,24 @@ export function UserProvider({ children }) {
             return {};
         }
     });
+
+    // وضعیت روشن یا خاموش بودن نوتیفیکیشن خبر فوری (UCS-012)
+    const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+        if (typeof window === 'undefined' || !('Notification' in window)) return false;
+        return localStorage.getItem('duta_notifications_enabled') === 'true'
+            && Notification.permission === 'granted';
+    });
+
+    // ثبت Service Worker در مرورگر
+    useEffect(() => {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => {
+                    swRegistrationRef.current = reg;
+                })
+                .catch(() => {});
+        }
+    }, []);
 
     useEffect(() => {
         const token = localStorage.getItem('duta_token');
@@ -60,6 +79,148 @@ export function UserProvider({ children }) {
                 }
             });
     }, []);
+
+    // نمایش اعلان بومی در مرورگر/سیستم‌عامل (از طریق Service Worker یا Notification API)
+    const showBrowserNotification = useCallback(async (title, body, targetUrl = '/') => {
+        if (typeof window === 'undefined' || !('Notification' in window)) return;
+        if (Notification.permission !== 'granted') return;
+
+        const options = {
+            body,
+            icon: '/duta-logo.svg',
+            badge: '/duta-logo.svg',
+            dir: 'rtl',
+            lang: 'fa-IR',
+            tag: 'duta-breaking-' + Date.now(),
+            data: { url: targetUrl }
+        };
+
+        try {
+            if (swRegistrationRef.current && swRegistrationRef.current.showNotification) {
+                await swRegistrationRef.current.showNotification(title, options);
+                return;
+            }
+        } catch {}
+
+        try {
+            const notif = new Notification(title, options);
+            notif.onclick = () => {
+                window.focus();
+                navigate(targetUrl);
+                notif.close();
+            };
+        } catch {}
+    }, [navigate]);
+
+    // کلید روشن / خاموش کردن دریافت اعلان اخبار فوری (UCS-012)
+    const toggleNotifications = useCallback(async () => {
+        if (typeof window === 'undefined' || !('Notification' in window)) {
+            alert('مرورگر شما از اعلان‌های وب پشتیبانی نمی‌کند.');
+            return false;
+        }
+
+        // اگر الان روشن است -> خاموش شود
+        if (notificationsEnabled) {
+            setNotificationsEnabled(false);
+            localStorage.setItem('duta_notifications_enabled', 'false');
+            if (user) {
+                api.delete('/notifications/unsubscribe').catch(() => {});
+            }
+            return false;
+        }
+
+        // اگر خاموش است -> درخواست مجوز از مرورگر و روشن کردن
+        let perm = Notification.permission;
+        if (perm === 'default') {
+            perm = await Notification.requestPermission();
+        }
+
+        if (perm !== 'granted') {
+            alert('برای دریافت اعلان خبر فوری، لطفاً دسترسی Notification را در نوار آدرس مرورگر خود روی Allow قرار دهید.');
+            return false;
+        }
+
+        // ثبت آخرین شناسه خبر فوری فعلی به عنوان مبدا تا فقط اخبار جدیدتر نوتیف بدهند
+        try {
+            const res = await api.get('/articles/breaking?page=0&size=1');
+            const latest = res.data?.content?.[0];
+            if (latest?.id) {
+                localStorage.setItem('duta_last_breaking_id', String(latest.id));
+            }
+        } catch {}
+
+        setNotificationsEnabled(true);
+        localStorage.setItem('duta_notifications_enabled', 'true');
+
+        // ثبت اشتراک در جدول push_subscriptions بک‌اند (در صورت لاگین بودن)
+        if (user) {
+            api.post('/notifications/subscribe', {
+                endpoint: `https://duta.ir/local-push/user-${user.id}`,
+                p256dh: 'native-browser-notification',
+                auth: 'duta-web-push'
+            }).catch(() => {});
+        }
+
+        await showBrowserNotification(
+            'اعلان خبر فوری Duta فعال شد',
+            'به محض انتشار خبر فوری جدید، اعلان آن روی مرورگر شما نمایش داده می‌شود.',
+            '/'
+        );
+        return true;
+    }, [notificationsEnabled, user, showBrowserNotification]);
+
+    // پایش خودکار اخبار فوری جدید در پس‌زمینه (UCS-012)
+    useEffect(() => {
+        if (!notificationsEnabled) return;
+
+        const checkNewBreakingNews = async () => {
+            if (typeof window === 'undefined' || Notification.permission !== 'granted') return;
+            try {
+                const res = await api.get('/articles/breaking?page=0&size=5');
+                const items = res.data?.content || [];
+                if (items.length === 0) return;
+
+                const mutedSources = Array.isArray(user?.mutedSources) ? user.mutedSources : [];
+                const interestScores = user?.interestScores || {};
+
+                // فیلتر کردن منابع مسدودشده یا دسته‌هایی که کاربر «عدم علاقه» زده است
+                const eligible = items.filter(a => {
+                    const srcName = a.source?.name || '';
+                    const cat = a.category || '';
+                    if (mutedSources.includes(srcName)) return false;
+                    if ((interestScores['cat:' + cat] || 0) <= -20) return false;
+                    return true;
+                });
+
+                if (eligible.length === 0) return;
+
+                const newest = eligible[0];
+                const lastSeenId = Number(localStorage.getItem('duta_last_breaking_id') || 0);
+
+                if (!lastSeenId) {
+                    localStorage.setItem('duta_last_breaking_id', String(newest.id));
+                    return;
+                }
+
+                if (newest.id > lastSeenId) {
+                    localStorage.setItem('duta_last_breaking_id', String(newest.id));
+                    const score = getArticleScore(newest);
+                    const srcName = newest.source?.name || 'Duta';
+                    const targetPath = `/article/${newest.slug || newest.id}`;
+
+                    await showBrowserNotification(
+                        `خبر فوری · ${srcName} (اعتبار ${score}٪)`,
+                        newest.title,
+                        targetPath
+                    );
+                }
+            } catch {}
+        };
+
+        checkNewBreakingNews();
+        const interval = setInterval(checkNewBreakingNews, BREAKING_CHECK_INTERVAL_MS);
+        return () => clearInterval(interval);
+    }, [notificationsEnabled, user, showBrowserNotification]);
 
     const openModal = useCallback(() => {
         window.scrollTo(0, 0);
@@ -133,7 +294,6 @@ export function UserProvider({ children }) {
         }
     }, [user]);
 
-    // محاسبه شمارنده واقعی (Real DB Count) بدون بوست نمایشی
     const getRawReactionData = useCallback((article) => {
         const cid = article?.cluster?.id;
         const synced = cid ? clusterReactions[cid] : null;
@@ -142,8 +302,6 @@ export function UserProvider({ children }) {
         const serverHot = article?.cluster?.hotCount ?? 0;
         const serverDoubt = article?.cluster?.doubtCount ?? 0;
 
-        // اگر کاربر در ۱۵ ثانیه اخیر خودش روی این کلستر کلیک کرده، مقدار Optimistic/Confirmed او اولویت دارد؛
-        // در غیر این صورت، بیشترین مقدار بین سرور و کش محلی نمایش داده می‌شود تا لایک سایر کاربران همیشه دیده شود.
         const isRecentlyClicked = synced?.updatedAt && (Date.now() - synced.updatedAt < 15000);
 
         const rawLike = isRecentlyClicked
@@ -163,7 +321,6 @@ export function UserProvider({ children }) {
         return { rawLike, rawHot, rawDoubt, userReaction };
     }, [clusterReactions]);
 
-    // خواندن وضعیت نهایی ری‌اکشن برای نمایش در UI (شمارنده واقعی + بوست نمایشی)
     const getReactionData = useCallback((article) => {
         const { rawLike, rawHot, rawDoubt, userReaction } = getRawReactionData(article);
         const boost = getSeededReactionBoost(article);
@@ -260,6 +417,8 @@ export function UserProvider({ children }) {
         <UserContext.Provider value={{
             user,
             isLoggedIn: !!user,
+            notificationsEnabled,
+            toggleNotifications,
             openModal,
             loginSuccess,
             logout,

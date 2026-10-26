@@ -75,7 +75,7 @@ function PasswordCriteriaChecklist({ password, confirmPassword }) {
 
 function AuthPage({ onPreferencesSaved }) {
     const navigate = useNavigate();
-    const { user, isLoggedIn, loginSuccess, logout, savePreferences } = useUser();
+    const { user, isLoggedIn, notificationsEnabled, toggleNotifications, loginSuccess, logout, savePreferences } = useUser();
     const googleBtnRef = useRef(null);
 
     const [authTab, setAuthTab] = useState('login');
@@ -362,7 +362,6 @@ function AuthPage({ onPreferencesSaved }) {
         });
     }
 
-    // ─── حالت ۱: فرم ورود و ثبت‌نام (با key اختصاصی برای تخریب کامل DOM پس از ورود) ───
     if (!isLoggedIn) {
         return (
             <div key="guest-auth-view" className="auth-page-wrap">
@@ -394,7 +393,6 @@ function AuthPage({ onPreferencesSaved }) {
                         </button>
                     </div>
 
-                    {/* کانتینر اختصاصی دکمه گوگل */}
                     <div
                         ref={googleBtnRef}
                         style={{
@@ -502,7 +500,6 @@ function AuthPage({ onPreferencesSaved }) {
         );
     }
 
-    // ─── حالت ۲: پنل حساب کاربری و علایق (با key مجزا) ───
     return (
         <div key="member-account-view" className="page-content" style={{ maxWidth: '680px' }}>
             <div className="prefs-card">
@@ -544,6 +541,47 @@ function AuthPage({ onPreferencesSaved }) {
 
                 {memberTab === 'feed_prefs' ? (
                     <div>
+                        {/* بخش اعلان خبر فوری (UCS-012) */}
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '12px',
+                                padding: '14px 16px',
+                                borderRadius: '14px',
+                                background: notificationsEnabled ? 'rgba(0, 186, 124, 0.08)' : 'var(--bg)',
+                                border: `1px solid ${notificationsEnabled ? 'rgba(0, 186, 124, 0.35)' : 'var(--separator)'}`,
+                                marginBottom: '18px'
+                            }}
+                        >
+                            <div>
+                                <div style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--label)', marginBottom: '3px' }}>
+                                    اعلان مرورگر برای اخبار فوری
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'var(--label-2)', lineHeight: 1.5 }}>
+                                    {notificationsEnabled
+                                        ? 'فعال است — به محض انتشار خبر فوری جدید، اعلان روی مرورگر شما نمایش داده می‌شود.'
+                                        : 'غیرفعال است — با روشن کردن این گزینه، اخبار فوری را به صورت نوتیفیکیشن دریافت کنید.'}
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={toggleNotifications}
+                                className="cat"
+                                style={{
+                                    background: notificationsEnabled ? 'var(--green)' : 'var(--label)',
+                                    color: notificationsEnabled ? '#fff' : 'var(--bg)',
+                                    borderColor: 'transparent',
+                                    fontWeight: 800,
+                                    padding: '8px 16px'
+                                }}
+                            >
+                                {notificationsEnabled ? '✓ روشن (خاموش کردن)' : 'روشن کردن اعلان'}
+                            </button>
+                        </div>
+
                         <div className="x-layer-box" style={{ borderTop: 'none', marginTop: 0, paddingTop: 0 }}>
                             <div className="x-layer-label">۱. موقعیت مکانی شما (اولویت اخبار محلی)</div>
                             <div className="x-pill-cloud">
