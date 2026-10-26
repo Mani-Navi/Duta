@@ -1,21 +1,46 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axiosConfig';
+import { useUser } from '../context/UserContext';
 import { getArticleScore, getArticleSourceCount, getBadgeClass } from '../utils/articleHelpers';
 
-function HotNewsPanel({ onOpenArticle }) {
-    const [hotArticles, setHotArticles] = useState([]);
+const HOT_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // هر ۵ دقیقه
 
-    useEffect(() => {
-        let mounted = true;
+function HotNewsPanel({ onOpenArticle, refreshTrigger = 0 }) {
+    const [hotArticles, setHotArticles] = useState([]);
+    const { getReactionData } = useUser();
+
+    const fetchHotArticles = useCallback(() => {
+        if (document.hidden) return;
         api.get('/articles/hot')
             .then(res => {
-                if (mounted && Array.isArray(res.data)) {
+                if (Array.isArray(res.data) && res.data.length > 0) {
                     setHotArticles(res.data.slice(0, 4));
                 }
             })
             .catch(() => {});
-        return () => { mounted = false; };
     }, []);
+
+    // ۱. بارگذاری اولیه و همگام‌سازی فوری هنگام کلیک روی دکمه «اخبار جدید منتشر شد» یا تغییر تنظیمات
+    useEffect(() => {
+        fetchHotArticles();
+    }, [fetchHotArticles, refreshTrigger]);
+
+    // ۲. به‌روزرسانی خودکار هر ۵ دقیقه در پس‌زمینه + هنگام بازگشت کاربر به تب سایت
+    useEffect(() => {
+        const interval = setInterval(fetchHotArticles, HOT_REFRESH_INTERVAL_MS);
+
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                fetchHotArticles();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [fetchHotArticles]);
 
     if (hotArticles.length === 0) return null;
 
@@ -38,7 +63,8 @@ function HotNewsPanel({ onOpenArticle }) {
                     const sourceCount = getArticleSourceCount(article);
                     const badgeCls = getBadgeClass(score);
                     const rankStr = String(idx + 1).padStart(2, '0');
-                    const reactionsCount = (article.cluster?.likeCount || 0) + (article.cluster?.hotCount || 0) + (article.cluster?.doubtCount || 0);
+                    const { likeCount, hotCount, doubtCount } = getReactionData(article);
+                    const reactionsCount = likeCount + hotCount + doubtCount;
                     const articleHref = `/article/${encodeURIComponent(article.slug || article.id)}`;
 
                     return (

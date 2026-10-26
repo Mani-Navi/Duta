@@ -7,10 +7,10 @@ import api from '../api/axiosConfig';
 function getColumnCountForWidth(w) {
     if (w <= 560) return 1;
     if (w <= 920) return 2;
-    return 3; // 3 spacious columns on desktop matching the Apple + X prototype
+    return 3;
 }
 
-function NewsGrid({ feedMode = 'newspaper', activeCategory, onOpenArticle, searchKeyword, refreshTrigger }) {
+function NewsGrid({ feedMode = 'newspaper', activeCategory, onOpenArticle, searchKeyword, refreshTrigger, onRefreshHot }) {
     const [articles, setArticles] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -132,12 +132,13 @@ function NewsGrid({ feedMode = 'newspaper', activeCategory, onOpenArticle, searc
                     latestItems[0].id !== latestArticleIdRef.current
                 ) {
                     setHasNewArticles(true);
+                    if (onRefreshHot) onRefreshHot();
                 }
             } catch {}
         }, 5 * 60 * 1000);
 
         return () => clearInterval(interval);
-    }, [searchKeyword, buildEndpointUrl]);
+    }, [searchKeyword, buildEndpointUrl, onRefreshHot]);
 
     const sentinelRef = useCallback(node => {
         if (loading || isFetchingMore) return;
@@ -174,6 +175,7 @@ function NewsGrid({ feedMode = 'newspaper', activeCategory, onOpenArticle, searc
         setPage(0);
         setHasMore(true);
         fetchArticles(0, true);
+        if (onRefreshHot) onRefreshHot();
     };
 
     if (error && articles.length === 0) {

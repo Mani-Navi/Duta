@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import CategoryBar from '../components/CategoryBar';
 import NewsGrid from '../components/NewsGrid';
 import HotNewsPanel from '../components/HotNewsPanel';
 import { useUser } from '../context/UserContext';
 
-function Home({ onOpenArticle, searchKeyword, refreshTrigger }) {
+function Home({ onOpenArticle, searchKeyword, refreshTrigger = 0 }) {
     const { isLoggedIn, openModal } = useUser();
     const [feedTab, setFeedTab] = useState(() => (isLoggedIn ? 'myfeed' : 'newspaper'));
     const [activeCategory, setActiveCategory] = useState(null);
+    const [hotRefreshKey, setHotRefreshKey] = useState(0);
 
     useEffect(() => {
         if (!isLoggedIn && feedTab === 'myfeed') {
@@ -25,11 +26,18 @@ function Home({ onOpenArticle, searchKeyword, refreshTrigger }) {
         setFeedTab(tab);
     };
 
+    const handleRefreshHot = useCallback(() => {
+        setHotRefreshKey(prev => prev + 1);
+    }, []);
+
     return (
         <section aria-label="صفحه اصلی اخبار Duta">
             {!searchKeyword && (
                 <div className="home-top-container">
-                    <HotNewsPanel onOpenArticle={onOpenArticle} />
+                    <HotNewsPanel
+                        onOpenArticle={onOpenArticle}
+                        refreshTrigger={refreshTrigger + hotRefreshKey}
+                    />
 
                     <div className="x-tabs-bar">
                         <div className="x-tabs">
@@ -79,6 +87,7 @@ function Home({ onOpenArticle, searchKeyword, refreshTrigger }) {
                 onOpenArticle={onOpenArticle}
                 searchKeyword={searchKeyword}
                 refreshTrigger={refreshTrigger}
+                onRefreshHot={handleRefreshHot}
             />
         </section>
     );
