@@ -19,30 +19,32 @@ export function getSeededReactionBoost(article) {
     const score = getArticleScore(article);
     const sourceCount = getArticleSourceCount(article);
 
-    let like = 5 + (h % 19);               // پایه بین ۵ تا ۲۳
-    let hot = 2 + ((h >>> 5) % 12);        // پایه بین ۲ تا ۱۳
+    let like = 68 + (h % 175);                  // پایه بین ۶۸ تا ۲۴۲
+    let hot = 34 + ((h >>> 5) % 115);           // پایه بین ۳۴ تا ۱۴۸
     let doubt = score >= 80
-        ? ((h >>> 10) % 3)                 // برای اخبار معتبر: ۰ تا ۲ تردید
-        : (2 + ((h >>> 10) % 6));          // برای اخبار کم‌اعتبارتر: ۲ تا ۷ تردید
+        ? (4 + ((h >>> 10) % 19))               // برای اخبار معتبر: ۴ تا ۲۲ تردید
+        : (26 + ((h >>> 10) % 64));             // برای اخبار کم‌اعتبارتر: ۲۶ تا ۸۹ تردید
 
+    // جهش ویژه برای اخبار فوری
     if (article.breaking) {
-        like += 9;
-        hot += 12;
+        like += 115 + (h % 85);
+        hot += 95 + ((h >>> 7) % 75);
     }
 
+    // افزایش متناسب با تعداد منابع پوشش‌دهنده کلستر
     if (sourceCount > 1) {
-        like += Math.min(14, (sourceCount - 1) * 3);
-        hot += Math.min(10, (sourceCount - 1) * 2);
+        like += Math.min(280, (sourceCount - 1) * 46);
+        hot += Math.min(210, (sourceCount - 1) * 34);
     }
 
-    // رشد تدریجی و طبیعی در ۴۵ دقیقه اول انتشار خبر
+    // رشد سریع در ۳۰ دقیقه اول انتشار (شروع از ۴۰٪ ظرفیت در دقیقه اول)
     if (article.publishedAt) {
         const ageMins = Math.max(1, (Date.now() - new Date(article.publishedAt).getTime()) / 60000);
-        if (ageMins < 45) {
-            const ramp = 0.25 + (ageMins / 45) * 0.75;
-            like = Math.max(1, Math.round(like * ramp));
-            hot = Math.max(1, Math.round(hot * ramp));
-            doubt = Math.round(doubt * ramp);
+        if (ageMins < 30) {
+            const ramp = 0.40 + (ageMins / 30) * 0.60;
+            like = Math.max(18, Math.round(like * ramp));
+            hot = Math.max(9, Math.round(hot * ramp));
+            doubt = Math.max(2, Math.round(doubt * ramp));
         }
     }
 
