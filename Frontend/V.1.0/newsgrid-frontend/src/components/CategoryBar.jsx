@@ -3,10 +3,15 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
         { label: 'همه', value: null },
         { label: 'اقتصادی', value: 'اقتصادی' },
         { label: 'سیاسی', value: 'سیاسی' },
-        { label: 'ورزشی', value: 'ورزشی' },
         { label: 'تکنولوژی', value: 'تکنولوژی' },
+        { label: 'رمزارز', value: 'رمزارز' },
+        { label: 'اجتماعی', value: 'اجتماعی' },
+        { label: 'خودرو', value: 'خودرو' },
+        { label: 'ورزشی', value: 'ورزشی' },
         { label: 'جهانی', value: 'جهانی' },
+        { label: 'سلامت', value: 'سلامت' },
         { label: 'سرگرمی', value: 'سرگرمی' },
+        { label: 'فرهنگ و هنر', value: 'فرهنگ و هنر' },
     ];
 
     return (
@@ -18,16 +23,6 @@ function CategoryBar({ activeCategory, onSelectCategory }) {
                 <span className="pulse-dot" aria-hidden="true" />
                 خبر فوری
             </button>
-
-            {/*
-            <button
-                className={`cat cat-telegram ${activeCategory === 'telegram' ? 'active' : ''}`}
-                onClick={() => onSelectCategory('telegram')}
-            >
-                <i className="ti ti-brand-telegram" aria-hidden="true" style={{ fontSize: '15px' }} />
-                کانال‌های تلگرام
-            </button>
-            */}
 
             {CATEGORIES.map((cat, i) => (
                 <button
