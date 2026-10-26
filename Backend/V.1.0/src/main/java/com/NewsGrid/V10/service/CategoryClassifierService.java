@@ -14,7 +14,29 @@ public class CategoryClassifierService {
     private static final Pattern SUFFIX_PATTERN = Pattern.compile("(هایی|های|ها)(?=\\s|$)");
 
     static {
-        // ── اقتصادی ──
+        // ── ۱. رمزارز و فین‌تک ──
+        Map<String, Integer> crypto = new HashMap<>();
+        crypto.put("بیت کوین", 10); crypto.put("اتریوم", 10); crypto.put("رمزارز", 10);
+        crypto.put("ارز دیجیتال", 10); crypto.put("بلاکچین", 10); crypto.put("تتر", 9);
+        crypto.put("ساتوشی", 9); crypto.put("بایننس", 9); crypto.put("کیف پول", 8);
+        crypto.put("ماینینگ", 9); crypto.put("ماینر", 9); crypto.put("آلت کوین", 10);
+        crypto.put("دوج کوین", 10); crypto.put("سولانا", 10); crypto.put("ریپل", 9);
+        crypto.put("فین تک", 9); crypto.put("صرافی ارز", 10); crypto.put("کریپتو", 10);
+        CATEGORY_KEYWORDS.put("رمزارز", crypto);
+
+        // ── ۲. خودرو و صنعت ──
+        Map<String, Integer> auto = new HashMap<>();
+        auto.put("خودرو", 10); auto.put("ایران خودرو", 10); auto.put("سایپا", 10);
+        auto.put("واردات خودرو", 10); auto.put("قیمت خودرو", 10); auto.put("پژو", 9);
+        auto.put("سمند", 9); auto.put("دنا", 9); auto.put("تارا", 9);
+        auto.put("شاهین", 9); auto.put("کوییک", 9); auto.put("پراید", 9);
+        auto.put("گیربکس", 8); auto.put("پیشرانه", 8); auto.put("خودروساز", 9);
+        auto.put("خودروسازی", 9); auto.put("موتورسیکلت", 8); auto.put("برقی", 6);
+        auto.put("هیبریدی", 8); auto.put("شاسی بلند", 9); auto.put("تویوتا", 8);
+        auto.put("هیوندای", 8); auto.put("بنز", 8); auto.put("بی ام و", 8);
+        CATEGORY_KEYWORDS.put("خودرو", auto);
+
+        // ── ۳. اقتصادی ──
         Map<String, Integer> eco = new HashMap<>();
         eco.put("بورس", 10); eco.put("سهام", 10); eco.put("بازار سرمایه", 10);
         eco.put("تورم", 9);  eco.put("نرخ ارز", 9); eco.put("دلار", 8);
@@ -24,27 +46,38 @@ public class CategoryClassifierService {
         eco.put("گرانی", 6);  eco.put("مالیات", 8);  eco.put("مالی", 6);
         eco.put("سرمایه گذاری", 8); eco.put("تجارت", 7); eco.put("بیمه", 6);
         eco.put("گمرک", 7);   eco.put("ریال", 8);   eco.put("یورو", 8);
-        eco.put("طلا", 9);    eco.put("سکه", 9);    eco.put("مسکن", 7);
-        eco.put("اشتغال", 6); eco.put("بیکاری", 7); eco.put("تسهیلات", 7);
+        eco.put("طلا", 9);    eco.put("سکه", 9);    eco.put("مسکن", 8);
+        eco.put("اجاره", 7);  eco.put("بیکاری", 7); eco.put("تسهیلات", 7);
         eco.put("وام", 8);    eco.put("یارانه", 8);  eco.put("معیشت", 7);
+        eco.put("حقوق", 6);   eco.put("بازنشستگان", 8);
         CATEGORY_KEYWORDS.put("اقتصادی", eco);
 
-        // ── سیاسی ──
+        // ── ۴. سیاسی ──
         Map<String, Integer> pol = new HashMap<>();
         pol.put("مجلس", 10);      pol.put("نماینده", 8);   pol.put("انتخابات", 10);
         pol.put("رئیس جمهور", 10); pol.put("دولت", 8);     pol.put("وزیر", 9);
         pol.put("وزارت", 8);      pol.put("سیاست", 7);     pol.put("سیاسی", 7);
-        pol.put("قانون", 7);      pol.put("شورای نگهبان", 10); pol.put("قوه قضاییه", 9);
-        pol.put("رهبری", 9);      pol.put("حزب", 8);       pol.put("ائتلاف", 8);
-        pol.put("تحریم", 8);      pol.put("دیپلماسی", 9);  pol.put("سفیر", 8);
-        pol.put("سفارت", 8);      pol.put("معاون", 7);     pol.put("استعفا", 9);
+        pol.put("شورای نگهبان", 10); pol.put("رهبری", 9);  pol.put("حزب", 8);
+        pol.put("ائتلاف", 8);     pol.put("تحریم", 8);     pol.put("دیپلماسی", 9);
+        pol.put("سفیر", 8);       pol.put("سفارت", 8);     pol.put("استعفا", 9);
         pol.put("رای", 8);        pol.put("مذاکره", 8);    pol.put("مذاکرات", 9);
-        pol.put("توافق", 7);      pol.put("پارلمان", 9);   pol.put("تکذیب", 7);
-        pol.put("تنگه هرمز", 10); pol.put("نظامی", 8);     pol.put("سپاه", 9);
-        pol.put("ارتش", 8);       pol.put("انرژی هسته ای", 10);
+        pol.put("توافق", 7);      pol.put("پارلمان", 9);   pol.put("سپاه", 9);
+        pol.put("ارتش", 8);       pol.put("انرژی هسته ای", 10); pol.put("پزشکیان", 9);
         CATEGORY_KEYWORDS.put("سیاسی", pol);
 
-        // ── ورزشی ──
+        // ── ۵. اجتماعی و حوادث ──
+        Map<String, Integer> soc = new HashMap<>();
+        soc.put("حوادث", 10); soc.put("حادثه", 8); soc.put("تصادف", 9);
+        soc.put("آتش سوزی", 9); soc.put("زلزله", 10); soc.put("سیل", 9);
+        soc.put("پلیس", 9); soc.put("فراجا", 9); soc.put("دادگاه", 9);
+        soc.put("قوه قضاییه", 9); soc.put("بازداشت", 8); soc.put("زندان", 8);
+        soc.put("شهرداری", 8); soc.put("مترو", 8); soc.put("ترافیک", 8);
+        soc.put("هواشناسی", 9); soc.put("بارش", 8); soc.put("آلودگی هوا", 10);
+        soc.put("محیط زیست", 9); soc.put("مدارس", 8); soc.put("دانش آموز", 8);
+        soc.put("تعطیلی", 8); soc.put("اجتماعی", 8); soc.put("اورژانس", 8);
+        CATEGORY_KEYWORDS.put("اجتماعی", soc);
+
+        // ── ۶. ورزشی ──
         Map<String, Integer> sport = new HashMap<>();
         sport.put("فوتبال", 10); sport.put("لیگ", 9);      sport.put("گل", 7);
         sport.put("المپیک", 10); sport.put("جام جهانی", 10); sport.put("جام", 8);
@@ -53,11 +86,11 @@ public class CategoryClassifierService {
         sport.put("کشتی", 9);    sport.put("والیبال", 9);  sport.put("بسکتبال", 9);
         sport.put("تنیس", 9);    sport.put("شنا", 8);      sport.put("سرمربی", 9);
         sport.put("مربی", 7);    sport.put("استادیوم", 8); sport.put("ورزشگاه", 8);
-        sport.put("پنالتی", 9);  sport.put("فیفا", 10);    sport.put("استقلال", 9);
-        sport.put("پرسپولیس", 9); sport.put("تراکتور", 9); sport.put("سپاهان", 9);
+        sport.put("پنالتی", 9);  sport.put("فیفا", 10);    sport.put("استقلال", 10);
+        sport.put("پرسپولیس", 10); sport.put("تراکتور", 9); sport.put("سپاهان", 9);
         CATEGORY_KEYWORDS.put("ورزشی", sport);
 
-        // ── تکنولوژی ──
+        // ── ۷. تکنولوژی ──
         Map<String, Integer> tech = new HashMap<>();
         tech.put("هوش مصنوعی", 10); tech.put("chatgpt", 10); tech.put("گوگل", 8);
         tech.put("اپل", 8);         tech.put("آیفون", 9);    tech.put("مایکروسافت", 8);
@@ -65,12 +98,21 @@ public class CategoryClassifierService {
         tech.put("نرم افزار", 9);   tech.put("سخت افزار", 9); tech.put("فناوری", 8);
         tech.put("تکنولوژی", 9);    tech.put("دیجیتال", 7);  tech.put("استارتاپ", 9);
         tech.put("سایبری", 9);      tech.put("هک", 9);       tech.put("هکر", 9);
-        tech.put("رمزارز", 9);      tech.put("بیت کوین", 10); tech.put("بلاکچین", 10);
-        tech.put("ماهواره", 8);     tech.put("فضایی", 7);    tech.put("ربات", 8);
-        tech.put("چیپ", 8);         tech.put("پردازنده", 9); tech.put("سامسونگ", 8);
+        tech.put("ماهواره", 8);     tech.put("ربات", 8);     tech.put("پردازنده", 9);
+        tech.put("سامسونگ", 8);     tech.put("شیائومی", 8);  tech.put("فیلترینگ", 8);
         CATEGORY_KEYWORDS.put("تکنولوژی", tech);
 
-        // ── جهانی ──
+        // ── ۸. سلامت و علمی ──
+        Map<String, Integer> health = new HashMap<>();
+        health.put("سلامت", 9); health.put("پزشکی", 10); health.put("بیماری", 8);
+        health.put("بیمارستان", 8); health.put("دارو", 9); health.put("درمان", 8);
+        health.put("واکسن", 9); health.put("سرطان", 9); health.put("تغذیه", 9);
+        health.put("ویتامین", 9); health.put("قلب", 7); health.put("دیابت", 9);
+        health.put("روانشناسی", 9); health.put("نجوم", 9); health.put("ناسا", 9);
+        health.put("فضا", 7); health.put("علمی", 8); health.put("پژوهش", 7);
+        CATEGORY_KEYWORDS.put("سلامت", health);
+
+        // ── ۹. جهانی ──
         Map<String, Integer> world = new HashMap<>();
         world.put("آمریکا", 8);    world.put("اروپا", 8);    world.put("چین", 8);
         world.put("روسیه", 8);     world.put("اسرائیل", 9);  world.put("غزه", 10);
@@ -78,10 +120,10 @@ public class CategoryClassifierService {
         world.put("ناتو", 10);     world.put("بین الملل", 9); world.put("بین المللی", 8);
         world.put("جهان", 6);      world.put("فرانسه", 7);   world.put("آلمان", 7);
         world.put("انگلیس", 7);    world.put("پوتین", 8);    world.put("ترامپ", 8);
-        world.put("بایدن", 8);     world.put("کاخ سفید", 9);
+        world.put("کاخ سفید", 9);  world.put("اتحادیه اروپا", 9);
         CATEGORY_KEYWORDS.put("جهانی", world);
 
-        // ── سرگرمی (سینما، سریال و گیمینگ) ──
+        // ── ۱۰. سرگرمی (سینما، سریال و گیمینگ) ──
         Map<String, Integer> ent = new HashMap<>();
         ent.put("فیلم سینمایی", 10); ent.put("سریال", 10);   ent.put("سینما", 10);
         ent.put("سینمایی", 9);       ent.put("گیم", 9);      ent.put("بازی ویدئویی", 10);
@@ -89,9 +131,17 @@ public class CategoryClassifierService {
         ent.put("ps5", 10);          ent.put("xbox", 10);    ent.put("هالیوود", 8);
         ent.put("اکران", 8);         ent.put("بازیگر", 8);   ent.put("کارگردان", 8);
         ent.put("انیمیشن", 8);       ent.put("انیمه", 8);    ent.put("تریلر", 8);
-        ent.put("تیزر", 7);          ent.put("جشنواره فجر", 9); ent.put("اسکار", 10);
-        ent.put("استیم", 8);         ent.put("گیمر", 8);     ent.put("gta", 10);
+        ent.put("اسکار", 10);        ent.put("استیم", 8);    ent.put("گیمر", 8);
         CATEGORY_KEYWORDS.put("سرگرمی", ent);
+
+        // ── ۱۱. فرهنگ و هنر ──
+        Map<String, Integer> cul = new HashMap<>();
+        cul.put("کتاب", 9); cul.put("موسیقی", 10); cul.put("کنسرت", 10);
+        cul.put("تئاتر", 10); cul.put("نمایشگاه", 8); cul.put("میراث فرهنگی", 10);
+        cul.put("گردشگری", 9); cul.put("شعر", 8); cul.put("ادبیات", 9);
+        cul.put("نقاشی", 9); cul.put("هنری", 8); cul.put("موزه", 8);
+        cul.put("باستان شناسی", 9); cul.put("سمفونی", 9);
+        CATEGORY_KEYWORDS.put("فرهنگ و هنر", cul);
     }
 
     public String classify(String title) {
@@ -105,7 +155,6 @@ public class CategoryClassifierService {
 
         if (title == null || title.isBlank()) return fallbackCategory;
 
-        // نرمال‌سازی متن و ایجاد مرز کلمه با فاصله در ابتدا و انتها
         String normalized = normalizeText(title);
         String paddedTitle = " " + normalized + " ";
 
@@ -116,7 +165,6 @@ public class CategoryClassifierService {
             int totalScore = 0;
 
             for (Map.Entry<String, Integer> kwEntry : catEntry.getValue().entrySet()) {
-                // جستجوی دقیق کلمه یا عبارت با مرز فاصله
                 String boundedKeyword = " " + kwEntry.getKey() + " ";
                 if (paddedTitle.contains(boundedKeyword)) {
                     totalScore += kwEntry.getValue();
@@ -136,11 +184,9 @@ public class CategoryClassifierService {
         String s = input.toLowerCase(Locale.ROOT)
                 .replace('ي', 'ی')
                 .replace('ك', 'ک')
-                .replace('\u200C', ' '); // تبدیل نیم‌فاصله به فاصله استاندارد
+                .replace('\u200C', ' ');
 
-        // تبدیل علائم نگارشی به فاصله
         s = NON_LETTER_PATTERN.matcher(s).replaceAll(" ").trim();
-        // جدا کردن پسوندهای جمع چسبیده (مثل بورس‌ها -> بورس ها)
         s = SUFFIX_PATTERN.matcher(s).replaceAll(" ");
         return s.replaceAll("\\s+", " ").trim();
     }

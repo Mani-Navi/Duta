@@ -380,11 +380,15 @@ public class UserService {
     @Transactional(readOnly = true)
     public Map<String, Object> getDiscoveryCatalog() {
         List<Source> allSources = sourceRepository.findAll().stream()
+                .filter(s -> s.getSourceType() == null || s.getSourceType() == com.NewsGrid.V10.entity.SourceType.RSS)
                 .sorted(Comparator.comparingInt((Source s) -> s.getCredibility() != null ? s.getCredibility() : 0).reversed())
                 .toList();
 
         Map<String, List<Map<String, Object>>> sourcesByCategory = new LinkedHashMap<>();
-        List<String> mainCategories = List.of("اقتصادی", "تکنولوژی", "سیاسی", "ورزشی", "جهانی", "سرگرمی");
+        List<String> mainCategories = List.of(
+                "اقتصادی", "سیاسی", "تکنولوژی", "رمزارز", "اجتماعی",
+                "خودرو", "ورزشی", "جهانی", "سلامت", "سرگرمی", "فرهنگ و هنر"
+        );
         mainCategories.forEach(c -> sourcesByCategory.put(c, new ArrayList<>()));
 
         for (Source s : allSources) {
