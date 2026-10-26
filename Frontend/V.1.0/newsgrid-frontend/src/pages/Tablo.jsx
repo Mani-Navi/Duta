@@ -75,23 +75,6 @@ function Tablo() {
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
                         <h1 className="tablo-main-title" style={{ marginBottom: 0 }}>تابلو بازار</h1>
-                        <span
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                fontSize: '11.5px',
-                                fontWeight: 700,
-                                padding: '4px 11px',
-                                borderRadius: '99px',
-                                background: 'var(--chip-bg)',
-                                color: 'var(--label-2)',
-                                border: '1px solid var(--separator)'
-                            }}
-                        >
-                            <span className="pulse-dot" style={{ background: 'var(--green)' }} aria-hidden="true" />
-                            بازه تغییرات و نمودار: ۲۴ ساعت اخیر
-                        </span>
                     </div>
                     <p className="tablo-subtitle">
                         نرخ لحظه‌ای ارز، طلا، سکه و رمزارز (به‌روزرسانی خودکار هر ۵ دقیقه) — حداکثر ۴ دارایی را برای نمایش در نوار بالای سایت پین کنید.
