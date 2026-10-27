@@ -2,32 +2,61 @@ import { useState, useEffect } from 'react';
 import { fetchSharedMarketData } from '../components/PriceTicker';
 import { useUser } from '../context/UserContext';
 
-function SparklineChart({ points = [], isUp = true }) {
+function SparklineChart({ id = 'asset', points = [], isUp = true }) {
     if (!points || points.length < 2) return null;
-    const width = 108;
-    const height = 34;
-    const min = Math.min(...points);
-    const max = Math.max(...points);
-    const range = max - min || 1;
+    const width = 114;
+    const height = 38;
 
-    const coords = points.map((p, i) => {
-        const x = (i / (points.length - 1)) * width;
-        const y = height - ((p - min) / range) * (height - 8) - 4;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
+    const rawMin = Math.min(...points);
+    const rawMax = Math.max(...points);
+    const avg = (rawMin + rawMax) / 2 || 1;
 
-    const strokeColor = isUp ? '#15803d' : '#be123c';
+    // حداقل دامنه عمودی (0.8% قیمت) تا نوسانات جزئی به شکل اره (\/\/\/) کش نیایند
+    const minVisualSpan = avg * 0.008;
+    const actualSpan = rawMax - rawMin;
+    const effectiveSpan = Math.max(actualSpan, minVisualSpan, 1);
+    const paddedMin = avg - effectiveSpan / 2;
+
+    const pts = points.map((p, i) => {
+        const x = (i / (points.length - 1)) * (width - 6) + 3;
+        const y = height - ((p - paddedMin) / effectiveSpan) * (height - 12) - 6;
+        return { x, y };
+    });
+
+    // ساخت منحنی نرم (Smooth Catmull-Rom / Quadratic Bezier)
+    let linePath = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+        const curr = pts[i];
+        const next = pts[i + 1];
+        const midX = ((curr.x + next.x) / 2).toFixed(1);
+        const midY = ((curr.y + next.y) / 2).toFixed(1);
+        linePath += ` Q ${curr.x.toFixed(1)} ${curr.y.toFixed(1)}, ${midX} ${midY}`;
+    }
+    const last = pts[pts.length - 1];
+    linePath += ` T ${last.x.toFixed(1)} ${last.y.toFixed(1)}`;
+
+    const areaPath = `${linePath} L ${last.x.toFixed(1)} ${height} L ${pts[0].x.toFixed(1)} ${height} Z`;
+
+    const strokeColor = isUp ? '#00BA7C' : '#F4212E';
+    const gradId = `spark-grad-${id}`;
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
             <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
-                <polyline
+                <defs>
+                    <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={strokeColor} stopOpacity="0.28" />
+                        <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
+                    </linearGradient>
+                </defs>
+                <path d={areaPath} fill={`url(#${gradId})`} />
+                <path
+                    d={linePath}
                     fill="none"
                     stroke={strokeColor}
                     strokeWidth="2.2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    points={coords}
                 />
             </svg>
             <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--label-3)', whiteSpace: 'nowrap' }}>
@@ -45,7 +74,7 @@ function Tablo() {
 
     useEffect(() => {
         let mounted = true;
-        fetchSharedMarketData(false).then(data => {
+        fetchSharedMarketData(true).then(data => {
             if (mounted && Array.isArray(data)) {
                 setAssets(data);
             }
@@ -75,6 +104,23 @@ function Tablo() {
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
                         <h1 className="tablo-main-title" style={{ marginBottom: 0 }}>تابلو بازار</h1>
+                        <span
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '11.5px',
+                                fontWeight: 700,
+                                padding: '4px 11px',
+                                borderRadius: '99px',
+                                background: 'var(--chip-bg)',
+                                color: 'var(--label-2)',
+                                border: '1px solid var(--separator)'
+                            }}
+                        >
+                            <span className="pulse-dot" style={{ background: 'var(--green)' }} aria-hidden="true" />
+                            بازه تغییرات و نمودار: ۲۴ ساعت اخیر
+                        </span>
                     </div>
                     <p className="tablo-subtitle">
                         نرخ لحظه‌ای ارز، طلا، سکه و رمزارز (به‌روزرسانی خودکار هر ۵ دقیقه) — حداکثر ۴ دارایی را برای نمایش در نوار بالای سایت پین کنید.
@@ -138,7 +184,11 @@ function Tablo() {
                                         )}
                                     </div>
 
-                                    <SparklineChart points={asset.points} isUp={asset.up !== false} />
+                                    <SparklineChart
+                                        id={asset.id}
+                                        points={asset.points}
+                                        isUp={asset.up !== false}
+                                    />
                                 </div>
                             </div>
                         );
