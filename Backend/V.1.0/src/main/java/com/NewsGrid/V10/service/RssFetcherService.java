@@ -206,9 +206,14 @@ public class RssFetcherService {
                         }
 
                         String cleanDesc = extractCleanDescription(entry);
+                        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
                         ZonedDateTime pubAt = entry.getPublishedDate() != null
                                 ? entry.getPublishedDate().toInstant().atZone(ZoneOffset.UTC)
-                                : ZonedDateTime.now(ZoneOffset.UTC);
+                                : now;
+
+                        if (pubAt.isAfter(now)) {
+                            pubAt = now;
+                        }
 
                         saveAndClusterArticle(source, title, cleanDesc, link, pubAt);
                         savedCount++;
