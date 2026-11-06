@@ -99,15 +99,22 @@ public class RssFetcherService {
         try {
             TrustManager[] trustAllCerts = new TrustManager[]{
                     new X509TrustManager() {
-                        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-                        public void checkClientTrusted(X509Certificate[] certs, String authType) {}
-                        public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return new X509Certificate[0];
+                        }
+
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                        }
+
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                        }
                     }
             };
             SSLContext sc = SSLContext.getInstance("TLS");
             sc.init(null, trustAllCerts, new java.security.SecureRandom());
             rssSslSocketFactory = sc.getSocketFactory();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
 
     @Scheduled(fixedRate = 300000)
@@ -217,7 +224,8 @@ public class RssFetcherService {
 
                         saveAndClusterArticle(source, title, cleanDesc, link, pubAt);
                         savedCount++;
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable ignored) {
+                    }
                 }
             } else {
                 // پشتیبانی خودکار از صفحات دسته‌بندی HTML (مانند متادرس و سایت‌های بدون XML)
@@ -252,7 +260,8 @@ public class RssFetcherService {
                         saveAndClusterArticle(source, title, summary, link, ZonedDateTime.now(ZoneOffset.UTC));
                         savedCount++;
                         count++;
-                    } catch (Throwable ignored) {}
+                    } catch (Throwable ignored) {
+                    }
                 }
             }
 
@@ -369,16 +378,17 @@ public class RssFetcherService {
     private String trimSummary(String clean) {
         if (clean == null || clean.isBlank()) return null;
 
-        // حذف عبارات خودکار افزونه‌های وردپرس (Yoast SEO / RankMath) در دیجیاتو و سایر رسانه‌ها
+        // ۱. ابتدا حذف کامل تمام پسوندهای خودکار وردپرس (Yoast / RankMath) قبل از برش ۳۵۰ کاراکتری
         String sanitized = clean
-                .replaceAll("(?i)\\s*The post\\s+.*?\\s+appeared first on\\s+.*$", "")
-                .replaceAll("\\s*نوشته\\s+.*?\\s+اولین بار در\\s+.*?(پدیدار شد|منتشر شد)\\.?.*$", "")
-                .replaceAll("\\s*این مطلب اولین بار در\\s+.*?\\s+منتشر شده است\\.?.*$", "")
+                .replaceAll("(?is)\\s*(\\.{2,}|…|\\[\\s*(…|\\.{2,})\\s*\\])?\\s*The post\\b.*$", "")
+                .replaceAll("(?s)\\s*(\\.{2,}|…)?\\s*(نوشته|مطلب|این نوشته)\\s+.*?\\s+اولین بار در.*$", "")
+                .replaceAll("(?s)\\s*(\\.{2,}|…)?\\s*(ادامه مطلب|بیشتر بخوانید)\\s*(\\.{2,}|…|:)?\\s*$", "")
                 .replaceAll("\\s*\\[\\s*(…|\\.{2,})\\s*\\]\\s*$", "")
                 .trim();
 
         if (sanitized.isBlank()) return null;
 
+        // ۲. برش استاندارد ۳۵۰ کاراکتری پس از پاکسازی
         if (sanitized.length() > 350) {
             int lastSpace = sanitized.substring(0, 350).lastIndexOf(' ');
             return (lastSpace > 100) ? sanitized.substring(0, lastSpace) + "..." : sanitized.substring(0, 347) + "...";
@@ -387,8 +397,21 @@ public class RssFetcherService {
     }
 
     private boolean isBreaking(String title) {
-        if (title == null) return false;
-        String lower = title.toLowerCase().replace('ي', 'ی').replace('ك', 'ک');
-        return BREAKING_KEYWORDS.stream().anyMatch(lower::contains);
+        if (title == null || title.isBlank()) return false;
+        String normalized = " " + title.toLowerCase()
+                .replace('ي', 'ی')
+                .replace('ك', 'ک')
+                .replace('\u200C', ' ')
+                .replaceAll("[^\\p{L}\\p{N}]+", " ")
+                .trim() + " ";
+
+        // بررسی دقیق با مرز فاصله تا «جنگی» یا «جنگل» با «جنگ» اشتباه گرفته نشود
+        for (String kw : BREAKING_KEYWORDS) {
+            String normKw = " " + kw.replace('\u200C', ' ') + " ";
+            if (normalized.contains(normKw)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
