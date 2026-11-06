@@ -368,11 +368,22 @@ public class RssFetcherService {
 
     private String trimSummary(String clean) {
         if (clean == null || clean.isBlank()) return null;
-        if (clean.length() > 350) {
-            int lastSpace = clean.substring(0, 350).lastIndexOf(' ');
-            return (lastSpace > 100) ? clean.substring(0, lastSpace) + "..." : clean.substring(0, 347) + "...";
+
+        // حذف عبارات خودکار افزونه‌های وردپرس (Yoast SEO / RankMath) در دیجیاتو و سایر رسانه‌ها
+        String sanitized = clean
+                .replaceAll("(?i)\\s*The post\\s+.*?\\s+appeared first on\\s+.*$", "")
+                .replaceAll("\\s*نوشته\\s+.*?\\s+اولین بار در\\s+.*?(پدیدار شد|منتشر شد)\\.?.*$", "")
+                .replaceAll("\\s*این مطلب اولین بار در\\s+.*?\\s+منتشر شده است\\.?.*$", "")
+                .replaceAll("\\s*\\[\\s*(…|\\.{2,})\\s*\\]\\s*$", "")
+                .trim();
+
+        if (sanitized.isBlank()) return null;
+
+        if (sanitized.length() > 350) {
+            int lastSpace = sanitized.substring(0, 350).lastIndexOf(' ');
+            return (lastSpace > 100) ? sanitized.substring(0, lastSpace) + "..." : sanitized.substring(0, 347) + "...";
         }
-        return clean;
+        return sanitized;
     }
 
     private boolean isBreaking(String title) {
