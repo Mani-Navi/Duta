@@ -94,3 +94,15 @@ export function formatRelativeTime(dateStr) {
     const days = Math.floor(hours / 24);
     return `${days} روز پیش`;
 }
+
+export function cleanArticleDescription(desc, title = '') {
+    if (!desc) return '';
+    const cleaned = desc
+        .replace(/\s*The post\s+[\s\S]*?\s+appeared first on\s+[\s\S]*$/i, '')
+        .replace(/\s*نوشته\s+[\s\S]*?\s+اولین بار در\s+[\s\S]*?(پدیدار شد|منتشر شد)\.?[\s\S]*$/i, '')
+        .replace(/\s*\[\s*(…|\.{2,})\s*\]\s*$/g, '')
+        .trim();
+
+    if (!cleaned || cleaned === title?.trim()) return '';
+    return cleaned;
+}

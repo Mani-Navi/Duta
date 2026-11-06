@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import strings from '../strings/strings';
 import api from '../api/axiosConfig';
 import { useUser } from '../context/UserContext';
+import { cleanArticleDescription} from "../utils/articleHelpers";
 import {
     getArticleScore,
     getArticleSourceCount,
@@ -36,6 +37,7 @@ function ArticleDetail({ article }) {
     const mainSourceName = article.source?.name || 'منبع خبری';
     const mainSourceColor = article.source?.color || '#1D9BF0';
     const mainSourceInitials = article.source?.initials || mainSourceName.substring(0, 2);
+    const cleanDesc = cleanArticleDescription(article.description, article.title);
 
     useEffect(() => {
         syncServerArticleReaction(article);
@@ -187,6 +189,10 @@ function ArticleDetail({ article }) {
             <script type="application/ld+json">
                 {JSON.stringify(structuredData)}
             </script>
+
+            {cleanDesc && (
+                <p className="detail-description">{cleanDesc}</p>
+            )}
 
             <article className="x-detail-article-card">
                 <header className="x-publisher-bar">
