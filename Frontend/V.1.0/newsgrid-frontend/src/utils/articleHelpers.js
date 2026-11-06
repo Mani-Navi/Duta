@@ -98,11 +98,13 @@ export function formatRelativeTime(dateStr) {
 export function cleanArticleDescription(desc, title = '') {
     if (!desc) return '';
     const cleaned = desc
-        .replace(/\s*The post\s+[\s\S]*?\s+appeared first on\s+[\s\S]*$/i, '')
-        .replace(/\s*نوشته\s+[\s\S]*?\s+اولین بار در\s+[\s\S]*?(پدیدار شد|منتشر شد)\.?[\s\S]*$/i, '')
-        .replace(/\s*\[\s*(…|\.{2,})\s*\]\s*$/g, '')
+        .replace(/\s*(\.{2,}|…|\[\s*(…|\.{2,})\s*\])?\s*The post\b[\s\S]*$/i, '...')
+        .replace(/\s*(\.{2,}|…)?\s*(نوشته|مطلب|این نوشته)\s+[\s\S]*?\s+اولین بار در[\s\S]*$/i, '...')
+        .replace(/\s*(\.{2,}|…)?\s*(ادامه مطلب|بیشتر بخوانید)\s*(\.{2,}|…|:)?\s*$/i, '')
+        .replace(/\s*\[\s*(…|\.{2,})\s*\]\s*$/g, '...')
+        .replace(/\.{4,}$/g, '...')
         .trim();
 
-    if (!cleaned || cleaned === title?.trim()) return '';
+    if (!cleaned || cleaned === '...' || cleaned === title?.trim()) return '';
     return cleaned;
 }
