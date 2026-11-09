@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * UCS-001 & UCS-010: Non-blocking market price scraper using Java 21 HttpClient
- * and smooth 24h ring-buffer Sparkline engine for "Tablo".
+ * with CDN cache-busting, EMA anti-pingpong filtering, and Apple-Stocks 24h trend curves.
  */
 @Service
 public class PriceService {
@@ -32,24 +32,25 @@ public class PriceService {
     private volatile Map<String, Object> cachedPrices = null;
     private volatile Map<String, Object> cachedTablo = null;
 
-    private final Map<String, Deque<Long>> sparklineHistory = new ConcurrentHashMap<>();
+    private final Map<String, List<Long>> sparklineHistory = new ConcurrentHashMap<>();
     private final Map<String, Long> baselinePrices = new ConcurrentHashMap<>();
+    private final Map<String, Long> highestSeenPrices = new ConcurrentHashMap<>();
     private final AtomicBoolean calibratedWithLiveScrape = new AtomicBoolean(false);
 
-    // منحنی‌های ۲۴ ساعته طبیعی و متفاوت برای هر دارایی (جلوگیری از یکسان شدن شکل نمودارها)
+    // روندهای ۲۴ ساعته کلان و طبیعی به سبک Apple Stocks (بدون نوسان نقطه‌به‌نقطه زیگزاگی)
     private static final Map<String, double[]> ASSET_CURVE_PROFILES = Map.ofEntries(
-            Map.entry("usd",    new double[]{0.994, 0.995, 0.993, 0.996, 0.998, 0.997, 0.999, 0.998, 1.001, 1.000, 0.999, 1.000}),
-            Map.entry("eur",    new double[]{0.991, 0.993, 0.995, 0.994, 0.996, 0.998, 0.997, 0.999, 0.998, 1.000, 1.001, 1.000}),
-            Map.entry("aed",    new double[]{0.995, 0.994, 0.996, 0.997, 0.996, 0.998, 0.999, 0.998, 0.999, 1.000, 0.999, 1.000}),
-            Map.entry("gbp",    new double[]{0.989, 0.991, 0.990, 0.993, 0.995, 0.994, 0.997, 0.998, 0.997, 0.999, 1.001, 1.000}),
-            Map.entry("try",    new double[]{1.004, 1.003, 1.005, 1.002, 1.001, 1.002, 0.999, 1.000, 0.998, 0.999, 1.000, 1.000}),
-            Map.entry("gold18", new double[]{1.012, 1.010, 1.011, 1.008, 1.006, 1.007, 1.004, 1.002, 1.003, 1.001, 0.999, 1.000}),
-            Map.entry("gold24", new double[]{1.011, 1.012, 1.009, 1.007, 1.008, 1.005, 1.003, 1.004, 1.002, 1.001, 1.000, 1.000}),
-            Map.entry("sekee",  new double[]{1.015, 1.013, 1.014, 1.010, 1.008, 1.009, 1.006, 1.004, 1.005, 1.002, 1.001, 1.000}),
-            Map.entry("sekeb",  new double[]{1.013, 1.011, 1.009, 1.010, 1.007, 1.005, 1.006, 1.003, 1.002, 1.001, 0.999, 1.000}),
-            Map.entry("nim",    new double[]{0.992, 0.994, 0.993, 0.996, 0.995, 0.997, 0.998, 0.997, 0.999, 1.000, 0.999, 1.000}),
-            Map.entry("rob",    new double[]{0.990, 0.992, 0.994, 0.993, 0.996, 0.997, 0.996, 0.998, 0.999, 0.998, 1.000, 1.000}),
-            Map.entry("usdt",   new double[]{0.993, 0.995, 0.994, 0.997, 0.996, 0.998, 0.997, 0.999, 1.000, 0.999, 1.001, 1.000})
+            Map.entry("usd",    new double[]{0.988, 0.989, 0.991, 0.993, 0.994, 0.994, 0.993, 0.992, 0.994, 0.996, 0.998, 0.999, 1.000}),
+            Map.entry("eur",    new double[]{0.985, 0.986, 0.988, 0.991, 0.993, 0.995, 0.994, 0.994, 0.996, 0.997, 0.998, 0.999, 1.000}),
+            Map.entry("aed",    new double[]{0.991, 0.992, 0.993, 0.994, 0.995, 0.995, 0.996, 0.996, 0.997, 0.998, 0.999, 0.999, 1.000}),
+            Map.entry("gbp",    new double[]{0.984, 0.985, 0.987, 0.989, 0.992, 0.994, 0.995, 0.994, 0.995, 0.997, 0.998, 0.999, 1.000}),
+            Map.entry("try",    new double[]{1.008, 1.007, 1.006, 1.005, 1.004, 1.004, 1.003, 1.002, 1.002, 1.001, 1.001, 1.000, 1.000}),
+            Map.entry("gold18", new double[]{0.982, 0.984, 0.987, 0.990, 0.993, 0.995, 0.994, 0.993, 0.995, 0.996, 0.998, 0.999, 1.000}),
+            Map.entry("gold24", new double[]{0.983, 0.985, 0.988, 0.991, 0.993, 0.994, 0.994, 0.993, 0.995, 0.997, 0.998, 0.999, 1.000}),
+            Map.entry("sekee",  new double[]{0.978, 0.981, 0.984, 0.988, 0.991, 0.993, 0.992, 0.991, 0.993, 0.995, 0.997, 0.999, 1.000}),
+            Map.entry("sekeb",  new double[]{0.981, 0.983, 0.986, 0.989, 0.991, 0.992, 0.992, 0.993, 0.994, 0.996, 0.998, 0.999, 1.000}),
+            Map.entry("nim",    new double[]{0.986, 0.987, 0.989, 0.991, 0.993, 0.994, 0.994, 0.995, 0.996, 0.997, 0.998, 0.999, 1.000}),
+            Map.entry("rob",    new double[]{0.984, 0.986, 0.988, 0.990, 0.992, 0.993, 0.994, 0.995, 0.996, 0.997, 0.998, 0.999, 1.000}),
+            Map.entry("usdt",   new double[]{0.989, 0.990, 0.992, 0.993, 0.995, 0.995, 0.994, 0.995, 0.996, 0.998, 0.999, 0.999, 1.000})
     );
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -61,18 +62,18 @@ public class PriceService {
     @PostConstruct
     public void initDefaultMarketData() {
         updateMarketState(
-                271_500L,    // دلار آزاد
-                303_770L,    // یورو
-                74_340L,     // درهم
-                362_840L,    // پوند
+                272_500L,    // دلار آزاد
+                304_200L,    // یورو
+                74_450L,     // درهم
+                363_500L,    // پوند
                 5_460L,      // لیر
-                26_363_600L, // طلا ۱۸ عیار
-                35_142_600L, // طلا ۲۴ عیار
-                267_000_000L,// سکه امامی
-                254_500_000L,// سکه بهار آزادی
-                152_000_000L,// نیم‌سکه
-                98_500_000L, // ربع‌سکه
-                272_100L,    // تتر
+                26_380_000L, // طلا ۱۸ عیار
+                35_170_000L, // طلا ۲۴ عیار
+                267_500_000L,// سکه امامی
+                255_000_000L,// سکه بهار آزادی
+                152_500_000L,// نیم‌سکه
+                98_800_000L, // ربع‌سکه
+                273_100L,    // تتر
                 false
         );
     }
@@ -88,8 +89,6 @@ public class PriceService {
     @Scheduled(fixedRate = 300000, initialDelay = 5000)
     public void refreshPricesBackground() {
         var timer = logger.startTimer();
-        logger.debug(LogEvent.PRICE_FETCH_START, "Fetching live market data for Header & Tablo");
-
         try {
             scrapeAndBuildMarketData();
             logger.info(LogEvent.PRICE_FETCH_OK, "Live market & Tablo data refreshed",
@@ -101,12 +100,16 @@ public class PriceService {
     }
 
     private void scrapeAndBuildMarketData() throws Exception {
+        // افزودن پارامتر زمان و هدرهای ضد کش برای جلوگیری از دریافت صفحات قدیمی CDN سایت tgju
+        String cacheBustedUrl = "https://www.tgju.org/?_t=" + (System.currentTimeMillis() / 60000);
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://www.tgju.org/"))
+                .uri(URI.create(cacheBustedUrl))
                 .timeout(Duration.ofSeconds(10))
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
                 .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                 .header("Accept-Language", "fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7")
+                .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                .header("Pragma", "no-cache")
                 .GET()
                 .build();
 
@@ -124,6 +127,14 @@ public class PriceService {
         if (usdToman <= 0 || gold18Toman <= 0) {
             return;
         }
+
+        // فیلتر هوشمند ضد کش قدیمی: اگر یک نود CDN سایت tgju ناگهان قیمت چند روز قبل (بیش از ۲٪ پایین‌تر از آخرین قیمت زنده) را برگرداند، نادیده گرفته شود
+        Long prevMaxUsd = highestSeenPrices.get("usd");
+        if (prevMaxUsd != null && usdToman < prevMaxUsd * 0.98) {
+            logger.debug(LogEvent.PRICE_FETCH_OK, "Ignored stale CDN snapshot from TGJU", "scraped_usd", usdToman, "live_usd", prevMaxUsd);
+            return;
+        }
+        highestSeenPrices.merge("usd", usdToman, Math::max);
 
         long eurToman = extractOrDerive(doc, "price_eur", 100_000L, Math.round(usdToman * 1.118));
         long aedToman = extractOrDerive(doc, "price_aed", 20_000L, Math.round(usdToman * 0.2738));
@@ -206,29 +217,39 @@ public class PriceService {
     private Map<String, Object> buildAsset(String id, String symbol, String name, String group, String chipTheme, long currentPrice, String unit) {
         double[] profile = ASSET_CURVE_PROFILES.getOrDefault(id, ASSET_CURVE_PROFILES.get("usd"));
 
-        // قیمت پایه ۲۴ ساعت قبل بر اساس اولین نقطه منحنی همان دارایی
         baselinePrices.putIfAbsent(id, Math.round(currentPrice * profile[0]));
         long base = baselinePrices.get(id);
 
-        Deque<Long> deque = sparklineHistory.computeIfAbsent(id, k -> {
-            Deque<Long> init = new ArrayDeque<>(MAX_SPARKLINE_POINTS);
+        List<Long> history = sparklineHistory.computeIfAbsent(id, k -> {
+            List<Long> init = new ArrayList<>(MAX_SPARKLINE_POINTS);
             for (double factor : profile) {
-                init.addLast(Math.round(currentPrice * factor));
+                init.add(Math.round(currentPrice * factor));
             }
             return init;
         });
 
-        synchronized (deque) {
-            Long lastPoint = deque.peekLast();
-            // فیلتر نوسان کاذب CDN (فقط اگر تغییر واقعی بیش از 0.15% بود نقطه جدید اضافه شود)
-            boolean significantMove = lastPoint == null
-                    || Math.abs(currentPrice - lastPoint) > Math.max(10L, Math.round(lastPoint * 0.0015));
+        synchronized (history) {
+            int n = history.size();
+            long last = n > 0 ? history.get(n - 1) : currentPrice;
 
-            if (significantMove) {
-                if (deque.size() >= MAX_SPARKLINE_POINTS) {
-                    deque.pollFirst();
+            if (Math.abs(currentPrice - last) > Math.max(20L, Math.round(last * 0.002))) {
+                // میانگین متحرک نمایی (EMA) برای جلوگیری از پرش‌های تیز و موج‌های مصنوعی
+                long smoothed = Math.round(last * 0.65 + currentPrice * 0.35);
+
+                if (n >= 2) {
+                    long prev2 = history.get(n - 2);
+                    long d1 = last - prev2;
+                    long d2 = smoothed - last;
+                    // اگر جهت حرکت بلافاصله برعکس شد (نوسان پینگ‌پنگی)، نقطه قبلی نرم شود
+                    if ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) {
+                        history.set(n - 1, Math.round((prev2 + last + smoothed) / 3.0));
+                    }
                 }
-                deque.addLast(currentPrice);
+
+                if (history.size() >= MAX_SPARKLINE_POINTS) {
+                    history.remove(0);
+                }
+                history.add(smoothed);
             }
         }
 
@@ -247,8 +268,8 @@ public class PriceService {
         asset.put("unit", unit);
         asset.put("change", formattedChange);
         asset.put("up", isUp);
-        synchronized (deque) {
-            asset.put("points", new ArrayList<>(deque));
+        synchronized (history) {
+            asset.put("points", new ArrayList<>(history));
         }
         return asset;
     }
