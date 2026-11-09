@@ -4,26 +4,24 @@ import { useUser } from '../context/UserContext';
 
 function SparklineChart({ id = 'asset', points = [], isUp = true }) {
     if (!points || points.length < 2) return null;
-    const width = 114;
-    const height = 38;
+    const width = 122;
+    const height = 42;
 
     const rawMin = Math.min(...points);
     const rawMax = Math.max(...points);
     const avg = (rawMin + rawMax) / 2 || 1;
 
-    // حداقل دامنه عمودی (0.8% قیمت) تا نوسانات جزئی به شکل اره (\/\/\/) کش نیایند
-    const minVisualSpan = avg * 0.008;
+    const minVisualSpan = avg * 0.012;
     const actualSpan = rawMax - rawMin;
     const effectiveSpan = Math.max(actualSpan, minVisualSpan, 1);
-    const paddedMin = avg - effectiveSpan / 2;
+    const paddedMin = rawMin - (effectiveSpan - actualSpan) / 2;
 
     const pts = points.map((p, i) => {
-        const x = (i / (points.length - 1)) * (width - 6) + 3;
-        const y = height - ((p - paddedMin) / effectiveSpan) * (height - 12) - 6;
+        const x = (i / (points.length - 1)) * (width - 10) + 4;
+        const y = height - ((p - paddedMin) / effectiveSpan) * (height - 14) - 7;
         return { x, y };
     });
 
-    // ساخت منحنی نرم (Smooth Catmull-Rom / Quadratic Bezier)
     let linePath = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
     for (let i = 0; i < pts.length - 1; i++) {
         const curr = pts[i];
@@ -39,24 +37,47 @@ function SparklineChart({ id = 'asset', points = [], isUp = true }) {
 
     const strokeColor = isUp ? '#00BA7C' : '#F4212E';
     const gradId = `spark-grad-${id}`;
+    const baselineY = pts[0].y.toFixed(1);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
             <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
                 <defs>
                     <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={strokeColor} stopOpacity="0.28" />
+                        <stop offset="0%" stopColor={strokeColor} stopOpacity="0.26" />
                         <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
                     </linearGradient>
                 </defs>
+
+                {/* خط‌چین قیمت پایه ۲۴ ساعت قبل به سبک Apple Stocks */}
+                <line
+                    x1="2"
+                    y1={baselineY}
+                    x2={width - 2}
+                    y2={baselineY}
+                    stroke="var(--label-3)"
+                    strokeOpacity="0.35"
+                    strokeWidth="1"
+                    strokeDasharray="2.5 2.5"
+                />
+
                 <path d={areaPath} fill={`url(#${gradId})`} />
+
                 <path
                     d={linePath}
                     fill="none"
                     stroke={strokeColor}
-                    strokeWidth="2.2"
+                    strokeWidth="2.1"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                />
+
+                {/* نقطه قیمت لحظه‌ای در انتهای نمودار */}
+                <circle
+                    cx={last.x.toFixed(1)}
+                    cy={last.y.toFixed(1)}
+                    r="2.8"
+                    fill={strokeColor}
                 />
             </svg>
             <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--label-3)', whiteSpace: 'nowrap' }}>
@@ -104,9 +125,26 @@ function Tablo() {
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
                         <h1 className="tablo-main-title" style={{ marginBottom: 0 }}>تابلو بازار</h1>
+                        <span
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '11.5px',
+                                fontWeight: 700,
+                                padding: '4px 11px',
+                                borderRadius: '99px',
+                                background: 'var(--chip-bg)',
+                                color: 'var(--label-2)',
+                                border: '1px solid var(--separator)'
+                            }}
+                        >
+                            <span className="pulse-dot" style={{ background: 'var(--green)' }} aria-hidden="true" />
+                            بازه تغییرات و نمودار: ۲۴ ساعت اخیر
+                        </span>
                     </div>
                     <p className="tablo-subtitle">
-                        نرخ لحظه‌ای ارز، طلا، سکه و رمزارز — حداکثر ۴ دارایی را برای نمایش در نوار بالای سایت پین کنید.
+                        نرخ لحظه‌ای ارز، طلا، سکه و رمزارز (به‌روزرسانی خودکار هر ۵ دقیقه) — حداکثر ۴ دارایی را برای نمایش در نوار بالای سایت پین کنید.
                     </p>
                 </div>
 
