@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import strings from '../strings/strings';
 import api from '../api/axiosConfig';
 import { useUser } from '../context/UserContext';
-import { cleanArticleDescription} from "../utils/articleHelpers";
 import {
     getArticleScore,
     getArticleSourceCount,
@@ -12,6 +11,35 @@ import {
     getScoreDesc,
     formatRelativeTime
 } from '../utils/articleHelpers';
+
+function sanitizeSummary(rawDesc, title = '') {
+    if (!rawDesc) return '';
+    let s = String(rawDesc).trim();
+
+    const lower = s.toLowerCase();
+    const postIdx = lower.indexOf('the post');
+    if (postIdx !== -1) {
+        s = s.substring(0, postIdx).trim();
+    }
+
+    const appIdx = s.toLowerCase().indexOf('appeared first on');
+    if (appIdx !== -1) {
+        s = s.substring(0, appIdx).trim();
+    }
+
+    const faIdx = s.indexOf('اولین بار در');
+    if (faIdx !== -1) {
+        const nIdx = s.lastIndexOf('نوشته', faIdx);
+        s = s.substring(0, nIdx !== -1 ? nIdx : faIdx).trim();
+    }
+
+    s = s.replace(/\s*\[\s*(…|\.{2,})\s*\]\s*$/g, '...')
+        .replace(/\s*(ادامه مطلب|بیشتر بخوانید)\s*(\.{2,}|…|:)?\s*$/g, '')
+        .trim();
+
+    if (!s || s === '...' || s === title?.trim()) return '';
+    return s;
+}
 
 function ArticleDetail({ article }) {
     const t = strings.fa;
@@ -37,10 +65,11 @@ function ArticleDetail({ article }) {
     const mainSourceName = article.source?.name || 'منبع خبری';
     const mainSourceColor = article.source?.color || '#1D9BF0';
     const mainSourceInitials = article.source?.initials || mainSourceName.substring(0, 2);
-    const cleanDesc = cleanArticleDescription(article.description, article.title);
 
     useEffect(() => {
-        syncServerArticleReaction(article);
+        if (syncServerArticleReaction) {
+            syncServerArticleReaction(article);
+        }
         if (article.cluster?.id) {
             api.get(`/clusters/${article.cluster.id}/articles`)
                 .then(res => setClusterArticles(res.data.filter(a => a.id !== article.id)))
@@ -141,7 +170,7 @@ function ArticleDetail({ article }) {
     const sourceCount = getArticleSourceCount(article);
     const scoreColor = getScoreColor(score);
     const allSources = [article, ...clusterArticles];
-    const hasDistinctDescription = article.description && article.description.trim() !== article.title?.trim();
+    const cleanDesc = sanitizeSummary(article.description, article.title);
     const followedSources = Array.isArray(user?.followedSources) ? user.followedSources : [];
     const isMainFollowed = followedSources.includes(mainSourceName);
 
@@ -152,7 +181,7 @@ function ArticleDetail({ article }) {
                 "@type": "NewsArticle",
                 "@id": `${shareUrl}#article`,
                 "headline": article.title,
-                "description": article.description || article.title,
+                "description": cleanDesc || article.title,
                 "datePublished": article.publishedAt,
                 "dateModified": article.cluster?.updatedAt || article.publishedAt,
                 "articleSection": categoryName || "اخبار",
@@ -189,10 +218,6 @@ function ArticleDetail({ article }) {
             <script type="application/ld+json">
                 {JSON.stringify(structuredData)}
             </script>
-
-            {cleanDesc && (
-                <p className="detail-description">{cleanDesc}</p>
-            )}
 
             <article className="x-detail-article-card">
                 <header className="x-publisher-bar">
@@ -248,8 +273,8 @@ function ArticleDetail({ article }) {
 
                 <h1 className="detail-title">{article.title}</h1>
 
-                {hasDistinctDescription && (
-                    <p className="detail-description">{article.description}</p>
+                {cleanDesc && (
+                    <p className="detail-description">{cleanDesc}</p>
                 )}
 
                 <div className="x-detail-reactions-dock" role="group" aria-label="ثبت واکنش به خبر">
