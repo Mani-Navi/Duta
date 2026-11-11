@@ -7,11 +7,15 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const rawSuperAdmin = (process.env.SUPER_ADMIN_ID || '').trim();
+const isNumericAdmin = /^\d+$/.test(rawSuperAdmin);
+
 export const CONFIG = {
     botToken: (process.env.BOT_TOKEN || '').trim(),
-    superAdminId: Number(process.env.SUPER_ADMIN_ID || 0),
+    superAdminId: isNumericAdmin ? Number(rawSuperAdmin) : 0,
+    superAdminUsername: !isNumericAdmin ? rawSuperAdmin.replace(/^@/, '').toLowerCase() : '',
     channelId: (process.env.CHANNEL_ID || '@Duta_News').trim(),
-    channelHandle: (process.env.CHANNEL_HANDLE || 'Duta_News').replace('@', '').trim(),
+    channelHandle: (process.env.CHANNEL_HANDLE || 'Duta_News').replace(/^@/, '').trim(),
 
     // Cloudflare Worker Bridge or direct Telegram API root
     telegramApiRoot: (process.env.TELEGRAM_API_ROOT || 'https://api.telegram.org').replace(/\/+$/, ''),

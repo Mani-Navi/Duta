@@ -9,7 +9,6 @@ if (!fs.existsSync(CONFIG.dataDir)) {
 
 const db = new DatabaseSync(CONFIG.dbPath);
 
-// ─── Initialize Tables & Pragmas ───
 db.exec(`
   PRAGMA journal_mode = WAL;
   PRAGMA synchronous = NORMAL;
@@ -32,11 +31,17 @@ db.exec(`
     created_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS pending_admin_usernames (
+    username TEXT PRIMARY KEY,
+    role TEXT NOT NULL DEFAULT 'ADMIN',
+    created_at INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS sources (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     url_or_handle TEXT NOT NULL UNIQUE,
-    type TEXT NOT NULL, -- 'TELEGRAM' | 'RSS' | 'WEB'
+    type TEXT NOT NULL,
     category TEXT NOT NULL DEFAULT 'سیاسی',
     credibility INTEGER NOT NULL DEFAULT 78,
     color TEXT NOT NULL DEFAULT '#007AFF',
@@ -101,7 +106,7 @@ db.exec(`
     breaking INTEGER NOT NULL DEFAULT 0,
     is_ad_suspect INTEGER NOT NULL DEFAULT 0,
     ad_reason TEXT,
-    status TEXT NOT NULL DEFAULT 'PENDING', -- 'PENDING' | 'PUBLISHED' | 'REJECTED'
+    status TEXT NOT NULL DEFAULT 'PENDING',
     locked_by_user_id INTEGER,
     locked_by_name TEXT,
     locked_until INTEGER DEFAULT 0,
@@ -120,13 +125,12 @@ db.exec(`
   );
 `);
 
-// Seed default settings
 const defaultSettings = {
-    breaking_auto_publish: '0',     // 0 = Send breaking news to admins for approval, 1 = 100% Auto-publish
-    silent_night_enabled: '1',      // 1 = Silent notifications between 00:30 and 07:00 Tehran time
-    inline_url_btn_enabled: '1',    // 1 = Attach glass URL button under channel posts
-    auto_publish_regular: '1',      // 1 = Automatically publish verified regular news on schedule
-    tablo_pinned_msg_id: '0'        // Message ID of the pinned Market Tablo post in @Duta_News
+    breaking_auto_publish: '0',
+    silent_night_enabled: '1',
+    inline_url_btn_enabled: '1',
+    auto_publish_regular: '1',
+    tablo_pinned_msg_id: '0'
 };
 
 const insertSettingStmt = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
@@ -134,7 +138,6 @@ for (const [k, v] of Object.entries(defaultSettings)) {
     insertSettingStmt.run(k, v);
 }
 
-// Seed Super Admin from .env if configured
 if (CONFIG.superAdminId > 0) {
     db.prepare(`
         INSERT INTO admins (user_id, username, display_name, role, receive_breaking_drafts, receive_ad_suspects, receive_daily_report, created_at)
@@ -143,7 +146,6 @@ if (CONFIG.superAdminId > 0) {
     `).run(CONFIG.superAdminId, Date.now());
 }
 
-// ─── Settings Helpers ───
 export function getSetting(key, fallback = '') {
     const row = db.prepare(`SELECT value FROM settings WHERE key = ?`).get(key);
     return row ? row.value : fallback;
@@ -161,7 +163,6 @@ export function getBooleanSetting(key, fallback = false) {
     return val === '1' || val === 'true';
 }
 
-// ─── Admin & RBAC Helpers ───
 export function getAdmin(userId) {
     if (!userId) return null;
     const row = db.prepare(`SELECT * FROM admins WHERE user_id = ?`).get(Number(userId));
@@ -175,15 +176,76 @@ export function getAdmin(userId) {
     };
 }
 
-export function isAdmin(userId) {
+/**
+ * Checks and auto-binds a Telegram user object (msg.from / cb.from) if they match SUPER_ADMIN_ID/@username or pending admin usernames.
+ */
+export function verifyAndSyncTelegramUser(fromUser) {
+    if (!fromUser || !fromUser.id) return null;
+    const uid = Number(fromUser.id);
+    const uname = (fromUser.username || '').replace(/^@/, '').toLowerCase();
+    const fullName = [fromUser.first_name, fromUser.last_name].filter(Boolean).join(' ').trim() || uname || 'ادمین';
+
+    if (
+        (CONFIG.superAdminId > 0 && uid === CONFIG.superAdminId) ||
+        (CONFIG.superAdminUsername && uname && uname === CONFIG.superAdminUsername)
+    ) {
+        return upsertAdmin({ userId: uid, username: uname, displayName: fullName, role: 'SUPER_ADMIN' });
+    }
+
+    if (uname) {
+        const pending = db.prepare(`SELECT * FROM pending_admin_usernames WHERE username = ?`).get(uname);
+        if (pending) {
+            db.prepare(`DELETE FROM pending_admin_usernames WHERE username = ?`).run(uname);
+            return upsertAdmin({ userId: uid, username: uname, displayName: fullName, role: pending.role || 'ADMIN' });
+        }
+    }
+
+    const existing = getAdmin(uid);
+    if (existing) {
+        if (uname && existing.username !== uname) {
+            db.prepare(`UPDATE admins SET username = ?, display_name = ? WHERE user_id = ?`).run(uname, fullName, uid);
+            return getAdmin(uid);
+        }
+        return existing;
+    }
+
+    return null;
+}
+
+export function addPendingAdminByUsername(username) {
+    const clean = String(username || '').replace(/^@/, '').trim().toLowerCase();
+    if (!clean) return false;
+    db.prepare(`
+    INSERT OR REPLACE INTO pending_admin_usernames (username, role, created_at)
+    VALUES (?, 'ADMIN', ?)
+  `).run(clean, Date.now());
+    return true;
+}
+
+export function getPendingAdminUsernames() {
+    return db.prepare(`SELECT * FROM pending_admin_usernames ORDER BY created_at DESC`).all();
+}
+
+export function removePendingAdminUsername(username) {
+    const clean = String(username || '').replace(/^@/, '').trim().toLowerCase();
+    return db.prepare(`DELETE FROM pending_admin_usernames WHERE username = ?`).run(clean).changes > 0;
+}
+
+export function isAdmin(userId, username = '') {
     if (!userId) return false;
     if (Number(userId) === CONFIG.superAdminId) return true;
+    if (CONFIG.superAdminUsername && username && username.replace(/^@/, '').toLowerCase() === CONFIG.superAdminUsername) {
+        return true;
+    }
     return !!getAdmin(userId);
 }
 
-export function isSuperAdmin(userId) {
+export function isSuperAdmin(userId, username = '') {
     if (!userId) return false;
     if (Number(userId) === CONFIG.superAdminId) return true;
+    if (CONFIG.superAdminUsername && username && username.replace(/^@/, '').toLowerCase() === CONFIG.superAdminUsername) {
+        return true;
+    }
     const adm = getAdmin(userId);
     return adm?.role === 'SUPER_ADMIN';
 }
@@ -200,12 +262,13 @@ export function getAllAdmins() {
 
 export function upsertAdmin({ userId, username = '', displayName = 'ادمین', role = 'ADMIN' }) {
     db.prepare(`
-        INSERT INTO admins (user_id, username, display_name, role, created_at)
-        VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(user_id) DO UPDATE SET
-            username = COALESCE(NULLIF(excluded.username, ''), admins.username),
-                                        display_name = COALESCE(NULLIF(excluded.display_name, ''), admins.display_name)
-    `).run(Number(userId), username, displayName, role, Date.now());
+    INSERT INTO admins (user_id, username, display_name, role, created_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      username = COALESCE(NULLIF(excluded.username, ''), admins.username),
+      display_name = COALESCE(NULLIF(excluded.display_name, ''), admins.display_name),
+      role = CASE WHEN admins.role = 'SUPER_ADMIN' THEN 'SUPER_ADMIN' ELSE excluded.role END
+  `).run(Number(userId), username, displayName, role, Date.now());
     return getAdmin(userId);
 }
 
@@ -227,19 +290,20 @@ export function updateAdminPersonalPrefs(userId, patch = {}) {
         : current.allowed_categories;
 
     db.prepare(`
-        UPDATE admins
-        SET receive_breaking_drafts = ?,
-            receive_ad_suspects = ?,
-            receive_daily_report = ?,
-            allowed_categories = ?
-        WHERE user_id = ?
-    `).run(recBreaking, recAds, recReport, allowedCats, Number(userId));
+    UPDATE admins
+    SET receive_breaking_drafts = ?,
+        receive_ad_suspects = ?,
+        receive_daily_report = ?,
+        allowed_categories = ?
+    WHERE user_id = ?
+  `).run(recBreaking, recAds, recReport, allowedCats, Number(userId));
 
     return getAdmin(userId);
 }
 
 export function removeAdmin(userId) {
-    if (Number(userId) === CONFIG.superAdminId) return false;
+    const adm = getAdmin(userId);
+    if (!adm || adm.role === 'SUPER_ADMIN') return false;
     const res = db.prepare(`DELETE FROM admins WHERE user_id = ? AND role != 'SUPER_ADMIN'`).run(Number(userId));
     return res.changes > 0;
 }
@@ -255,7 +319,6 @@ export function getEligibleAdminsForDraft({ isBreaking = false, isAdSuspect = fa
     });
 }
 
-// ─── Dynamic Sources Helpers ───
 export function getAllSources(onlyActive = false) {
     const sql = onlyActive
         ? `SELECT * FROM sources WHERE active = 1 ORDER BY id DESC`
@@ -270,14 +333,14 @@ export function getSourceById(id) {
 export function addSource({ name, urlOrHandle, type, category = 'سیاسی', credibility = 78, color = '#007AFF', initials = 'DT' }) {
     const cleanInitials = (initials || name.slice(0, 2)).toUpperCase().slice(0, 4);
     const info = db.prepare(`
-        INSERT INTO sources (name, url_or_handle, type, category, credibility, color, initials, active, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
-            ON CONFLICT(url_or_handle) DO UPDATE SET
-            name = excluded.name,
-                                              category = excluded.category,
-                                              credibility = excluded.credibility,
-                                              active = 1
-    `).run(name.trim(), urlOrHandle.trim(), type, category, Number(credibility), color, cleanInitials, Date.now());
+    INSERT INTO sources (name, url_or_handle, type, category, credibility, color, initials, active, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+    ON CONFLICT(url_or_handle) DO UPDATE SET
+      name = excluded.name,
+      category = excluded.category,
+      credibility = excluded.credibility,
+      active = 1
+  `).run(name.trim(), urlOrHandle.trim(), type, category, Number(credibility), color, cleanInitials, Date.now());
     return getSourceById(Number(info.lastInsertRowid)) || db.prepare(`SELECT * FROM sources WHERE url_or_handle = ?`).get(urlOrHandle.trim());
 }
 
@@ -297,7 +360,6 @@ export function touchSourceFetched(id) {
     db.prepare(`UPDATE sources SET last_fetched_at = ? WHERE id = ?`).run(Date.now(), Number(id));
 }
 
-// ─── Deduplication & Ad-Filter Tracking ───
 function hashUrl(url) {
     return crypto.createHash('sha1').update(String(url).trim()).digest('hex');
 }
@@ -313,12 +375,11 @@ export function markUrlSeen(url, sourceId = null, isAd = false, adReason = null)
     if (!url) return;
     const h = hashUrl(url);
     db.prepare(`
-        INSERT OR IGNORE INTO seen_items (url_hash, url, source_id, is_ad, ad_reason, created_at)
+    INSERT OR IGNORE INTO seen_items (url_hash, url, source_id, is_ad, ad_reason, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
-    `).run(h, String(url).trim(), sourceId, isAd ? 1 : 0, adReason, Date.now());
+  `).run(h, String(url).trim(), sourceId, isAd ? 1 : 0, adReason, Date.now());
 }
 
-// ─── Clusters & Live Credibility Upgrade Helpers ───
 export function getRecentClusters(hours = 6) {
     const cutoff = Date.now() - hours * 3600 * 1000;
     return db.prepare(`SELECT * FROM clusters WHERE created_at >= ? ORDER BY created_at DESC`).all(cutoff).map(hydrateCluster);
@@ -352,12 +413,12 @@ export function createCluster({
                               }) {
     const now = Date.now();
     const info = db.prepare(`
-        INSERT INTO clusters (
-            site_cluster_id, site_article_id, representative_title, summary, category,
-            credibility_score, source_count, covered_sources, source_name, source_color,
-            source_initials, short_url, breaking, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    INSERT INTO clusters (
+      site_cluster_id, site_article_id, representative_title, summary, category,
+      credibility_score, source_count, covered_sources, source_name, source_color,
+      source_initials, short_url, breaking, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
         siteClusterId,
         siteArticleId,
         title,
@@ -390,17 +451,17 @@ export function updateClusterData(id, {
     if (!current) return null;
 
     db.prepare(`
-        UPDATE clusters
-        SET representative_title = ?,
-            summary = ?,
-            credibility_score = ?,
-            source_count = ?,
-            covered_sources = ?,
-            short_url = ?,
-            breaking = ?,
-            updated_at = ?
-        WHERE id = ?
-    `).run(
+    UPDATE clusters
+    SET representative_title = ?,
+        summary = ?,
+        credibility_score = ?,
+        source_count = ?,
+        covered_sources = ?,
+        short_url = ?,
+        breaking = ?,
+        updated_at = ?
+    WHERE id = ?
+  `).run(
         title ?? current.representative_title,
         summary ?? current.summary,
         credibilityScore ?? current.credibility_score,
@@ -416,26 +477,26 @@ export function updateClusterData(id, {
 
 export function markClusterPublished(id, channelMessageId, score, sourceCount) {
     db.prepare(`
-        UPDATE clusters
-        SET published_to_channel = 1,
-            channel_message_id = ?,
-            last_published_score = ?,
-            last_published_sources = ?,
-            updated_at = ?
-        WHERE id = ?
-    `).run(Number(channelMessageId), Number(score), Number(sourceCount), Date.now(), Number(id));
+    UPDATE clusters
+    SET published_to_channel = 1,
+        channel_message_id = ?,
+        last_published_score = ?,
+        last_published_sources = ?,
+        updated_at = ?
+    WHERE id = ?
+  `).run(Number(channelMessageId), Number(score), Number(sourceCount), Date.now(), Number(id));
 }
 
 export function getNextUnpublishedAutoCluster() {
     const cutoff = Date.now() - 12 * 3600 * 1000;
     const row = db.prepare(`
-        SELECT * FROM clusters
-        WHERE published_to_channel = 0
-          AND created_at >= ?
-          AND credibility_score >= 60
-        ORDER BY breaking DESC, source_count DESC, credibility_score DESC, created_at DESC
-            LIMIT 1
-    `).get(cutoff);
+    SELECT * FROM clusters
+    WHERE published_to_channel = 0
+      AND created_at >= ?
+      AND credibility_score >= 60
+    ORDER BY breaking DESC, source_count DESC, credibility_score DESC, created_at DESC
+    LIMIT 1
+  `).get(cutoff);
     return row ? hydrateCluster(row) : null;
 }
 
@@ -444,11 +505,11 @@ export function updateClusterTelegramMetrics(channelMessageId, { views = null, r
     const row = db.prepare(`SELECT * FROM clusters WHERE channel_message_id = ?`).get(Number(channelMessageId));
     if (!row) return;
     db.prepare(`
-        UPDATE clusters
-        SET telegram_views = ?,
-            telegram_reactions = ?
-        WHERE channel_message_id = ?
-    `).run(
+    UPDATE clusters
+    SET telegram_views = ?,
+        telegram_reactions = ?
+    WHERE channel_message_id = ?
+  `).run(
         views !== null ? Number(views) : row.telegram_views,
         reactions !== null ? Number(reactions) : row.telegram_reactions,
         Number(channelMessageId)
@@ -464,7 +525,6 @@ function hydrateCluster(row) {
     };
 }
 
-// ─── Multi-Admin Editorial Drafts & Claim-Lock Concurrency ───
 export function createDraft({
                                 clusterId = null,
                                 title,
@@ -481,12 +541,12 @@ export function createDraft({
                                 adReason = null
                             }) {
     const info = db.prepare(`
-        INSERT INTO drafts (
-            cluster_id, title, summary, category, credibility_score, source_count,
-            source_name, source_color, source_initials, short_url, breaking,
-            is_ad_suspect, ad_reason, status, version, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 1, ?)
-    `).run(
+    INSERT INTO drafts (
+      cluster_id, title, summary, category, credibility_score, source_count,
+      source_name, source_color, source_initials, short_url, breaking,
+      is_ad_suspect, ad_reason, status, version, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 1, ?)
+  `).run(
         clusterId,
         title,
         summary,
@@ -515,9 +575,6 @@ export function getDraft(id) {
     };
 }
 
-/**
- * Atomic 2-minute Claim-Lock so two admins cannot edit the same draft simultaneously.
- */
 export function tryAcquireDraftLock(draftId, userId, userName, ttlMs = 120_000) {
     const draft = getDraft(draftId);
     if (!draft || draft.status !== 'PENDING') {
@@ -533,20 +590,20 @@ export function tryAcquireDraftLock(draftId, userId, userName, ttlMs = 120_000) 
     }
 
     db.prepare(`
-        UPDATE drafts
-        SET locked_by_user_id = ?, locked_by_name = ?, locked_until = ?
-        WHERE id = ?
-    `).run(Number(userId), userName, now + ttlMs, Number(draftId));
+    UPDATE drafts
+    SET locked_by_user_id = ?, locked_by_name = ?, locked_until = ?
+    WHERE id = ?
+  `).run(Number(userId), userName, now + ttlMs, Number(draftId));
 
     return { ok: true, draft: getDraft(draftId) };
 }
 
 export function releaseDraftLock(draftId, userId) {
     db.prepare(`
-        UPDATE drafts
-        SET locked_by_user_id = NULL, locked_by_name = NULL, locked_until = 0
-        WHERE id = ? AND (locked_by_user_id IS NULL OR locked_by_user_id = ?)
-    `).run(Number(draftId), Number(userId));
+    UPDATE drafts
+    SET locked_by_user_id = NULL, locked_by_name = NULL, locked_until = 0
+    WHERE id = ? AND (locked_by_user_id IS NULL OR locked_by_user_id = ?)
+  `).run(Number(draftId), Number(userId));
 }
 
 export function updateDraftContent(draftId, patch = {}, editorName = 'ادمین') {
@@ -559,18 +616,18 @@ export function updateDraftContent(draftId, patch = {}, editorName = 'ادمین
     const nextBreaking = patch.breaking !== undefined ? (patch.breaking ? 1 : 0) : current.breaking;
 
     db.prepare(`
-        UPDATE drafts
-        SET title = ?,
-            summary = ?,
-            category = ?,
-            breaking = ?,
-            version = version + 1,
-            last_edited_by = ?,
-            locked_by_user_id = NULL,
-            locked_by_name = NULL,
-            locked_until = 0
-        WHERE id = ?
-    `).run(nextTitle, nextSummary, nextCategory, nextBreaking, editorName, Number(draftId));
+    UPDATE drafts
+    SET title = ?,
+        summary = ?,
+        category = ?,
+        breaking = ?,
+        version = version + 1,
+        last_edited_by = ?,
+        locked_by_user_id = NULL,
+        locked_by_name = NULL,
+        locked_until = 0
+    WHERE id = ?
+  `).run(nextTitle, nextSummary, nextCategory, nextBreaking, editorName, Number(draftId));
 
     if (current.cluster_id) {
         updateClusterData(current.cluster_id, {
@@ -585,42 +642,41 @@ export function updateDraftContent(draftId, patch = {}, editorName = 'ادمین
 
 export function finalizeDraftStatus(draftId, status, actorName) {
     const res = db.prepare(`
-        UPDATE drafts
-        SET status = ?,
-            action_by_name = ?,
-            locked_by_user_id = NULL,
-            locked_by_name = NULL,
-            locked_until = 0
-        WHERE id = ? AND status = 'PENDING'
-    `).run(status, actorName, Number(draftId));
+    UPDATE drafts
+    SET status = ?,
+        action_by_name = ?,
+        locked_by_user_id = NULL,
+        locked_by_name = NULL,
+        locked_until = 0
+    WHERE id = ? AND status = 'PENDING'
+  `).run(status, actorName, Number(draftId));
     return res.changes > 0 ? getDraft(draftId) : null;
 }
 
 export function saveDraftAdminMessage(draftId, adminChatId, messageId) {
     db.prepare(`
-        INSERT OR REPLACE INTO draft_messages (draft_id, admin_chat_id, message_id)
+    INSERT OR REPLACE INTO draft_messages (draft_id, admin_chat_id, message_id)
     VALUES (?, ?, ?)
-    `).run(Number(draftId), Number(adminChatId), Number(messageId));
+  `).run(Number(draftId), Number(adminChatId), Number(messageId));
 }
 
 export function getDraftAdminMessages(draftId) {
     return db.prepare(`SELECT * FROM draft_messages WHERE draft_id = ?`).all(Number(draftId));
 }
 
-// ─── Analytics & Cleanup Helpers ───
 export function getBotAnalyticsSummary(hours = 24) {
     const since = Date.now() - hours * 3600 * 1000;
 
     const publishedRows = db.prepare(`
-        SELECT * FROM clusters
-        WHERE published_to_channel = 1 AND created_at >= ?
-        ORDER BY telegram_views DESC, telegram_reactions DESC
-    `).all(since);
+    SELECT * FROM clusters
+    WHERE published_to_channel = 1 AND created_at >= ?
+    ORDER BY telegram_views DESC, telegram_reactions DESC
+  `).all(since);
 
     const adsBlockedCount = db.prepare(`
-        SELECT COUNT(*) AS cnt FROM seen_items
-        WHERE is_ad = 1 AND created_at >= ?
-    `).get(since)?.cnt || 0;
+    SELECT COUNT(*) AS cnt FROM seen_items
+    WHERE is_ad = 1 AND created_at >= ?
+  `).get(since)?.cnt || 0;
 
     let totalViews = 0;
     let totalReactions = 0;
