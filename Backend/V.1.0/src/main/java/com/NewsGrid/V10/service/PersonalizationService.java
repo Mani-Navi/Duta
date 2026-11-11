@@ -24,8 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
- * UCS-008, UCS-009, UCS-011: In-memory personalization engine, Hot News ranker, and cluster reaction manager.
- * Computes user-specific feeds in < 0.5ms from the cached representative article pool with zero DB JOINs.
+ * UCS-008, UCS-009, UCS-011, UCS-014: In-memory personalization engine, Hot News ranker,
+ * cluster reaction manager, and Telegram short-link click telemetry.
  */
 @Service
 @RequiredArgsConstructor
@@ -40,6 +40,7 @@ public class PersonalizationService {
     private static final int DISCOVERY_CREDIBILITY_MIN = 82;
 
     private final ConcurrentHashMap<Long, LongAdder> pendingClusterViews = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, LongAdder> telegramShortLinkClicks = new ConcurrentHashMap<>();
 
     @Cacheable(value = "hot_articles", key = "'top4'")
     @Transactional(readOnly = true)
@@ -216,10 +217,6 @@ public class PersonalizationService {
         return toEnrichedArticleMap(article, null, null, userReactions);
     }
 
-    /**
-     * Evicts article feeds & detail caches (while keeping sitemap, seo, categories and user_profiles warm)
-     * so any user's reaction is immediately visible on all cards across the platform.
-     */
     @Caching(evict = {
             @CacheEvict(value = "articles", allEntries = true),
             @CacheEvict(value = "article_detail", allEntries = true),
@@ -288,6 +285,66 @@ public class PersonalizationService {
 
     public void incrementClusterViewAsync(Long clusterId) {
         incrementClusterView(clusterId);
+    }
+
+    /**
+     * UCS-014: Records a click coming from duta.ir/c/{id} short links shared on @Duta_News Telegram channel.
+     */
+    public void recordTelegramShortLinkClick(Long articleId, Long clusterId) {
+        if (articleId != null) {
+            telegramShortLinkClicks.computeIfAbsent(articleId, k -> new LongAdder()).increment();
+        }
+        if (clusterId != null) {
+            incrementClusterView(clusterId);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getTelegramAnalyticsSnapshot() {
+        List<Article> pool = articleService.getRecentRepresentativePool();
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+        ZonedDateTime cutoff24h = now.minusHours(24);
+
+        long totalShortLinkClicks = telegramShortLinkClicks.values().stream()
+                .mapToLong(LongAdder::sum)
+                .sum();
+
+        List<Map<String, Object>> topArticles24h = pool.stream()
+                .filter(a -> a.getPublishedAt() != null && a.getPublishedAt().isAfter(cutoff24h))
+                .sorted((a, b) -> {
+                    long clicksA = telegramShortLinkClicks.containsKey(a.getId()) ? telegramShortLinkClicks.get(a.getId()).sum() : 0L;
+                    long clicksB = telegramShortLinkClicks.containsKey(b.getId()) ? telegramShortLinkClicks.get(b.getId()).sum() : 0L;
+                    int viewsA = a.getCluster() != null ? a.getCluster().getViewCount() : 0;
+                    int viewsB = b.getCluster() != null ? b.getCluster().getViewCount() : 0;
+                    return Long.compare((clicksB * 5) + viewsB, (clicksA * 5) + viewsA);
+                })
+                .limit(5)
+                .map(a -> {
+                    long shortClicks = telegramShortLinkClicks.containsKey(a.getId())
+                            ? telegramShortLinkClicks.get(a.getId()).sum()
+                            : 0L;
+                    int views = a.getCluster() != null ? a.getCluster().getViewCount() : 0;
+                    int score = a.getCluster() != null ? a.getCluster().getCredibilityScore() : 75;
+                    int sources = a.getCluster() != null ? a.getCluster().getSourceCount() : 1;
+
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", a.getId());
+                    item.put("title", a.getTitle());
+                    item.put("category", a.getCategory() != null ? a.getCategory() : "اخبار");
+                    item.put("shortLinkClicks", shortClicks);
+                    item.put("siteViews", views);
+                    item.put("credibilityScore", score);
+                    item.put("sourceCount", sources);
+                    item.put("shortUrl", "https://duta.ir/c/" + a.getId());
+                    return item;
+                })
+                .toList();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalShortLinkClicks", totalShortLinkClicks);
+        result.put("topArticles24h", topArticles24h);
+        result.put("generatedAt", now.toString());
+        return result;
     }
 
     @Scheduled(fixedRate = 60000)

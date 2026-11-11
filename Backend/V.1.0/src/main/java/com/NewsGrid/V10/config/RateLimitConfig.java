@@ -39,7 +39,10 @@ public class RateLimitConfig implements HandlerInterceptor {
                              Object handler) throws Exception {
 
         String path = request.getRequestURI();
-        if (path != null && (path.endsWith("/sitemap.xml") || path.contains("/api/articles/seo/"))) {
+        if (path != null && (path.endsWith("/sitemap.xml")
+                || path.endsWith("/rss.xml")
+                || path.contains("/api/articles/seo/")
+                || path.endsWith("/api/articles/telegram-stats"))) {
             return true;
         }
 

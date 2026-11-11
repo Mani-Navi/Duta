@@ -19,6 +19,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 
@@ -176,6 +177,74 @@ public class ArticleService {
                 .breaking(article.isBreaking())
                 .coveredSources(coveredSources)
                 .build();
+    }
+
+    /**
+     * UCS-014: Official Duta RSS 2.0 Feed enriched with <duta:*> credibility & cluster metadata for @Duta_News Bot.
+     */
+    @Cacheable(value = "sitemap", key = "'rss-xml'")
+    public String generateRssFeedXml() {
+        List<Article> pool = getRecentRepresentativePool();
+        List<Article> latest = pool.stream().limit(60).toList();
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+
+        StringBuilder rss = new StringBuilder(131_072);
+        rss.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        rss.append("<rss version=\"2.0\" xmlns:duta=\"https://duta.ir/ns\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n");
+        rss.append("  <channel>\n");
+        rss.append("    <title>Duta — دو نگاه، یک حقیقت</title>\n");
+        rss.append("    <link>https://duta.ir</link>\n");
+        rss.append("    <description>پلتفرم هوشمند تجمیع، خوشه‌بندی و سنجش اعتبار اخبار فارسی</description>\n");
+        rss.append("    <language>fa-IR</language>\n");
+        rss.append("    <atom:link href=\"https://duta.ir/api/articles/rss.xml\" rel=\"self\" type=\"application/rss+xml\"/>\n");
+        rss.append("    <lastBuildDate>").append(DateTimeFormatter.RFC_1123_DATE_TIME.format(now)).append("</lastBuildDate>\n");
+
+        for (Article a : latest) {
+            int score = a.getCluster() != null
+                    ? a.getCluster().getCredibilityScore()
+                    : (a.getSource() != null && a.getSource().getCredibility() != null ? a.getSource().getCredibility() : 50);
+            int sourceCount = a.getCluster() != null ? Math.max(1, a.getCluster().getSourceCount()) : 1;
+            Long clusterId = a.getCluster() != null ? a.getCluster().getId() : a.getId();
+            String srcName = a.getSource() != null && a.getSource().getName() != null ? a.getSource().getName() : "Duta";
+            String srcColor = a.getSource() != null && a.getSource().getColor() != null ? a.getSource().getColor() : "#007AFF";
+            String srcInitials = a.getSource() != null && a.getSource().getInitials() != null
+                    ? a.getSource().getInitials()
+                    : srcName.substring(0, Math.min(2, srcName.length()));
+            String category = a.getCategory() != null ? a.getCategory() : "سیاسی";
+            String shortUrl = "https://duta.ir/c/" + a.getId();
+            String rawSlug = (a.getSlug() != null && !a.getSlug().isBlank()) ? a.getSlug() : String.valueOf(a.getId());
+            String canonicalUrl = "https://duta.ir/article/" + URLEncoder.encode(rawSlug, StandardCharsets.UTF_8);
+            ZonedDateTime pubDate = a.getPublishedAt() != null ? a.getPublishedAt() : now;
+            String summary = (a.getDescription() != null && !a.getDescription().isBlank())
+                    ? a.getDescription()
+                    : a.getTitle();
+
+            rss.append("    <item>\n");
+            rss.append("      <title>").append(escapeXml(a.getTitle())).append("</title>\n");
+            rss.append("      <link>").append(shortUrl).append("</link>\n");
+            rss.append("      <guid isPermaLink=\"true\">").append(escapeXml(canonicalUrl)).append("</guid>\n");
+            rss.append("      <pubDate>").append(DateTimeFormatter.RFC_1123_DATE_TIME.format(pubDate)).append("</pubDate>\n");
+            rss.append("      <category>").append(escapeXml(category)).append("</category>\n");
+            rss.append("      <description>").append(escapeXml(summary)).append("</description>\n");
+            rss.append("      <duta:articleId>").append(a.getId()).append("</duta:articleId>\n");
+            rss.append("      <duta:clusterId>").append(clusterId).append("</duta:clusterId>\n");
+            rss.append("      <duta:slug>").append(escapeXml(rawSlug)).append("</duta:slug>\n");
+            rss.append("      <duta:shortUrl>").append(shortUrl).append("</duta:shortUrl>\n");
+            rss.append("      <duta:credibilityScore>").append(score).append("</duta:credibilityScore>\n");
+            rss.append("      <duta:sourceCount>").append(sourceCount).append("</duta:sourceCount>\n");
+            rss.append("      <duta:breaking>").append(a.isBreaking()).append("</duta:breaking>\n");
+            rss.append("      <duta:sourceName>").append(escapeXml(srcName)).append("</duta:sourceName>\n");
+            rss.append("      <duta:sourceColor>").append(escapeXml(srcColor)).append("</duta:sourceColor>\n");
+            rss.append("      <duta:sourceInitials>").append(escapeXml(srcInitials)).append("</duta:sourceInitials>\n");
+            if (a.getLocation() != null && !a.getLocation().isBlank()) {
+                rss.append("      <duta:location>").append(escapeXml(a.getLocation())).append("</duta:location>\n");
+            }
+            rss.append("    </item>\n");
+        }
+
+        rss.append("  </channel>\n");
+        rss.append("</rss>");
+        return rss.toString();
     }
 
     @Cacheable(value = "sitemap", key = "'xml'")

@@ -153,6 +153,35 @@ public class ArticleController {
         return personalizationService.getEnrichedArticleDetail(article, userId);
     }
 
+    /**
+     * UCS-014: Resolves short link duta.ir/c/{id}, records Telegram click telemetry, and returns enriched article.
+     */
+    @GetMapping("/short/{id}")
+    public Map<String, Object> resolveShortLink(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Article article;
+        try {
+            article = articleService.getArticleById(id);
+        } catch (RuntimeException ex) {
+            List<Article> clusterArticles = articleService.getClusterArticles(id);
+            article = clusterArticles.get(0);
+        }
+        Long clusterId = article.getCluster() != null ? article.getCluster().getId() : null;
+        personalizationService.recordTelegramShortLinkClick(article.getId(), clusterId);
+
+        Long userId = jwtService.extractUserIdFromHeader(authHeader);
+        return personalizationService.getEnrichedArticleDetail(article, userId);
+    }
+
+    /**
+     * UCS-014: Returns Telegram short-link click counts and top 24h articles for @Duta_News analytics digest.
+     */
+    @GetMapping("/telegram-stats")
+    public Map<String, Object> getTelegramStats() {
+        return personalizationService.getTelegramAnalyticsSnapshot();
+    }
+
     @GetMapping("/slug/{slug}")
     public Map<String, Object> getArticleBySlug(
             @PathVariable String slug,
@@ -227,6 +256,11 @@ public class ArticleController {
     @GetMapping(value = "/sitemap.xml", produces = "application/xml;charset=UTF-8")
     public String getNewsSitemap() {
         return articleService.generateNewsSitemapXml();
+    }
+
+    @GetMapping(value = "/rss.xml", produces = "application/rss+xml;charset=UTF-8")
+    public String getOfficialRssFeed() {
+        return articleService.generateRssFeedXml();
     }
 
     private boolean isAuthorizedAdmin(String headerKey, String paramKey) {
