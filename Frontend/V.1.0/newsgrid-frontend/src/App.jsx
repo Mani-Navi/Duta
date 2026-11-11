@@ -86,6 +86,50 @@ function TermsPage() {
     );
 }
 
+/**
+ * UCS-014: Resolves Telegram short link duta.ir/c/:id, records click telemetry, and redirects to canonical slug.
+ */
+function ShortLinkRedirectPage() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [notFound, setNotFound] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+        api.get(`/articles/short/${encodeURIComponent(id)}`)
+            .then(res => {
+                if (!isMounted) return;
+                const data = res.data;
+                const targetSlug = data?.slug || data?.id || id;
+                navigate(`/article/${targetSlug}`, {
+                    replace: true,
+                    state: {
+                        breaking: data?.breaking || false,
+                        articleData: data
+                    }
+                });
+            })
+            .catch(() => {
+                if (isMounted) setNotFound(true);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [id, navigate]);
+
+    if (notFound) {
+        return <NotFound />;
+    }
+
+    return (
+        <div className="nitt-loading-box">
+            <DutaLogo loading={true} />
+            <span className="nitt-loading-text">در حال باز کردن خبر از کانال تلگرام Duta...</span>
+        </div>
+    );
+}
+
 function ArticleDetailPage() {
     const { slug } = useParams();
     const navigate = useNavigate();
@@ -93,12 +137,32 @@ function ArticleDetailPage() {
 
     const isBreakingInit = location.state?.breaking || false;
 
-    const [article, setArticle] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [article, setArticle] = useState(location.state?.articleData || null);
+    const [loading, setLoading] = useState(!location.state?.articleData);
     const [notFound, setNotFound] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
+
+        if (location.state?.articleData && String(location.state.articleData.slug || location.state.articleData.id) === String(slug)) {
+            const preloaded = location.state.articleData;
+            setArticle(preloaded);
+            setLoading(false);
+            if (preloaded.title) {
+                const canonicalSlug = preloaded.slug || preloaded.id;
+                const score = getArticleScore(preloaded);
+                const seoDesc = preloaded.description
+                    ? `امتیاز اعتبار: ${score}٪ | ${preloaded.description}`
+                    : `امتیاز اعتبار: ${score}٪ | ${preloaded.title}`;
+                syncDocumentSeoTags({
+                    title: `${preloaded.title} | Duta`,
+                    description: seoDesc,
+                    canonicalUrl: `https://duta.ir/article/${canonicalSlug}`
+                });
+            }
+            return () => { isMounted = false; };
+        }
+
         setArticle(null);
         setLoading(true);
         setNotFound(false);
@@ -244,7 +308,7 @@ function AppLayout() {
                 description: 'قوانین بهره‌برداری، نحوه کارکرد الگوریتم اعتبارسنجی و سلب مسئولیت منابع خبری در Duta.',
                 canonicalUrl: 'https://duta.ir/terms'
             });
-        } else if (!location.pathname.startsWith('/article/')) {
+        } else if (!location.pathname.startsWith('/article/') && !location.pathname.startsWith('/c/')) {
             syncDocumentSeoTags({
                 title: 'صفحه یافت نشد (404) | Duta',
                 description: DEFAULT_DESC,
@@ -254,7 +318,7 @@ function AppLayout() {
     }, [location]);
 
     const isHome = location.pathname === '/';
-    const isDetail = location.pathname.startsWith('/article/');
+    const isDetail = location.pathname.startsWith('/article/') || location.pathname.startsWith('/c/');
     const view = isDetail ? 'detail'
         : location.pathname === '/tablo' ? 'tablo'
             : location.pathname === '/auth' ? 'auth'
@@ -386,6 +450,7 @@ function AppLayout() {
                     }>
                         <Routes>
                             <Route path="/" element={null} />
+                            <Route path="/c/:id" element={<ShortLinkRedirectPage />} />
                             <Route path="/article/:slug" element={<ArticleDetailPage />} />
                             <Route path="/tablo" element={<Tablo />} />
                             <Route path="/auth" element={<AuthPage onPreferencesSaved={() => setFeedRefreshCounter(c => c + 1)} />} />
