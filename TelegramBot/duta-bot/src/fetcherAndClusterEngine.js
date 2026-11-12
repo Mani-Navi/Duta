@@ -317,6 +317,35 @@ export async function detectSourceInfoFromInput(rawInput) {
     };
 }
 
+/**
+ * Fetches exact list of all independent sources covering a site cluster directly from Duta Backend.
+ */
+export async function fetchSiteClusterSourcesList(siteClusterId, fallbackSourceName = 'Duta', fallbackScore = 80) {
+    if (!siteClusterId) return [{ name: fallbackSourceName, credibility: fallbackScore }];
+    try {
+        const res = await fetch(`${CONFIG.dutaBackendUrl}/api/clusters/${siteClusterId}/articles`, {
+            signal: AbortSignal.timeout(3500)
+        });
+        if (res.ok) {
+            const articles = await res.json();
+            if (Array.isArray(articles) && articles.length > 0) {
+                const seen = new Set();
+                const list = [];
+                for (const a of articles) {
+                    const sName = a?.source?.name;
+                    const sCred = a?.source?.credibility || fallbackScore;
+                    if (sName && !seen.has(sName)) {
+                        seen.add(sName);
+                        list.push({ name: sName, credibility: sCred });
+                    }
+                }
+                if (list.length > 0) return list;
+            }
+        }
+    } catch {}
+    return [{ name: fallbackSourceName, credibility: fallbackScore }];
+}
+
 async function fetchDutaSiteRss({ onNewDraftCreated, onClusterUpgraded }) {
     const urlsToTry = [
         `${CONFIG.dutaBackendUrl}/api/articles/rss.xml`,
@@ -360,12 +389,20 @@ async function fetchDutaSiteRss({ onNewDraftCreated, onClusterUpgraded }) {
         const sourceColor = String(item['duta:sourceColor'] || '#007AFF').trim();
         const sourceInitials = String(item['duta:sourceInitials'] || 'DT').trim();
 
-        const rawCoveredStr = String(item['duta:coveredSources'] || sourceName);
-        const coveredList = rawCoveredStr
+        const rawCoveredStr = String(item['duta:coveredSources'] || '');
+        let coveredList = rawCoveredStr
             .split(/،|,/)
             .map(s => s.trim())
             .filter(Boolean)
             .map(name => ({ name, credibility: score }));
+
+        // If multi-source cluster and RSS didn't have all source names yet, fetch directly from /api/clusters/:id/articles
+        if (sourceCount > coveredList.length && siteClusterId > 0) {
+            coveredList = await fetchSiteClusterSourcesList(siteClusterId, sourceName, score);
+        }
+        if (coveredList.length === 0) {
+            coveredList = [{ name: sourceName, credibility: score }];
+        }
 
         const existingCluster = getClusterBySiteClusterId(siteClusterId);
         if (existingCluster) {
@@ -376,7 +413,7 @@ async function fetchDutaSiteRss({ onNewDraftCreated, onClusterUpgraded }) {
                 title,
                 summary,
                 credibilityScore: Math.max(score, existingCluster.credibility_score),
-                sourceCount: Math.max(sourceCount, existingCluster.source_count),
+                sourceCount: Math.max(sourceCount, existingCluster.source_count, coveredList.length),
                 coveredSources: coveredList.length >= existingCluster.coveredSourcesList.length ? coveredList : undefined,
                 shortUrl,
                 breaking: breaking || existingCluster.breaking
@@ -405,7 +442,7 @@ async function fetchDutaSiteRss({ onNewDraftCreated, onClusterUpgraded }) {
             category,
             credibilityScore: score,
             sourceCount: Math.max(sourceCount, coveredList.length),
-            coveredSources: coveredList.length ? coveredList : [{ name: sourceName, credibility: score }],
+            coveredSources: coveredList,
             sourceName,
             sourceColor,
             sourceInitials,
@@ -535,6 +572,7 @@ async function fetchManualBotSource(source, { onNewDraftCreated, onClusterUpgrad
                     category,
                     credibilityScore: source.credibility,
                     sourceCount: 1,
+                    coveredSources: [{ name: source.name, credibility: source.credibility }],
                     sourceName: source.name,
                     sourceColor: source.color,
                     sourceInitials: source.initials,
@@ -625,6 +663,7 @@ async function handleBreakingOrAdItem(cluster, { isAdSuspect = false, adReason =
         category: cluster.category,
         credibilityScore: cluster.credibility_score,
         sourceCount: cluster.source_count,
+        coveredSources: cluster.coveredSourcesList,
         sourceName: cluster.source_name,
         sourceColor: cluster.source_color,
         sourceInitials: cluster.source_initials,

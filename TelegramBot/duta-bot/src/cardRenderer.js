@@ -53,9 +53,6 @@ function escapeSvg(text) {
         .replace(/'/g, '&apos;');
 }
 
-/**
- * Deterministic reaction numbers matching src/utils/articleHelpers.js on duta.ir
- */
 function computeSeededReactions(title = '', score = 85, sourceCount = 1, breaking = false) {
     let seed = 0;
     const str = String(title || 'duta');
@@ -124,9 +121,6 @@ function getBadgeTheme(score) {
     return { bg: '#FFE4E6', text: '#BE123C' };
 }
 
-/**
- * Renders the exact Light-Mode NewsCard from https://duta.ir (matching user screenshot 1:1).
- */
 export async function renderNewsCardPng(item) {
     await ensureFontsLoaded();
 
@@ -143,135 +137,120 @@ export async function renderNewsCardPng(item) {
 
     const timeText = item.timeLabel || `${12 + (like % 35)} دقیقه پیش`;
 
-    const width = 960;
-    const breakingBarHeight = isBreaking ? 64 : 0;
-    const extraTitleHeight = Math.max(0, titleLines.length - 2) * 60;
-    const cardHeight = 400 + breakingBarHeight + extraTitleHeight;
-    const height = cardHeight + 56;
+    const width = 920;
+    const breakingBarHeight = isBreaking ? 62 : 0;
+    const extraTitleHeight = Math.max(0, titleLines.length - 2) * 58;
+    const cardHeight = 385 + breakingBarHeight + extraTitleHeight;
+    const height = cardHeight + 48;
 
-    const cardX = 28;
-    const cardY = 28;
-    const cardW = width - 56;
+    const cardX = 24;
+    const cardY = 24;
+    const cardW = width - 48;
     const cardBorder = isBreaking ? 'rgba(244, 33, 46, 0.45)' : 'rgba(15, 20, 25, 0.10)';
     const bodyTop = cardY + breakingBarHeight;
 
-    const dividerY = cardY + cardHeight - 92;
-    const footerY = cardY + cardHeight - 40;
+    const dividerY = cardY + cardHeight - 88;
+    const footerY = cardY + cardHeight - 36;
 
     const svg = `
 <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <clipPath id="cardRoundClip">
-      <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardHeight}" rx="32" ry="32"/>
+      <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardHeight}" rx="30" ry="30"/>
     </clipPath>
   </defs>
 
-  <!-- Outer Page Canvas (#F7F9F9 exact match with duta.ir) -->
   <rect width="${width}" height="${height}" fill="#F7F9F9"/>
 
-  <!-- White NewsCard Container -->
   <g clip-path="url(#cardRoundClip)">
-    <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardHeight}" rx="32" ry="32" fill="#FFFFFF"/>
+    <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardHeight}" rx="30" ry="30" fill="#FFFFFF"/>
 
     ${isBreaking ? `
-    <!-- Red Breaking Strip at Top of Card -->
     <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${breakingBarHeight}" fill="#F4212E"/>
-    <circle cx="${cardX + cardW - 44}" cy="${cardY + 32}" r="6.5" fill="#FFFFFF" fill-opacity="0.9"/>
-    <text x="${cardX + cardW - 66}" y="${cardY + 41}" font-family="Vazirmatn" font-size="24" font-weight="700" fill="#FFFFFF" text-anchor="end" direction="rtl">
+    <circle cx="${cardX + cardW - 42}" cy="${cardY + 31}" r="6.5" fill="#FFFFFF" fill-opacity="0.9"/>
+    <text x="${cardX + cardW - 64}" y="${cardY + 40}" font-family="Vazirmatn" font-size="23" font-weight="700" fill="#FFFFFF" text-anchor="end" direction="rtl">
       خبر فوری
     </text>
     ` : ''}
   </g>
 
-  <!-- Card Border -->
-  <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardHeight}" rx="32" ry="32" fill="none" stroke="${cardBorder}" stroke-width="2"/>
+  <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardHeight}" rx="30" ry="30" fill="none" stroke="${cardBorder}" stroke-width="2"/>
 
-  <!-- 1. Blue Signal Line (منبع دنبال‌شده · نام منبع) -->
-  <text x="${cardX + cardW - 38}" y="${bodyTop + 52}" font-family="Vazirmatn" font-size="23" font-weight="700" fill="#007AFF" text-anchor="end" direction="rtl">
+  <!-- 1. Blue Signal Line -->
+  <text x="${cardX + cardW - 36}" y="${bodyTop + 50}" font-family="Vazirmatn" font-size="22" font-weight="700" fill="#007AFF" text-anchor="end" direction="rtl">
     منبع دنبال‌شده · ${escapeSvg(sourceName)}
   </text>
 
-  <!-- 2. Card Header Row: Source Avatar & Name (Right) + Score Pill & Dots (Left) -->
-  <!-- Right: Colored Source Initials Box -->
-  <rect x="${cardX + cardW - 94}" y="${bodyTop + 76}" width="56" height="56" rx="14" fill="${escapeSvg(sourceColor)}"/>
-  <text x="${cardX + cardW - 66}" y="${bodyTop + 111}" font-family="Vazirmatn" font-size="20" font-weight="700" fill="#FFFFFF" text-anchor="middle">
+  <!-- 2. Card Header Row -->
+  <rect x="${cardX + cardW - 90}" y="${bodyTop + 72}" width="54" height="54" rx="14" fill="${escapeSvg(sourceColor)}"/>
+  <text x="${cardX + cardW - 63}" y="${bodyTop + 106}" font-family="Vazirmatn" font-size="19" font-weight="700" fill="#FFFFFF" text-anchor="middle">
     ${escapeSvg(sourceInitials)}
   </text>
 
-  <!-- Source Name next to Avatar -->
-  <text x="${cardX + cardW - 112}" y="${bodyTop + 114}" font-family="Vazirmatn" font-size="27" font-weight="700" fill="#0F1419" text-anchor="end" direction="rtl">
+  <text x="${cardX + cardW - 108}" y="${bodyTop + 109}" font-family="Vazirmatn" font-size="26" font-weight="700" fill="#0F1419" text-anchor="end" direction="rtl">
     ${escapeSvg(sourceName)}
   </text>
 
-  <!-- Left: Three Dots (...) + Score Badge (95%) + Optional Multi-Source Pill -->
-  <g transform="translate(${cardX + 38}, ${bodyTop + 80})">
-    <!-- Three Dots Icon -->
-    <circle cx="10" cy="24" r="3.2" fill="#6E767D"/>
-    <circle cx="22" cy="24" r="3.2" fill="#6E767D"/>
-    <circle cx="34" cy="24" r="3.2" fill="#6E767D"/>
+  <g transform="translate(${cardX + 36}, ${bodyTop + 76})">
+    <circle cx="10" cy="23" r="3.2" fill="#6E767D"/>
+    <circle cx="22" cy="23" r="3.2" fill="#6E767D"/>
+    <circle cx="34" cy="23" r="3.2" fill="#6E767D"/>
 
-    <!-- Score Badge Pill (e.g. 95%) -->
-    <rect x="56" y="2" width="96" height="44" rx="22" fill="${badgeTheme.bg}"/>
-    <text x="104" y="32" font-family="Vazirmatn" font-size="23" font-weight="700" fill="${badgeTheme.text}" text-anchor="middle">
+    <rect x="54" y="2" width="92" height="42" rx="21" fill="${badgeTheme.bg}"/>
+    <text x="100" y="30" font-family="Vazirmatn" font-size="22" font-weight="700" fill="${badgeTheme.text}" text-anchor="middle">
       ${score}%
     </text>
 
     ${sourceCount > 1 ? `
-    <!-- Multi-source Badge Pill -->
-    <rect x="164" y="2" width="112" height="44" rx="22" fill="#EFF3F4"/>
-    <text x="220" y="31" font-family="Vazirmatn" font-size="20" font-weight="700" fill="#536471" text-anchor="middle" direction="rtl">
+    <rect x="158" y="2" width="108" height="42" rx="21" fill="#EFF3F4"/>
+    <text x="212" y="29" font-family="Vazirmatn" font-size="19" font-weight="700" fill="#536471" text-anchor="middle" direction="rtl">
       ${sourceCount} منبع
     </text>
     ` : ''}
   </g>
 
-  <!-- 3. Card Headline Title (Bold Black #0F1419, RTL) -->
-  <g transform="translate(0, ${bodyTop + 196})">
+  <!-- 3. Card Headline Title -->
+  <g transform="translate(0, ${bodyTop + 190})">
     ${titleLines.map((line, idx) => `
-      <text x="${cardX + cardW - 38}" y="${idx * 62}" font-family="Vazirmatn" font-size="35" font-weight="700" fill="#0F1419" text-anchor="end" direction="rtl">
+      <text x="${cardX + cardW - 36}" y="${idx * 58}" font-family="Vazirmatn" font-size="33" font-weight="700" fill="#0F1419" text-anchor="end" direction="rtl">
         ${escapeSvg(line)}
       </text>
     `).join('')}
   </g>
 
-  <!-- 4. Horizontal Divider Line -->
-  <line x1="${cardX + 36}" y1="${dividerY}" x2="${cardX + cardW - 36}" y2="${dividerY}" stroke="#E5E9EC" stroke-width="1.8"/>
+  <!-- 4. Divider -->
+  <line x1="${cardX + 34}" y1="${dividerY}" x2="${cardX + cardW - 34}" y2="${dividerY}" stroke="#E5E9EC" stroke-width="1.6"/>
 
-  <!-- 5. Card Footer Row: Relative Time (Right) + 3 Reaction Icons & Counts (Left) -->
-  <!-- Right: Time Label -->
-  <text x="${cardX + cardW - 38}" y="${footerY}" font-family="Vazirmatn" font-size="23" font-weight="400" fill="#6E767D" text-anchor="end" direction="rtl">
+  <!-- 5. Footer -->
+  <text x="${cardX + cardW - 36}" y="${footerY}" font-family="Vazirmatn" font-size="22" font-weight="400" fill="#6E767D" text-anchor="end" direction="rtl">
     ${escapeSvg(timeText)}
   </text>
 
-  <!-- Left: Doubt (?) + Hot (Trending Arrow) + Like (Thumbs Up) -->
-  <g transform="translate(${cardX + 38}, ${footerY - 26})">
-    <!-- Doubt Icon & Count -->
-    <text x="0" y="25" font-family="Vazirmatn" font-size="23" font-weight="700" fill="#536471" text-anchor="start">
+  <g transform="translate(${cardX + 36}, ${footerY - 25})">
+    <text x="0" y="24" font-family="Vazirmatn" font-size="22" font-weight="700" fill="#536471" text-anchor="start">
       ${doubt}
     </text>
-    <g transform="translate(${String(doubt).length * 14 + 10}, 2) scale(1.25)" fill="none" stroke="#6E767D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(${String(doubt).length * 14 + 10}, 2) scale(1.2)" fill="none" stroke="#6E767D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="10"/>
       <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
       <line x1="12" y1="17" x2="12.01" y2="17"/>
     </g>
 
-    <!-- Hot (Trending Up) Icon & Count -->
-    <g transform="translate(115, 0)">
-      <text x="0" y="25" font-family="Vazirmatn" font-size="23" font-weight="700" fill="#536471" text-anchor="start">
+    <g transform="translate(110, 0)">
+      <text x="0" y="24" font-family="Vazirmatn" font-size="22" font-weight="700" fill="#536471" text-anchor="start">
         ${hot}
       </text>
-      <g transform="translate(${String(hot).length * 14 + 10}, 2) scale(1.25)" fill="none" stroke="#6E767D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <g transform="translate(${String(hot).length * 14 + 10}, 2) scale(1.2)" fill="none" stroke="#6E767D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
         <polyline points="17 6 23 6 23 12"/>
       </g>
     </g>
 
-    <!-- Like (Thumbs Up) Icon & Count -->
-    <g transform="translate(245, 0)">
-      <text x="0" y="25" font-family="Vazirmatn" font-size="23" font-weight="700" fill="#536471" text-anchor="start">
+    <g transform="translate(235, 0)">
+      <text x="0" y="24" font-family="Vazirmatn" font-size="22" font-weight="700" fill="#536471" text-anchor="start">
         ${like}
       </text>
-      <g transform="translate(${String(like).length * 14 + 10}, 1) scale(1.22)" fill="none" stroke="#6E767D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+      <g transform="translate(${String(like).length * 14 + 10}, 1) scale(1.18)" fill="none" stroke="#6E767D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
       </g>
     </g>
@@ -293,7 +272,8 @@ export async function renderNewsCardPng(item) {
     });
 
     const rawPng = resvg.render().asPng();
+    // Ultra-fast 4:4:4 JPEG (~28KB instead of 250KB PNG) prevents upload timeouts through Cloudflare!
     return sharp(rawPng)
-        .png({ quality: 95, compressionLevel: 8 })
+        .jpeg({ quality: 93, chromaSubsampling: '4:4:4', mozjpeg: true })
         .toBuffer();
 }

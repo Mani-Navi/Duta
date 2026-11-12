@@ -99,6 +99,7 @@ db.exec(`
     category TEXT NOT NULL DEFAULT 'سیاسی',
     credibility_score INTEGER NOT NULL DEFAULT 75,
     source_count INTEGER NOT NULL DEFAULT 1,
+    covered_sources TEXT NOT NULL DEFAULT '[]',
     source_name TEXT NOT NULL DEFAULT 'Duta',
     source_color TEXT NOT NULL DEFAULT '#007AFF',
     source_initials TEXT NOT NULL DEFAULT 'DT',
@@ -125,6 +126,11 @@ db.exec(`
   );
 `);
 
+// Safe migration if drafts table existed from previous step without covered_sources column
+try {
+    db.exec(`ALTER TABLE drafts ADD COLUMN covered_sources TEXT NOT NULL DEFAULT '[]';`);
+} catch {}
+
 const defaultSettings = {
     breaking_auto_publish: '0',
     silent_night_enabled: '1',
@@ -140,10 +146,10 @@ for (const [k, v] of Object.entries(defaultSettings)) {
 
 if (CONFIG.superAdminId > 0) {
     db.prepare(`
-        INSERT INTO admins (user_id, username, display_name, role, receive_breaking_drafts, receive_ad_suspects, receive_daily_report, created_at)
-        VALUES (?, 'superadmin', 'سوپرادمین (مانی)', 'SUPER_ADMIN', 1, 1, 1, ?)
-            ON CONFLICT(user_id) DO UPDATE SET role = 'SUPER_ADMIN'
-    `).run(CONFIG.superAdminId, Date.now());
+    INSERT INTO admins (user_id, username, display_name, role, receive_breaking_drafts, receive_ad_suspects, receive_daily_report, created_at)
+    VALUES (?, 'superadmin', 'سوپرادمین (مانی)', 'SUPER_ADMIN', 1, 1, 1, ?)
+    ON CONFLICT(user_id) DO UPDATE SET role = 'SUPER_ADMIN'
+  `).run(CONFIG.superAdminId, Date.now());
 }
 
 export function getSetting(key, fallback = '') {
@@ -153,9 +159,9 @@ export function getSetting(key, fallback = '') {
 
 export function setSetting(key, value) {
     db.prepare(`
-        INSERT INTO settings (key, value) VALUES (?, ?)
-            ON CONFLICT(key) DO UPDATE SET value = excluded.value
-    `).run(key, String(value));
+    INSERT INTO settings (key, value) VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `).run(key, String(value));
 }
 
 export function getBooleanSetting(key, fallback = false) {
@@ -176,9 +182,6 @@ export function getAdmin(userId) {
     };
 }
 
-/**
- * Checks and auto-binds a Telegram user object (msg.from / cb.from) if they match SUPER_ADMIN_ID/@username or pending admin usernames.
- */
 export function verifyAndSyncTelegramUser(fromUser) {
     if (!fromUser || !fromUser.id) return null;
     const uid = Number(fromUser.id);
@@ -450,6 +453,8 @@ export function updateClusterData(id, {
     const current = getClusterById(id);
     if (!current) return null;
 
+    const nextCoveredJson = coveredSources ? JSON.stringify(coveredSources) : current.covered_sources;
+
     db.prepare(`
     UPDATE clusters
     SET representative_title = ?,
@@ -466,12 +471,22 @@ export function updateClusterData(id, {
         summary ?? current.summary,
         credibilityScore ?? current.credibility_score,
         sourceCount ?? current.source_count,
-        coveredSources ? JSON.stringify(coveredSources) : current.covered_sources,
+        nextCoveredJson,
         shortUrl !== undefined ? shortUrl : current.short_url,
         breaking !== undefined ? (breaking ? 1 : 0) : current.breaking,
         Date.now(),
         Number(id)
     );
+
+    // Sync covered_sources to any pending draft of this cluster
+    if (coveredSources) {
+        db.prepare(`UPDATE drafts SET covered_sources = ?, source_count = ? WHERE cluster_id = ?`).run(
+            nextCoveredJson,
+            sourceCount ?? current.source_count,
+            Number(id)
+        );
+    }
+
     return getClusterById(id);
 }
 
@@ -487,16 +502,34 @@ export function markClusterPublished(id, channelMessageId, score, sourceCount) {
   `).run(Number(channelMessageId), Number(score), Number(sourceCount), Date.now(), Number(id));
 }
 
+/**
+ * FIXED: When breaking_auto_publish is OFF, only selects regular (breaking = 0) clusters
+ * so pending breaking news drafts NEVER block regular news auto-publishing!
+ */
 export function getNextUnpublishedAutoCluster() {
-    const cutoff = Date.now() - 12 * 3600 * 1000;
-    const row = db.prepare(`
-    SELECT * FROM clusters
-    WHERE published_to_channel = 0
-      AND created_at >= ?
-      AND credibility_score >= 60
-    ORDER BY breaking DESC, source_count DESC, credibility_score DESC, created_at DESC
-    LIMIT 1
-  `).get(cutoff);
+    const cutoff = Date.now() - 24 * 3600 * 1000;
+    const includeBreaking = getBooleanSetting('breaking_auto_publish', false);
+
+    const sql = includeBreaking
+        ? `
+      SELECT * FROM clusters
+      WHERE published_to_channel = 0
+        AND created_at >= ?
+        AND credibility_score >= 55
+      ORDER BY breaking DESC, source_count DESC, credibility_score DESC, created_at DESC
+      LIMIT 1
+    `
+        : `
+      SELECT * FROM clusters
+      WHERE published_to_channel = 0
+        AND breaking = 0
+        AND created_at >= ?
+        AND credibility_score >= 55
+      ORDER BY source_count DESC, credibility_score DESC, created_at DESC
+      LIMIT 1
+    `;
+
+    const row = db.prepare(sql).get(cutoff);
     return row ? hydrateCluster(row) : null;
 }
 
@@ -532,6 +565,7 @@ export function createDraft({
                                 category = 'سیاسی',
                                 credibilityScore = 75,
                                 sourceCount = 1,
+                                coveredSources = [],
                                 sourceName = 'Duta',
                                 sourceColor = '#007AFF',
                                 sourceInitials = 'DT',
@@ -543,9 +577,9 @@ export function createDraft({
     const info = db.prepare(`
     INSERT INTO drafts (
       cluster_id, title, summary, category, credibility_score, source_count,
-      source_name, source_color, source_initials, short_url, breaking,
+      covered_sources, source_name, source_color, source_initials, short_url, breaking,
       is_ad_suspect, ad_reason, status, version, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 1, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 1, ?)
   `).run(
         clusterId,
         title,
@@ -553,6 +587,7 @@ export function createDraft({
         category,
         Number(credibilityScore),
         Number(sourceCount),
+        JSON.stringify(coveredSources),
         sourceName,
         sourceColor,
         sourceInitials,
@@ -571,7 +606,8 @@ export function getDraft(id) {
     return {
         ...row,
         breaking: row.breaking === 1,
-        isAdSuspect: row.is_ad_suspect === 1
+        isAdSuspect: row.is_ad_suspect === 1,
+        coveredSourcesList: safeJsonParse(row.covered_sources, [])
     };
 }
 

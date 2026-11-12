@@ -2,7 +2,6 @@ FROM node:22-slim
 
 WORKDIR /app
 
-# Configure fast npm mirror & cache
 COPY package.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm config set registry https://registry.npmmirror.com && \

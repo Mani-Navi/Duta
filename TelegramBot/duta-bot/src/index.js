@@ -19,6 +19,7 @@ import {
     toggleSourceActive,
     deleteSource,
     getClusterById,
+    updateClusterData,
     markClusterPublished,
     getNextUnpublishedAutoCluster,
     updateClusterTelegramMetrics,
@@ -37,6 +38,7 @@ import { formatNewsCaption } from './captionFormatter.js';
 import { buildLiveTabloMessageText, getTehranDateTimeStrings } from './tabloService.js';
 import {
     detectSourceInfoFromInput,
+    fetchSiteClusterSourcesList,
     runIngestionCycle,
     syncChannelPostMetrics
 } from './fetcherAndClusterEngine.js';
@@ -76,28 +78,39 @@ class TelegramClient {
         return data.result;
     }
 
-    async sendPhotoBuffer(chatId, pngBuffer, { caption = '', replyMarkup = null, disableNotification = false } = {}) {
-        const form = new FormData();
-        form.append('chat_id', String(chatId));
-        form.append('photo', new Blob([pngBuffer], { type: 'image/png' }), 'duta-newscard.png');
-        if (caption) form.append('caption', caption);
-        if (disableNotification) form.append('disable_notification', 'true');
-        if (replyMarkup) form.append('reply_markup', JSON.stringify(replyMarkup));
+    async sendPhotoBuffer(chatId, imgBuffer, { caption = '', replyMarkup = null, disableNotification = false } = {}) {
+        let lastErr = null;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+                const form = new FormData();
+                form.append('chat_id', String(chatId));
+                form.append('photo', new Blob([imgBuffer], { type: 'image/jpeg' }), 'duta-newscard.jpg');
+                if (caption) form.append('caption', caption);
+                if (disableNotification) form.append('disable_notification', 'true');
+                if (replyMarkup) form.append('reply_markup', JSON.stringify(replyMarkup));
 
-        const res = await fetch(`${this.baseUrl}/sendPhoto`, {
-            method: 'POST',
-            headers: this._headers(),
-            body: form,
-            signal: AbortSignal.timeout(30000)
-        });
-        const data = await res.json();
-        if (!data.ok) {
-            throw new Error(data.description || 'sendPhoto failed');
+                const res = await fetch(`${this.baseUrl}/sendPhoto`, {
+                    method: 'POST',
+                    headers: this._headers(),
+                    body: form,
+                    signal: AbortSignal.timeout(45000)
+                });
+                const data = await res.json();
+                if (!data.ok) {
+                    throw new Error(data.description || 'sendPhoto failed');
+                }
+                return data.result;
+            } catch (err) {
+                lastErr = err;
+                if (attempt < 2) {
+                    await new Promise(r => setTimeout(r, 1500));
+                }
+            }
         }
-        return data.result;
+        throw lastErr;
     }
 
-    async editMessagePhotoBuffer(chatId, messageId, pngBuffer, { caption = '', replyMarkup = null } = {}) {
+    async editMessagePhotoBuffer(chatId, messageId, imgBuffer, { caption = '', replyMarkup = null } = {}) {
         const form = new FormData();
         form.append('chat_id', String(chatId));
         form.append('message_id', String(messageId));
@@ -109,7 +122,7 @@ class TelegramClient {
                 caption
             })
         );
-        form.append('card_photo', new Blob([pngBuffer], { type: 'image/png' }), 'duta-newscard.png');
+        form.append('card_photo', new Blob([imgBuffer], { type: 'image/jpeg' }), 'duta-newscard.jpg');
         if (replyMarkup) {
             form.append('reply_markup', JSON.stringify(replyMarkup));
         }
@@ -118,7 +131,7 @@ class TelegramClient {
             method: 'POST',
             headers: this._headers(),
             body: form,
-            signal: AbortSignal.timeout(30000)
+            signal: AbortSignal.timeout(40000)
         });
         const data = await res.json();
         if (!data.ok) {
@@ -162,25 +175,46 @@ function buildChannelReplyMarkup(shortUrl) {
     };
 }
 
-function getCoveredSourcesForItem(item) {
+async function resolveCompleteCoveredSources(item) {
+    let list = [];
     if (Array.isArray(item.coveredSourcesList) && item.coveredSourcesList.length > 0) {
-        return item.coveredSourcesList;
+        list = item.coveredSourcesList;
     }
-    if (item.cluster_id) {
-        const cl = getClusterById(item.cluster_id);
-        if (cl?.coveredSourcesList?.length) return cl.coveredSourcesList;
+
+    const clusterId = item.cluster_id || item.id;
+    const cluster = clusterId ? getClusterById(clusterId) : null;
+    if (cluster && Array.isArray(cluster.coveredSourcesList) && cluster.coveredSourcesList.length > list.length) {
+        list = cluster.coveredSourcesList;
     }
-    return [];
+
+    const expectedCount = Number(item.sourceCount ?? item.source_count ?? cluster?.source_count ?? 1);
+    const siteClusterId = cluster?.site_cluster_id || item.site_cluster_id;
+
+    if (expectedCount > list.length && siteClusterId > 0) {
+        const fetched = await fetchSiteClusterSourcesList(
+            siteClusterId,
+            item.sourceName || item.source_name || 'Duta',
+            item.credibilityScore || item.credibility_score || 80
+        );
+        if (fetched.length > list.length) {
+            list = fetched;
+            if (cluster) {
+                updateClusterData(cluster.id, { coveredSources: list, sourceCount: Math.max(expectedCount, list.length) });
+            }
+        }
+    }
+
+    return list;
 }
 
 async function publishItemToChannel(item) {
-    const coveredSourcesList = getCoveredSourcesForItem(item);
-    const pngBuffer = await renderNewsCardPng({
+    const coveredSourcesList = await resolveCompleteCoveredSources(item);
+    const imgBuffer = await renderNewsCardPng({
         title: item.title || item.representative_title,
         summary: item.summary,
         category: item.category,
         credibilityScore: item.credibilityScore ?? item.credibility_score,
-        sourceCount: item.sourceCount ?? item.source_count,
+        sourceCount: Math.max(Number(item.sourceCount ?? item.source_count ?? 1), coveredSourcesList.length),
         sourceName: item.sourceName ?? item.source_name,
         sourceColor: item.sourceColor ?? item.source_color,
         sourceInitials: item.sourceInitials ?? item.source_initials,
@@ -192,7 +226,7 @@ async function publishItemToChannel(item) {
         summary: item.summary,
         category: item.category,
         credibilityScore: item.credibilityScore ?? item.credibility_score,
-        sourceCount: item.sourceCount ?? item.source_count,
+        sourceCount: Math.max(Number(item.sourceCount ?? item.source_count ?? 1), coveredSourcesList.length),
         sourceName: item.sourceName ?? item.source_name,
         coveredSourcesList,
         shortUrl: item.shortUrl ?? item.short_url,
@@ -202,7 +236,7 @@ async function publishItemToChannel(item) {
     const replyMarkup = buildChannelReplyMarkup(item.shortUrl ?? item.short_url);
     const disableNotification = isSilentNightWindow(Boolean(item.breaking));
 
-    const sent = await tg.sendPhotoBuffer(CONFIG.channelId, pngBuffer, {
+    const sent = await tg.sendPhotoBuffer(CONFIG.channelId, imgBuffer, {
         caption,
         replyMarkup,
         disableNotification
@@ -214,7 +248,7 @@ async function publishItemToChannel(item) {
             clusterId,
             sent.message_id,
             item.credibilityScore ?? item.credibility_score ?? 78,
-            item.sourceCount ?? item.source_count ?? 1
+            Math.max(Number(item.sourceCount ?? item.source_count ?? 1), coveredSourcesList.length)
         );
     }
 
@@ -224,12 +258,13 @@ async function publishItemToChannel(item) {
 async function upgradePublishedChannelCluster(cluster) {
     if (!cluster?.channel_message_id) return;
     try {
-        const pngBuffer = await renderNewsCardPng({
+        const coveredSourcesList = await resolveCompleteCoveredSources(cluster);
+        const imgBuffer = await renderNewsCardPng({
             title: cluster.representative_title,
             summary: cluster.summary,
             category: cluster.category,
             credibilityScore: cluster.credibility_score,
-            sourceCount: cluster.source_count,
+            sourceCount: Math.max(cluster.source_count, coveredSourcesList.length),
             sourceName: cluster.source_name,
             sourceColor: cluster.source_color,
             sourceInitials: cluster.source_initials,
@@ -242,9 +277,9 @@ async function upgradePublishedChannelCluster(cluster) {
                 summary: cluster.summary,
                 category: cluster.category,
                 credibilityScore: cluster.credibility_score,
-                sourceCount: cluster.source_count,
+                sourceCount: Math.max(cluster.source_count, coveredSourcesList.length),
                 sourceName: cluster.source_name,
-                coveredSourcesList: cluster.coveredSourcesList,
+                coveredSourcesList,
                 shortUrl: cluster.short_url,
                 breaking: Boolean(cluster.breaking)
             },
@@ -252,7 +287,7 @@ async function upgradePublishedChannelCluster(cluster) {
         );
 
         const replyMarkup = buildChannelReplyMarkup(cluster.short_url);
-        await tg.editMessagePhotoBuffer(CONFIG.channelId, cluster.channel_message_id, pngBuffer, {
+        await tg.editMessagePhotoBuffer(CONFIG.channelId, cluster.channel_message_id, imgBuffer, {
             caption,
             replyMarkup
         });
@@ -261,21 +296,21 @@ async function upgradePublishedChannelCluster(cluster) {
             cluster.id,
             cluster.channel_message_id,
             cluster.credibility_score,
-            cluster.source_count
+            Math.max(cluster.source_count, coveredSourcesList.length)
         );
     } catch (err) {
         console.warn('[LiveUpgrade] Warning updating channel post:', err.message);
     }
 }
 
-function buildDraftAdminCaption(draft) {
-    const coveredSourcesList = getCoveredSourcesForItem(draft);
+async function buildDraftAdminCaption(draft) {
+    const coveredSourcesList = await resolveCompleteCoveredSources(draft);
     const baseCaption = formatNewsCaption({
         title: draft.title,
         summary: draft.summary,
         category: draft.category,
         credibilityScore: draft.credibility_score,
-        sourceCount: draft.source_count,
+        sourceCount: Math.max(draft.source_count, coveredSourcesList.length),
         sourceName: draft.source_name,
         coveredSourcesList,
         shortUrl: draft.short_url,
@@ -290,9 +325,6 @@ function buildDraftAdminCaption(draft) {
     }
     if (draft.last_edited_by) {
         metaLines.push(`✏️ آخرین ویرایش توسط: ${draft.last_edited_by}`);
-    }
-    if (draft.locked_by_name && draft.locked_until > Date.now()) {
-        metaLines.push(`🔒 در حال ویرایش توسط: ${draft.locked_by_name}`);
     }
 
     return `${metaLines.join('\n')}\n\n${baseCaption}`;
@@ -339,7 +371,7 @@ async function dispatchDraftToAdmins(draft, autoPublishCluster = null) {
 
     if (eligibleAdmins.length === 0) return;
 
-    const pngBuffer = await renderNewsCardPng({
+    const imgBuffer = await renderNewsCardPng({
         title: draft.title,
         summary: draft.summary,
         category: draft.category,
@@ -351,12 +383,12 @@ async function dispatchDraftToAdmins(draft, autoPublishCluster = null) {
         breaking: draft.breaking
     });
 
-    const caption = buildDraftAdminCaption(draft);
+    const caption = await buildDraftAdminCaption(draft);
     const replyMarkup = buildDraftInlineKeyboard(draft);
 
     for (const adm of eligibleAdmins) {
         try {
-            const sent = await tg.sendPhotoBuffer(adm.user_id, pngBuffer, {
+            const sent = await tg.sendPhotoBuffer(adm.user_id, imgBuffer, {
                 caption,
                 replyMarkup
             });
@@ -367,7 +399,7 @@ async function dispatchDraftToAdmins(draft, autoPublishCluster = null) {
     }
 }
 
-async function broadcastDraftUpdateToAllAdmins(draftId) {
+async function broadcastDraftUpdateToAllAdmins(draftId, { regenerateImage = true } = {}) {
     const draft = getDraft(draftId);
     if (!draft) return;
 
@@ -394,7 +426,24 @@ async function broadcastDraftUpdateToAllAdmins(draftId) {
         return;
     }
 
-    const pngBuffer = await renderNewsCardPng({
+    const caption = await buildDraftAdminCaption(draft);
+    const replyMarkup = buildDraftInlineKeyboard(draft);
+
+    if (!regenerateImage) {
+        for (const row of adminMsgs) {
+            try {
+                await tg.call('editMessageCaption', {
+                    chat_id: row.admin_chat_id,
+                    message_id: row.message_id,
+                    caption,
+                    reply_markup: replyMarkup
+                });
+            } catch {}
+        }
+        return;
+    }
+
+    const imgBuffer = await renderNewsCardPng({
         title: draft.title,
         summary: draft.summary,
         category: draft.category,
@@ -406,17 +455,13 @@ async function broadcastDraftUpdateToAllAdmins(draftId) {
         breaking: draft.breaking
     });
 
-    const caption = buildDraftAdminCaption(draft);
-    const replyMarkup = buildDraftInlineKeyboard(draft);
-
     for (const row of adminMsgs) {
         try {
-            await tg.editMessagePhotoBuffer(row.admin_chat_id, row.message_id, pngBuffer, {
+            await tg.editMessagePhotoBuffer(row.admin_chat_id, row.message_id, imgBuffer, {
                 caption,
                 replyMarkup
             });
         } catch {
-            // Fallback to caption edit if media update fails
             try {
                 await tg.call('editMessageCaption', {
                     chat_id: row.admin_chat_id,
@@ -644,24 +689,12 @@ async function autoPublishNextRegularCluster() {
     const cluster = getNextUnpublishedAutoCluster();
     if (!cluster) return false;
 
-    if (cluster.breaking && !getBooleanSetting('breaking_auto_publish', false)) {
-        return false;
-    }
-
     try {
         await publishItemToChannel(cluster);
         console.log(`✅ [AutoPublish] Published cluster #${cluster.id}: ${cluster.representative_title}`);
         return true;
     } catch (err) {
         console.error('[AutoPublish] Error publishing to channel:', err.message);
-        for (const adm of getAllAdmins()) {
-            if (adm.role === 'SUPER_ADMIN') {
-                await tg.call('sendMessage', {
-                    chat_id: adm.user_id,
-                    text: `⚠️ خطا در ارسال خودکار خبر به کانال ${CONFIG.channelId}:\n${err.message}\n\n(مطمئن شوید ربات در کانال ${CONFIG.channelId} به عنوان Admin اضافه شده و دسترسی Post Messages دارد).`
-                }).catch(() => {});
-            }
-        }
         return false;
     }
 }
@@ -707,11 +740,11 @@ async function handleAdminMessage(msg) {
             adminSessions.delete(userId);
             const updated = updateDraftContent(session.draftId, { title: text }, adminUser.display_name);
             if (updated) {
-                await broadcastDraftUpdateToAllAdmins(session.draftId);
                 await tg.call('sendMessage', {
                     chat_id: msg.chat.id,
-                    text: `✅ تیتر خبر به‌روزرسانی شد و کارت جدید آماده انتشار است.`
+                    text: `✅ تیتر خبر تغییر کرد. در حال به‌روزرسانی کارت...`
                 });
+                await broadcastDraftUpdateToAllAdmins(session.draftId, { regenerateImage: true });
             }
             return;
         }
@@ -720,10 +753,10 @@ async function handleAdminMessage(msg) {
             adminSessions.delete(userId);
             const updated = updateDraftContent(session.draftId, { summary: text }, adminUser.display_name);
             if (updated) {
-                await broadcastDraftUpdateToAllAdmins(session.draftId);
+                await broadcastDraftUpdateToAllAdmins(session.draftId, { regenerateImage: false });
                 await tg.call('sendMessage', {
                     chat_id: msg.chat.id,
-                    text: `✅ خلاصه خبر به‌روزرسانی شد و آماده انتشار است.`
+                    text: `✅ خلاصه خبر در کپشن به‌روزرسانی شد.`
                 });
             }
             return;
@@ -763,7 +796,6 @@ async function handleAdminMessage(msg) {
         }
     }
 
-    // Smart Auto-Detection when Admin pastes a @channel, t.me link, RSS feed, or Website URL
     if (
         text.startsWith('@') ||
         /^https?:\/\//i.test(text) ||
@@ -1000,7 +1032,7 @@ async function handleCallbackQuery(cb) {
         } catch (err) {
             await tg.call('sendMessage', {
                 chat_id: chatId,
-                text: `❌ خطا در ارسال به کانال ${CONFIG.channelId}:\n${err.message}\n\nلطفاً مطمئن شوید بات را در کانال ${CONFIG.channelId} به عنوان Admin (با تیک Post Messages) اضافه کرده‌اید.`
+                text: `❌ خطا در ارسال به کانال ${CONFIG.channelId}:\n${err.message}`
             });
         }
         return;
@@ -1205,7 +1237,7 @@ async function handleCallbackQuery(cb) {
         return;
     }
 
-    // Multi-Admin Breaking / Ad Draft Actions (Claim-Lock + Safe Publish)
+    // Multi-Admin Breaking / Ad Draft Actions (Instant Response + Safe Publish)
     if (data.startsWith('dr_')) {
         const [action, rawId, extraParam] = data.split(':');
         const draftId = Number(rawId);
@@ -1230,18 +1262,17 @@ async function handleCallbackQuery(cb) {
             return;
         }
 
-        // FIXED: Publish to channel FIRST, and ONLY mark PUBLISHED if channel post succeeds!
         if (action === 'dr_pub') {
             await tg.call('answerCallbackQuery', { callback_query_id: cb.id, text: '🚀 در حال انتشار در کانال...' });
             try {
                 await publishItemToChannel(draft);
                 finalizeDraftStatus(draftId, 'PUBLISHED', adminUser.display_name);
-                await broadcastDraftUpdateToAllAdmins(draftId);
+                await broadcastDraftUpdateToAllAdmins(draftId, { regenerateImage: false });
             } catch (err) {
                 releaseDraftLock(draftId, userId);
                 await tg.call('sendMessage', {
                     chat_id: chatId,
-                    text: `❌ خطا در انتشار خبر در کانال ${CONFIG.channelId}:\n${err.message}\n\nلطفاً مطمئن شوید ربات در کانال ${CONFIG.channelId} ادمین است و دسترسی Post Messages دارد.`
+                    text: `❌ خطا در انتشار خبر در کانال ${CONFIG.channelId}:\n${err.message}`
                 });
             }
             return;
@@ -1250,21 +1281,22 @@ async function handleCallbackQuery(cb) {
         if (action === 'dr_rej') {
             finalizeDraftStatus(draftId, 'REJECTED', adminUser.display_name);
             await tg.call('answerCallbackQuery', { callback_query_id: cb.id, text: '🗑 خبر رد و حذف شد.' });
-            await broadcastDraftUpdateToAllAdmins(draftId);
+            await broadcastDraftUpdateToAllAdmins(draftId, { regenerateImage: false });
             return;
         }
 
         if (action === 'dr_brk') {
-            updateDraftContent(draftId, { breaking: !draft.breaking }, adminUser.display_name);
             await tg.call('answerCallbackQuery', {
                 callback_query_id: cb.id,
                 text: !draft.breaking ? '🚨 تگ خبر فوری روشن شد' : '⚪️ تگ خبر فوری خاموش شد'
             });
-            await broadcastDraftUpdateToAllAdmins(draftId);
+            updateDraftContent(draftId, { breaking: !draft.breaking }, adminUser.display_name);
+            await broadcastDraftUpdateToAllAdmins(draftId, { regenerateImage: true });
             return;
         }
 
         if (action === 'dr_catmenu') {
+            await tg.call('answerCallbackQuery', { callback_query_id: cb.id });
             const catRows = [];
             for (let i = 0; i < ALL_CATEGORIES.length; i += 3) {
                 catRows.push(
@@ -1274,25 +1306,36 @@ async function handleCallbackQuery(cb) {
                     }))
                 );
             }
+            catRows.push([{ text: '🔙 بازگشت به دکمه‌های خبر', callback_data: `dr_backmenu:${draft.id}` }]);
+
             await tg.call('editMessageReplyMarkup', {
                 chat_id: chatId,
                 message_id: messageId,
                 reply_markup: { inline_keyboard: catRows }
             });
+            return;
+        }
+
+        if (action === 'dr_backmenu') {
+            releaseDraftLock(draftId, userId);
             await tg.call('answerCallbackQuery', { callback_query_id: cb.id });
+            await tg.call('editMessageReplyMarkup', {
+                chat_id: chatId,
+                message_id: messageId,
+                reply_markup: buildDraftInlineKeyboard(draft)
+            });
             return;
         }
 
         if (action === 'dr_setcat') {
-            updateDraftContent(draftId, { category: extraParam }, adminUser.display_name);
             await tg.call('answerCallbackQuery', { callback_query_id: cb.id, text: `دسته‌بندی به ${extraParam} تغییر کرد.` });
-            await broadcastDraftUpdateToAllAdmins(draftId);
+            updateDraftContent(draftId, { category: extraParam }, adminUser.display_name);
+            await broadcastDraftUpdateToAllAdmins(draftId, { regenerateImage: false });
             return;
         }
 
         if (action === 'dr_edtitle') {
             adminSessions.set(userId, { mode: 'EDIT_DRAFT_TITLE', draftId });
-            await broadcastDraftUpdateToAllAdmins(draftId);
             await tg.call('answerCallbackQuery', { callback_query_id: cb.id });
             await tg.call('sendMessage', {
                 chat_id: chatId,
@@ -1304,7 +1347,6 @@ async function handleCallbackQuery(cb) {
 
         if (action === 'dr_edsum') {
             adminSessions.set(userId, { mode: 'EDIT_DRAFT_SUMMARY', draftId });
-            await broadcastDraftUpdateToAllAdmins(draftId);
             await tg.call('answerCallbackQuery', { callback_query_id: cb.id });
             await tg.call('sendMessage', {
                 chat_id: chatId,
@@ -1361,7 +1403,6 @@ async function startPollingLoop() {
 }
 
 function startBackgroundSchedulers() {
-    // 1. Ingestion & Cross-Clustering Cycle (Every 3 minutes)
     setInterval(async () => {
         try {
             await runIngestionCycle({
@@ -1374,12 +1415,10 @@ function startBackgroundSchedulers() {
         }
     }, CONFIG.fetchIntervalMs);
 
-    // 2. Paced Auto-Publisher for Verified Regular News
     setInterval(async () => {
         await autoPublishNextRegularCluster();
     }, CONFIG.autoPublishIntervalMs);
 
-    // 3. Live Market Tablo Pinned Message Updater (Every 10 minutes)
     setInterval(async () => {
         try {
             const pinnedId = Number(getSetting('tablo_pinned_msg_id', '0'));
@@ -1391,7 +1430,6 @@ function startBackgroundSchedulers() {
         }
     }, CONFIG.tabloUpdateIntervalMs);
 
-    // 4. Nightly (23:00) & Weekly Friday (22:00) Analytics Digest + DB Cleanup
     setInterval(async () => {
         try {
             const now = new Date();
@@ -1429,7 +1467,6 @@ function startBackgroundSchedulers() {
     await ensureFontsLoaded();
     startBackgroundSchedulers();
 
-    // Initial ingestion + immediate first regular article publish after 6 seconds
     setTimeout(async () => {
         try {
             await runIngestionCycle({
