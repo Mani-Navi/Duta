@@ -61,7 +61,6 @@ const CATEGORY_KEYWORDS = {
 
 const BRAND_COLORS = ['#007AFF', '#10B981', '#F59E0B', '#6366F1', '#EC4899', '#0EA5E9', '#8B5CF6', '#14B8A6'];
 
-// ─── Text Normalization, Classification & Jaccard Clustering ───
 export function normalizeText(text = '') {
     return String(text)
         .toLowerCase()
@@ -118,9 +117,6 @@ export function detectBreakingNews(title = '') {
     return BREAKING_KEYWORDS.some(kw => padded.includes(` ${kw} `));
 }
 
-/**
- * Bayesian-inspired credibility score calculation (exact match with Duta Java ScoringService).
- */
 export function calculateBayesianClusterScore(coveredSources = []) {
     if (!coveredSources || coveredSources.length === 0) return 75;
 
@@ -157,7 +153,6 @@ export function calculateBayesianClusterScore(coveredSources = []) {
     return Math.min(100, Math.round(baseQuality + rawBoost * trustMultiplier));
 }
 
-// ─── 4-Layer Advertisement & Spam Detector (Ad-Guard) ───
 export function detectAdvertisement(text = '', channelHandle = '', externalLinks = [], isSponsoredHtml = false) {
     if (isSponsoredHtml) {
         return { isAd: true, reason: 'پست تبلیغاتی رسمی تلگرام (Sponsored)' };
@@ -167,7 +162,6 @@ export function detectAdvertisement(text = '', channelHandle = '', externalLinks
     const norm = normalizeText(raw);
     const cleanChannel = String(channelHandle || '').replace(/^@/, '').toLowerCase();
 
-    // Layer 1: Invite links (t.me/+ or joinchat) or bot start referral links
     if (/t\.me\/(\+|joinchat\/)/i.test(raw) || /\?start=/i.test(raw)) {
         return { isAd: true, reason: 'حاوی لینک عضویت تبلیغاتی یا رفرال ربات' };
     }
@@ -178,7 +172,6 @@ export function detectAdvertisement(text = '', channelHandle = '', externalLinks
         }
     }
 
-    // Layer 2: Foreign @channel mentions (excluding the source channel itself and @Duta_News)
     const mentions = [...raw.matchAll(/@([a-zA-Z0-9_]{4,})/g)].map(m => m[1].toLowerCase());
     const foreignMentions = mentions.filter(
         m => m !== cleanChannel && m !== 'duta_news' && m !== 'duta_ir'
@@ -187,14 +180,12 @@ export function detectAdvertisement(text = '', channelHandle = '', externalLinks
         return { isAd: true, reason: `تبلیغ آیدی تلگرام دیگر (@${foreignMentions[0]})` };
     }
 
-    // Layer 3: Persian Commercial & Ad Keywords
     for (const kw of AD_KEYWORDS) {
         if (norm.includes(kw)) {
             return { isAd: true, reason: `واژه تبلیغاتی شناسایی‌شده («${kw}»)` };
         }
     }
 
-    // Layer 4: Foreign mention + commercial cues / phone number / emoji pointer spam
     if (foreignMentions.length === 1 && (/(خرید|فروش|قیمت|تومان|کانال|پیج|عضو|لینک)/.test(norm) || /[👇👈🔥💰🎁]{2,}/.test(raw))) {
         return { isAd: true, reason: `ارجاع تبلیغاتی به @${foreignMentions[0]}` };
     }
@@ -202,8 +193,7 @@ export function detectAdvertisement(text = '', channelHandle = '', externalLinks
     return { isAd: false, reason: null };
 }
 
-// ─── Helper: Fetch Telegram Public Channel HTML (Via Cloudflare Bridge if set, or Direct) ───
-export async function fetchTelegramChannelHtml(handle) {
+export async function fetchTelegramChannelHtml(handle, timeoutMs = 5000) {
     const cleanHandle = String(handle || '').replace(/^@/, '').replace(/^https?:\/\/t\.me\/(s\/)?/i, '').split('/')[0].trim();
     if (!cleanHandle) return null;
 
@@ -215,61 +205,66 @@ export async function fetchTelegramChannelHtml(handle) {
         headers['X-Duta-Bridge-Key'] = CONFIG.bridgeSecret;
     }
 
-    // 1. If TELEGRAM_API_ROOT points to our Cloudflare Worker, use its /tg-scrape/:handle route
     if (CONFIG.telegramApiRoot && !CONFIG.telegramApiRoot.includes('api.telegram.org')) {
         try {
             const bridgeUrl = `${CONFIG.telegramApiRoot}/tg-scrape/${cleanHandle}`;
-            const res = await fetch(bridgeUrl, { headers, signal: AbortSignal.timeout(10000) });
+            const res = await fetch(bridgeUrl, { headers, signal: AbortSignal.timeout(timeoutMs) });
             if (res.ok) return await res.text();
         } catch {}
+        return null;
     }
 
-    // 2. Direct fallback to https://t.me/s/:handle
     try {
         const directUrl = `https://t.me/s/${cleanHandle}`;
-        const res = await fetch(directUrl, { headers, signal: AbortSignal.timeout(10000) });
+        const res = await fetch(directUrl, { headers, signal: AbortSignal.timeout(timeoutMs) });
         if (res.ok) return await res.text();
     } catch {}
 
     return null;
 }
 
-/**
- * Automatically detects whether a pasted string is a Telegram Channel, RSS Feed, or Website URL.
- */
 export async function detectSourceInfoFromInput(rawInput) {
     const input = String(rawInput || '').trim();
     const randomColor = BRAND_COLORS[Math.floor(Math.random() * BRAND_COLORS.length)];
 
-    // Case 1: Telegram @handle or t.me/ link
     if (input.startsWith('@') || /^(https?:\/\/)?(www\.)?(t\.me|telegram\.me)\//i.test(input)) {
         const handle = input
             .replace(/^@/, '')
             .replace(/^(https?:\/\/)?(www\.)?(t\.me|telegram\.me)\/(s\/)?/i, '')
-            .split(/[/?#]/)[0]
+            .split(/[/?#\s]/)[0]
             .trim();
 
         let name = handle;
-        const html = await fetchTelegramChannelHtml(handle);
-        if (html) {
-            const $ = cheerio.load(html);
-            const pageTitle = $('.tgme_channel_info_header_title').text().trim();
-            if (pageTitle) name = pageTitle;
-        }
+        try {
+            const html = await fetchTelegramChannelHtml(handle, 4000);
+            if (html) {
+                const $ = cheerio.load(html);
+                const pageTitle = (
+                    $('.tgme_channel_info_header_title').text().trim() ||
+                    $('meta[property="og:title"]').attr('content') ||
+                    ''
+                ).trim();
+                if (pageTitle && !pageTitle.toLowerCase().includes('telegram:')) {
+                    name = pageTitle.slice(0, 35);
+                }
+            }
+        } catch {}
 
         return {
             type: 'TELEGRAM',
             urlOrHandle: handle,
-            name,
+            name: name || handle,
             color: '#2AABEE',
-            initials: handle.slice(0, 2).toUpperCase()
+            initials: (handle.slice(0, 2) || 'TG').toUpperCase()
         };
     }
 
-    // Case 2: Web URL (RSS XML or HTML Page)
     const fullUrl = /^https?:\/\//i.test(input) ? input : `https://${input}`;
-    const hostname = new URL(fullUrl).hostname.replace(/^www\./i, '');
-    let defaultName = hostname.split('.')[0].toUpperCase();
+    let defaultName = 'منبع خبری';
+    try {
+        const hostname = new URL(fullUrl).hostname.replace(/^www\./i, '');
+        defaultName = hostname.split('.')[0].toUpperCase();
+    } catch {}
 
     try {
         const res = await fetch(fullUrl, {
@@ -277,7 +272,7 @@ export async function detectSourceInfoFromInput(rawInput) {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/125.0.0.0 Safari/537.36',
                 'Accept': 'application/rss+xml, application/xml, text/xml, text/html, */*'
             },
-            signal: AbortSignal.timeout(10000)
+            signal: AbortSignal.timeout(6000)
         });
 
         if (res.ok) {
@@ -286,7 +281,7 @@ export async function detectSourceInfoFromInput(rawInput) {
                 const parsed = xmlParser.parse(text);
                 const channelTitle = parsed?.rss?.channel?.title || parsed?.feed?.title;
                 if (channelTitle && typeof channelTitle === 'string') {
-                    defaultName = channelTitle.split('|')[0].split('-')[0].trim();
+                    defaultName = channelTitle.split('|')[0].split('-')[0].trim().slice(0, 30);
                 }
                 return {
                     type: 'RSS',
@@ -322,7 +317,6 @@ export async function detectSourceInfoFromInput(rawInput) {
     };
 }
 
-// ─── Stream 1: Ingest Official Duta Site RSS Feed (/api/articles/rss.xml) ───
 async function fetchDutaSiteRss({ onNewDraftCreated, onClusterUpgraded }) {
     const urlsToTry = [
         `${CONFIG.dutaBackendUrl}/api/articles/rss.xml`,
@@ -366,7 +360,13 @@ async function fetchDutaSiteRss({ onNewDraftCreated, onClusterUpgraded }) {
         const sourceColor = String(item['duta:sourceColor'] || '#007AFF').trim();
         const sourceInitials = String(item['duta:sourceInitials'] || 'DT').trim();
 
-        // Check if this site cluster is already tracked in SQLite
+        const rawCoveredStr = String(item['duta:coveredSources'] || sourceName);
+        const coveredList = rawCoveredStr
+            .split(/،|,/)
+            .map(s => s.trim())
+            .filter(Boolean)
+            .map(name => ({ name, credibility: score }));
+
         const existingCluster = getClusterBySiteClusterId(siteClusterId);
         if (existingCluster) {
             const prevScore = existingCluster.last_published_score || existingCluster.credibility_score;
@@ -377,11 +377,11 @@ async function fetchDutaSiteRss({ onNewDraftCreated, onClusterUpgraded }) {
                 summary,
                 credibilityScore: Math.max(score, existingCluster.credibility_score),
                 sourceCount: Math.max(sourceCount, existingCluster.source_count),
+                coveredSources: coveredList.length >= existingCluster.coveredSourcesList.length ? coveredList : undefined,
                 shortUrl,
                 breaking: breaking || existingCluster.breaking
             });
 
-            // Live Fact-Check Upgrade in @Duta_News if already published and coverage/credibility grew
             if (
                 updated.publishedToChannel &&
                 updated.channel_message_id &&
@@ -404,8 +404,8 @@ async function fetchDutaSiteRss({ onNewDraftCreated, onClusterUpgraded }) {
             summary,
             category,
             credibilityScore: score,
-            sourceCount,
-            coveredSources: [{ name: sourceName, credibility: score }],
+            sourceCount: Math.max(sourceCount, coveredList.length),
+            coveredSources: coveredList.length ? coveredList : [{ name: sourceName, credibility: score }],
             sourceName,
             sourceColor,
             sourceInitials,
@@ -423,12 +423,11 @@ async function fetchDutaSiteRss({ onNewDraftCreated, onClusterUpgraded }) {
     return processed;
 }
 
-// ─── Stream 2: Ingest Manual Bot Sources (TELEGRAM, RSS, WEB) & Cross-Cluster with Site ───
 async function fetchManualBotSource(source, { onNewDraftCreated, onClusterUpgraded }) {
     const rawItems = [];
 
     if (source.type === 'TELEGRAM') {
-        const html = await fetchTelegramChannelHtml(source.url_or_handle);
+        const html = await fetchTelegramChannelHtml(source.url_or_handle, 8000);
         if (!html) return 0;
 
         const $ = cheerio.load(html);
@@ -513,7 +512,6 @@ async function fetchManualBotSource(source, { onNewDraftCreated, onClusterUpgrad
     for (const raw of rawItems) {
         if (isUrlSeen(raw.url)) continue;
 
-        // 1. Run 4-Layer Ad-Guard
         const adCheck = detectAdvertisement(
             raw.fullText || raw.title,
             source.type === 'TELEGRAM' ? source.url_or_handle : '',
@@ -527,8 +525,6 @@ async function fetchManualBotSource(source, { onNewDraftCreated, onClusterUpgrad
         const isBreaking = detectBreakingNews(raw.title);
 
         if (adCheck.isAd) {
-            // If Breaking Auto-Publish is ON (Full Auto Mode), drop ads silently.
-            // Otherwise, if any admin opted in to review ad suspects, send draft to PV.
             const isFullAuto = getBooleanSetting('breaking_auto_publish', false);
             const eligibleAdAdmins = getEligibleAdminsForDraft({ isBreaking: false, isAdSuspect: true, category });
             if (!isFullAuto && eligibleAdAdmins.length > 0 && onNewDraftCreated) {
@@ -542,7 +538,7 @@ async function fetchManualBotSource(source, { onNewDraftCreated, onClusterUpgrad
                     sourceName: source.name,
                     sourceColor: source.color,
                     sourceInitials: source.initials,
-                    shortUrl: null, // Not on duta.ir
+                    shortUrl: null,
                     breaking: false,
                     isAdSuspect: true,
                     adReason: adCheck.reason
@@ -552,7 +548,6 @@ async function fetchManualBotSource(source, { onNewDraftCreated, onClusterUpgrad
             continue;
         }
 
-        // 2. Cross-Cluster Jaccard Matching against recent 6h clusters (both Site & Bot clusters!)
         const newTokens = tokenizeTitle(raw.title);
         const recentClusters = getRecentClusters(6);
         let bestCluster = null;
@@ -587,7 +582,6 @@ async function fetchManualBotSource(source, { onNewDraftCreated, onClusterUpgrad
                 await onClusterUpgraded(updated);
             }
         } else {
-            // Create new Bot-originated cluster (shortUrl is null because it came from an external manual source)
             const created = createCluster({
                 siteClusterId: null,
                 siteArticleId: null,
@@ -618,7 +612,6 @@ async function fetchManualBotSource(source, { onNewDraftCreated, onClusterUpgrad
 async function handleBreakingOrAdItem(cluster, { isAdSuspect = false, adReason = null }, onNewDraftCreated) {
     const isBreakingAuto = getBooleanSetting('breaking_auto_publish', false);
     if (isBreakingAuto && !isAdSuspect) {
-        // Will be published automatically by the bot's immediate breaking publisher
         if (onNewDraftCreated) {
             await onNewDraftCreated(null, cluster);
         }
@@ -646,9 +639,6 @@ async function handleBreakingOrAdItem(cluster, { isAdSuspect = false, adReason =
     }
 }
 
-/**
- * Runs a full parallel ingestion cycle across Duta's official RSS + all active manual bot sources.
- */
 export async function runIngestionCycle(callbacks = {}) {
     let totalNew = 0;
     try {
@@ -669,18 +659,15 @@ export async function runIngestionCycle(callbacks = {}) {
     return totalNew;
 }
 
-/**
- * Scrapes @Duta_News public web view to sync post views (👁) and Telegram emoji reaction counts.
- */
 export async function syncChannelPostMetrics() {
     try {
-        const html = await fetchTelegramChannelHtml(CONFIG.channelHandle);
+        const html = await fetchTelegramChannelHtml(CONFIG.channelHandle, 6000);
         if (!html) return;
 
         const $ = cheerio.load(html);
         $('.tgme_widget_message').each((_, el) => {
             const msgEl = $(el);
-            const dataPost = msgEl.attr('data-post') || ''; // e.g. "Duta_News/142"
+            const dataPost = msgEl.attr('data-post') || '';
             const msgId = Number(dataPost.split('/')[1] || 0);
             if (!msgId) return;
 

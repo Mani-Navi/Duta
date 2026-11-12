@@ -15,10 +15,10 @@ import {
     removeAdmin,
     getEligibleAdminsForDraft,
     getAllSources,
-    getSourceById,
     addSource,
     toggleSourceActive,
     deleteSource,
+    getClusterById,
     markClusterPublished,
     getNextUnpublishedAutoCluster,
     updateClusterTelegramMetrics,
@@ -41,7 +41,13 @@ import {
     syncChannelPostMetrics
 } from './fetcherAndClusterEngine.js';
 
-// ─── Native Zero-Dependency Telegram Bot API Client (Supports Cloudflare Worker Bridge) ───
+function escapeHtml(str = '') {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 class TelegramClient {
     constructor(token, apiRoot, bridgeSecret = '') {
         this.baseUrl = `${apiRoot}/bot${token}`;
@@ -123,11 +129,8 @@ class TelegramClient {
 }
 
 const tg = new TelegramClient(CONFIG.botToken, CONFIG.telegramApiRoot, CONFIG.bridgeSecret);
-
-// In-memory wizard sessions per admin user_id
 const adminSessions = new Map();
 
-// ─── Smart Silent Night Helper (00:30 to 07:00 Tehran Time) ───
 function isSilentNightWindow(isBreaking = false) {
     if (isBreaking) return false;
     if (!getBooleanSetting('silent_night_enabled', true)) return false;
@@ -159,8 +162,19 @@ function buildChannelReplyMarkup(shortUrl) {
     };
 }
 
-// ─── Publish a Cluster or Draft to @Duta_News Channel ───
+function getCoveredSourcesForItem(item) {
+    if (Array.isArray(item.coveredSourcesList) && item.coveredSourcesList.length > 0) {
+        return item.coveredSourcesList;
+    }
+    if (item.cluster_id) {
+        const cl = getClusterById(item.cluster_id);
+        if (cl?.coveredSourcesList?.length) return cl.coveredSourcesList;
+    }
+    return [];
+}
+
 async function publishItemToChannel(item) {
+    const coveredSourcesList = getCoveredSourcesForItem(item);
     const pngBuffer = await renderNewsCardPng({
         title: item.title || item.representative_title,
         summary: item.summary,
@@ -179,6 +193,8 @@ async function publishItemToChannel(item) {
         category: item.category,
         credibilityScore: item.credibilityScore ?? item.credibility_score,
         sourceCount: item.sourceCount ?? item.source_count,
+        sourceName: item.sourceName ?? item.source_name,
+        coveredSourcesList,
         shortUrl: item.shortUrl ?? item.short_url,
         breaking: Boolean(item.breaking)
     });
@@ -205,7 +221,6 @@ async function publishItemToChannel(item) {
     return sent;
 }
 
-// ─── Live Fact-Check Upgrade on Existing Channel Post ───
 async function upgradePublishedChannelCluster(cluster) {
     if (!cluster?.channel_message_id) return;
     try {
@@ -228,6 +243,8 @@ async function upgradePublishedChannelCluster(cluster) {
                 category: cluster.category,
                 credibilityScore: cluster.credibility_score,
                 sourceCount: cluster.source_count,
+                sourceName: cluster.source_name,
+                coveredSourcesList: cluster.coveredSourcesList,
                 shortUrl: cluster.short_url,
                 breaking: Boolean(cluster.breaking)
             },
@@ -251,14 +268,16 @@ async function upgradePublishedChannelCluster(cluster) {
     }
 }
 
-// ─── Multi-Admin Draft Keyboard & Broadcast Sync ───
 function buildDraftAdminCaption(draft) {
+    const coveredSourcesList = getCoveredSourcesForItem(draft);
     const baseCaption = formatNewsCaption({
         title: draft.title,
         summary: draft.summary,
         category: draft.category,
         credibilityScore: draft.credibility_score,
         sourceCount: draft.source_count,
+        sourceName: draft.source_name,
+        coveredSourcesList,
         shortUrl: draft.short_url,
         breaking: draft.breaking
     });
@@ -301,12 +320,13 @@ function buildDraftInlineKeyboard(draft) {
     };
 }
 
-/**
- * Sends a newly created breaking/ad draft to all eligible admins' PVs and records their message_ids.
- */
 async function dispatchDraftToAdmins(draft, autoPublishCluster = null) {
     if (autoPublishCluster) {
-        await publishItemToChannel(autoPublishCluster);
+        try {
+            await publishItemToChannel(autoPublishCluster);
+        } catch (e) {
+            console.warn('[AutoBreaking] Failed:', e.message);
+        }
         return;
     }
     if (!draft) return;
@@ -347,9 +367,6 @@ async function dispatchDraftToAdmins(draft, autoPublishCluster = null) {
     }
 }
 
-/**
- * Broadcasts an updated draft card & caption to ALL admins' PVs simultaneously so no admin sees stale state.
- */
 async function broadcastDraftUpdateToAllAdmins(draftId) {
     const draft = getDraft(draftId);
     if (!draft) return;
@@ -398,11 +415,20 @@ async function broadcastDraftUpdateToAllAdmins(draftId) {
                 caption,
                 replyMarkup
             });
-        } catch {}
+        } catch {
+            // Fallback to caption edit if media update fails
+            try {
+                await tg.call('editMessageCaption', {
+                    chat_id: row.admin_chat_id,
+                    message_id: row.message_id,
+                    caption,
+                    reply_markup: replyMarkup
+                });
+            } catch {}
+        }
     }
 }
 
-// ─── Main Admin Glass Control Panel ───
 function buildMainPanelView(userId) {
     const isSuper = isSuperAdmin(userId);
     const breakingAuto = getBooleanSetting('breaking_auto_publish', false);
@@ -414,17 +440,25 @@ function buildMainPanelView(userId) {
 
     const text = [
         `🎛 <b>پنل مدیریت هوشمند کانال ${CONFIG.channelId}</b>`,
-        `🌐 متصل به پلتفرم: <code>${CONFIG.dutaSiteUrl}</code>`,
+        `🌐 متصل به فید رسمی سایت: <code>${CONFIG.dutaSiteUrl}/api/articles/rss.xml</code> ✅`,
         ``,
-        `• وضعیت اخبار فوری: <b>${breakingAuto ? '⚡️ انتشار ۱۰۰٪ خودکار (بدون تایید)' : '✋ ارسال برای تایید و ویرایش ادمین'}</b>`,
-        `• انتشار خودکار اخبار عادی: <b>${autoRegular ? '🟢 روشن' : '🔴 خاموش'}</b>`,
+        `• انتشار خودکار اخبار عادی در کانال: <b>${autoRegular ? '🟢 روشن (فعال)' : '🔴 خاموش'}</b>`,
+        `• وضعیت اخبار فوری: <b>${breakingAuto ? '⚡️ انتشار ۱۰۰٪ خودکار (بدون تایید)' : '✋ ارسال به پی‌وی برای تایید ادمین'}</b>`,
         `• حالت سکوت شبانه (۰۰:۳۰ تا ۰۷:۰۰): <b>${silentNight ? '🔕 فعال' : '🔔 غیرفعال'}</b>`,
-        `• منابع اختصاصی ثبت‌شده در بات: <b>${sourcesCount} منبع</b>`,
+        `• منابع اضافی ثبت‌شده در بات: <b>${sourcesCount} منبع</b>`,
         ``,
-        `💡 <i>نکته سریع: هر زمان لینک یک کانال تلگرام (@id)، فید RSS یا آدرس سایت را مستقیماً در همین چت پیست کنی، بات خودکار آن را شناسایی و اضافه می‌کند!</i>`
+        `💡 <i>هر زمان لینک کانال تلگرام (@id)، فید RSS یا آدرس سایتی را در همین چت پیست کنی، خودکار اضافه می‌شود!</i>`
     ].join('\n');
 
     const keyboard = [
+        [
+            {
+                text: autoRegular
+                    ? '🟢 انتشار خودکار اخبار عادی: روشن (کلیک برای توقف)'
+                    : '🔴 انتشار خودکار اخبار عادی: متوقف (کلیک برای شروع)',
+                callback_data: 'panel:toggle_regular_auto'
+            }
+        ],
         [
             {
                 text: breakingAuto
@@ -438,7 +472,7 @@ function buildMainPanelView(userId) {
             { text: `📡 مدیریت منابع (${sourcesCount})`, callback_data: 'panel:list_sources' }
         ],
         [
-            { text: '📰 انتشار فوری ۱ خبر از صف', callback_data: 'panel:publish_one_now' },
+            { text: '📰 انتشار فوری ۱ خبر در کانال', callback_data: 'panel:publish_one_now' },
             { text: '🔄 واکشی فوری منابع', callback_data: 'panel:fetch_now' }
         ],
         [
@@ -469,11 +503,10 @@ function buildMainPanelView(userId) {
     return { text, reply_markup: { inline_keyboard: keyboard } };
 }
 
-// ─── Personal Admin Settings Menu (Independent per Admin) ───
 function buildPersonalPrefsView(userId) {
     const adm = getAdmin(userId);
     const text = [
-        `⚙️ <b>تنظیمات شخصی ادمین: ${adm.display_name}</b>`,
+        `⚙️ <b>تنظیمات شخصی ادمین: ${escapeHtml(adm.display_name)}</b>`,
         `<i>این تنظیمات فقط روی اکانت شما اعمال می‌شود و تغییری در پنل سایر ادمین‌ها ایجاد نمی‌کند:</i>`,
         ``,
         `• دریافت پیش‌نویس اخبار فوری برای ویرایش: <b>${adm.receiveBreakingDrafts ? '🟢 روشن' : '🔴 خاموش'}</b>`,
@@ -509,7 +542,6 @@ function buildPersonalPrefsView(userId) {
     return { text, reply_markup: { inline_keyboard: keyboard } };
 }
 
-// ─── Analytics Digest Generator (Daily 24h & Weekly 7d) ───
 async function buildAnalyticsReportText(hours = 24) {
     await syncChannelPostMetrics();
     const botStats = getBotAnalyticsSummary(hours);
@@ -542,7 +574,7 @@ async function buildAnalyticsReportText(hours = 24) {
         lines.push(
             ``,
             `🔥 <b>پربازدیدترین پست در کانال تلگرام:</b>`,
-            `«${botStats.mostViewedPost.representative_title}»`,
+            `«${escapeHtml(botStats.mostViewedPost.representative_title)}»`,
             `👁 ${(botStats.mostViewedPost.telegram_views || 0).toLocaleString('en-US')} بازدید در تلگرام | ❤️ ${botStats.mostViewedPost.telegram_reactions || 0} ری‌اکشن`
         );
     }
@@ -551,7 +583,7 @@ async function buildAnalyticsReportText(hours = 24) {
         lines.push(
             ``,
             `💬 <b>بیشترین ری‌اکشن مخاطبان در تلگرام:</b>`,
-            `«${botStats.mostReactedPost.representative_title}»`,
+            `«${escapeHtml(botStats.mostReactedPost.representative_title)}»`,
             `❤️ ${botStats.mostReactedPost.telegram_reactions} ری‌اکشن در تلگرام | 👁 ${botStats.mostReactedPost.telegram_views || 0} بازدید`
         );
     }
@@ -561,7 +593,7 @@ async function buildAnalyticsReportText(hours = 24) {
         lines.push(
             ``,
             `🌐 <b>بیشترین ورودی کلیک به سایت (duta.ir/c):</b>`,
-            `«${topClick.title}»`,
+            `«${escapeHtml(topClick.title)}»`,
             `🔗 ${topClick.shortLinkClicks} کلیک مستقیم | 👁 ${topClick.siteViews} بازدید کلستر در سایت`
         );
     }
@@ -570,7 +602,6 @@ async function buildAnalyticsReportText(hours = 24) {
     return lines.join('\n');
 }
 
-// ─── Sync / Pin Live Market Tablo Message in @Duta_News ───
 async function syncOrPinTabloMessage(forceNewPin = false) {
     const text = await buildLiveTabloMessageText();
     const pinnedMsgId = Number(getSetting('tablo_pinned_msg_id', '0'));
@@ -608,7 +639,33 @@ async function syncOrPinTabloMessage(forceNewPin = false) {
     return { action: 'pinned_new', messageId: sent.message_id };
 }
 
-// ─── Handle Incoming Admin Text Messages & Wizards ───
+async function autoPublishNextRegularCluster() {
+    if (!getBooleanSetting('auto_publish_regular', true)) return false;
+    const cluster = getNextUnpublishedAutoCluster();
+    if (!cluster) return false;
+
+    if (cluster.breaking && !getBooleanSetting('breaking_auto_publish', false)) {
+        return false;
+    }
+
+    try {
+        await publishItemToChannel(cluster);
+        console.log(`✅ [AutoPublish] Published cluster #${cluster.id}: ${cluster.representative_title}`);
+        return true;
+    } catch (err) {
+        console.error('[AutoPublish] Error publishing to channel:', err.message);
+        for (const adm of getAllAdmins()) {
+            if (adm.role === 'SUPER_ADMIN') {
+                await tg.call('sendMessage', {
+                    chat_id: adm.user_id,
+                    text: `⚠️ خطا در ارسال خودکار خبر به کانال ${CONFIG.channelId}:\n${err.message}\n\n(مطمئن شوید ربات در کانال ${CONFIG.channelId} به عنوان Admin اضافه شده و دسترسی Post Messages دارد).`
+                }).catch(() => {});
+            }
+        }
+        return false;
+    }
+}
+
 async function handleAdminMessage(msg) {
     const adminUser = verifyAndSyncTelegramUser(msg.from);
     if (!adminUser) {
@@ -644,10 +701,8 @@ async function handleAdminMessage(msg) {
         return;
     }
 
-    // Check active wizard session
     const session = adminSessions.get(userId);
     if (session) {
-        // 1. Editing Draft Title
         if (session.mode === 'EDIT_DRAFT_TITLE') {
             adminSessions.delete(userId);
             const updated = updateDraftContent(session.draftId, { title: text }, adminUser.display_name);
@@ -655,13 +710,12 @@ async function handleAdminMessage(msg) {
                 await broadcastDraftUpdateToAllAdmins(session.draftId);
                 await tg.call('sendMessage', {
                     chat_id: msg.chat.id,
-                    text: `✅ تیتر خبر به‌روزرسانی شد و کارت جدید برای همه ادمین‌ها همگام‌سازی گردید.`
+                    text: `✅ تیتر خبر به‌روزرسانی شد و کارت جدید آماده انتشار است.`
                 });
             }
             return;
         }
 
-        // 2. Editing Draft Summary
         if (session.mode === 'EDIT_DRAFT_SUMMARY') {
             adminSessions.delete(userId);
             const updated = updateDraftContent(session.draftId, { summary: text }, adminUser.display_name);
@@ -669,13 +723,12 @@ async function handleAdminMessage(msg) {
                 await broadcastDraftUpdateToAllAdmins(session.draftId);
                 await tg.call('sendMessage', {
                     chat_id: msg.chat.id,
-                    text: `✅ خلاصه خبر به‌روزرسانی شد و در پی‌وی همه ادمین‌ها همگام‌سازی گردید.`
+                    text: `✅ خلاصه خبر به‌روزرسانی شد و آماده انتشار است.`
                 });
             }
             return;
         }
 
-        // 3. Adding New Admin (SuperAdmin only)
         if (session.mode === 'ADD_ADMIN' && isSuperAdmin(userId)) {
             adminSessions.delete(userId);
             if (msg.forward_from?.id) {
@@ -710,7 +763,7 @@ async function handleAdminMessage(msg) {
         }
     }
 
-    // Smart Auto-Detection when Admin pastes a @channel, t.me link, RSS feed, or Website URL!
+    // Smart Auto-Detection when Admin pastes a @channel, t.me link, RSS feed, or Website URL
     if (
         text.startsWith('@') ||
         /^https?:\/\//i.test(text) ||
@@ -721,45 +774,52 @@ async function handleAdminMessage(msg) {
             text: '🔍 در حال شناسایی هوشمند منبع...'
         });
 
-        const detected = await detectSourceInfoFromInput(text);
-        adminSessions.set(userId, {
-            mode: 'CONFIRM_NEW_SOURCE',
-            sourceDraft: {
-                ...detected,
-                category: 'سیاسی',
-                credibility: 80
+        try {
+            const detected = await detectSourceInfoFromInput(text);
+            adminSessions.set(userId, {
+                mode: 'CONFIRM_NEW_SOURCE',
+                sourceDraft: {
+                    ...detected,
+                    category: 'سیاسی',
+                    credibility: 80
+                }
+            });
+
+            const catButtons = [];
+            for (let i = 0; i < ALL_CATEGORIES.length; i += 3) {
+                catButtons.push(
+                    ALL_CATEGORIES.slice(i, i + 3).map(cat => ({
+                        text: cat,
+                        callback_data: `srcwiz_cat:${cat}`
+                    }))
+                );
             }
-        });
+            catButtons.push([{ text: '❌ انصراف', callback_data: 'srcwiz_cancel' }]);
 
-        const catButtons = [];
-        for (let i = 0; i < ALL_CATEGORIES.length; i += 3) {
-            catButtons.push(
-                ALL_CATEGORIES.slice(i, i + 3).map(cat => ({
-                    text: cat,
-                    callback_data: `srcwiz_cat:${cat}`
-                }))
-            );
+            await tg.call('editMessageText', {
+                chat_id: msg.chat.id,
+                message_id: waitMsg.message_id,
+                parse_mode: 'HTML',
+                text: [
+                    `✅ <b>منبع جدید شناسایی شد:</b>`,
+                    `• نام رسانه: <b>${escapeHtml(detected.name)}</b>`,
+                    `• نوع منبع: <b>${detected.type === 'TELEGRAM' ? 'کانال تلگرام' : detected.type === 'RSS' ? 'فید RSS' : 'وب‌سایت خبری'}</b>`,
+                    `• آدرس/شناسه: <code>${escapeHtml(detected.urlOrHandle)}</code>`,
+                    ``,
+                    `👇 <b>گام ۱: دسته‌بندی اصلی این منبع را انتخاب کنید:</b>`
+                ].join('\n'),
+                reply_markup: { inline_keyboard: catButtons }
+            });
+        } catch (err) {
+            await tg.call('editMessageText', {
+                chat_id: msg.chat.id,
+                message_id: waitMsg.message_id,
+                text: `❌ خطا در شناسایی منبع: ${err.message}`
+            });
         }
-        catButtons.push([{ text: '❌ انصراف', callback_data: 'srcwiz_cancel' }]);
-
-        await tg.call('editMessageText', {
-            chat_id: msg.chat.id,
-            message_id: waitMsg.message_id,
-            parse_mode: 'HTML',
-            text: [
-                `✅ <b>منبع جدید شناسایی شد:</b>`,
-                `• نام رسانه: <b>${detected.name}</b>`,
-                `• نوع منبع: <b>${detected.type === 'TELEGRAM' ? 'کانال تلگرام' : detected.type === 'RSS' ? 'فید RSS' : 'وب‌سایت خبری'}</b>`,
-                `• آدرس/شناسه: <code>${detected.urlOrHandle}</code>`,
-                ``,
-                `👇 <b>گام ۱: دسته‌بندی اصلی این منبع را انتخاب کنید:</b>`
-            ].join('\n'),
-            reply_markup: { inline_keyboard: catButtons }
-        });
     }
 }
 
-// ─── Handle Inline Keyboard Callback Queries ───
 async function handleCallbackQuery(cb) {
     const adminUser = verifyAndSyncTelegramUser(cb.from);
     if (!adminUser) {
@@ -776,7 +836,6 @@ async function handleCallbackQuery(cb) {
     const messageId = cb.message?.message_id;
     const data = cb.data || '';
 
-    // 1. Main Panel Actions
     if (data === 'panel:home') {
         const view = buildMainPanelView(userId);
         await tg.call('editMessageText', {
@@ -787,6 +846,24 @@ async function handleCallbackQuery(cb) {
             reply_markup: view.reply_markup
         });
         await tg.call('answerCallbackQuery', { callback_query_id: cb.id });
+        return;
+    }
+
+    if (data === 'panel:toggle_regular_auto') {
+        const current = getBooleanSetting('auto_publish_regular', true);
+        setSetting('auto_publish_regular', current ? '0' : '1');
+        const view = buildMainPanelView(userId);
+        await tg.call('editMessageText', {
+            chat_id: chatId,
+            message_id: messageId,
+            text: view.text,
+            parse_mode: 'HTML',
+            reply_markup: view.reply_markup
+        });
+        await tg.call('answerCallbackQuery', {
+            callback_query_id: cb.id,
+            text: !current ? '🟢 انتشار خودکار اخبار عادی روشن شد.' : '🔴 انتشار خودکار اخبار عادی متوقف شد.'
+        });
         return;
     }
 
@@ -883,7 +960,7 @@ async function handleCallbackQuery(cb) {
             parse_mode: 'HTML',
             text: sources.length
                 ? `📡 <b>لیست منابع اختصاصی بات (${sources.length} منبع):</b>\n<i>برای روشن/خاموش کردن هر منبع روی نام آن بزنید:</i>`
-                : `📡 هنوز منبع دستی به بات اضافه نشده است (بات هم‌اکنون از فید رسمی سایت Duta تغذیه می‌شود).`,
+                : `📡 هنوز منبع دستی به بات اضافه نشده است (بات هم‌اکنون به صورت خودکار از فید رسمی سایت Duta تغذیه می‌شود).`,
             reply_markup: { inline_keyboard: rows }
         });
         await tg.call('answerCallbackQuery', { callback_query_id: cb.id });
@@ -908,27 +985,41 @@ async function handleCallbackQuery(cb) {
         if (!nextCluster) {
             await tg.call('answerCallbackQuery', {
                 callback_query_id: cb.id,
-                text: 'در حال حاضر خبر جدید منتشرنشده‌ای در صف نیست (ابتدا واکشی منابع را بزنید).',
+                text: 'در حال حاضر خبر جدید منتشرنشده‌ای در صف نیست.',
                 show_alert: true
             });
             return;
         }
         await tg.call('answerCallbackQuery', { callback_query_id: cb.id, text: 'در حال ساخت NewsCard و انتشار...' });
-        await publishItemToChannel(nextCluster);
-        await tg.call('sendMessage', {
-            chat_id: chatId,
-            text: `✅ خبر «${nextCluster.representative_title}» با موفقیت در ${CONFIG.channelId} منتشر شد.`
-        });
+        try {
+            await publishItemToChannel(nextCluster);
+            await tg.call('sendMessage', {
+                chat_id: chatId,
+                text: `✅ خبر «${nextCluster.representative_title}» با موفقیت در ${CONFIG.channelId} منتشر شد.`
+            });
+        } catch (err) {
+            await tg.call('sendMessage', {
+                chat_id: chatId,
+                text: `❌ خطا در ارسال به کانال ${CONFIG.channelId}:\n${err.message}\n\nلطفاً مطمئن شوید بات را در کانال ${CONFIG.channelId} به عنوان Admin (با تیک Post Messages) اضافه کرده‌اید.`
+            });
+        }
         return;
     }
 
     if (data === 'panel:sync_tablo') {
         await tg.call('answerCallbackQuery', { callback_query_id: cb.id, text: '📊 در حال دریافت ۲۸ نرخ بازار و بروزرسانی تابلو...' });
-        const res = await syncOrPinTabloMessage(false);
-        await tg.call('sendMessage', {
-            chat_id: chatId,
-            text: `✅ پیام پین‌شده تابلو بازار در ${CONFIG.channelId} با موفقیت بروزرسانی شد (${res.action}).`
-        });
+        try {
+            const res = await syncOrPinTabloMessage(false);
+            await tg.call('sendMessage', {
+                chat_id: chatId,
+                text: `✅ پیام پین‌شده تابلو بازار در ${CONFIG.channelId} با موفقیت بروزرسانی شد (${res.action}).`
+            });
+        } catch (err) {
+            await tg.call('sendMessage', {
+                chat_id: chatId,
+                text: `❌ خطا در ارسال تابلو به کانال ${CONFIG.channelId}:\n${err.message}`
+            });
+        }
         return;
     }
 
@@ -954,7 +1045,6 @@ async function handleCallbackQuery(cb) {
         return;
     }
 
-    // 2. Personal Admin Settings Actions
     if (data === 'panel:my_prefs' || data.startsWith('myprefs:')) {
         const adm = getAdmin(userId);
         if (data === 'myprefs:toggle_breaking') {
@@ -976,7 +1066,6 @@ async function handleCallbackQuery(cb) {
         return;
     }
 
-    // 3. SuperAdmin Multi-Admin Management
     if (data === 'panel:manage_admins' || data.startsWith('adm_del:') || data.startsWith('adm_pdel:') || data === 'adm_add_prompt') {
         if (!isSuperAdmin(userId)) {
             await tg.call('answerCallbackQuery', { callback_query_id: cb.id, text: 'فقط سوپرادمین دسترسی دارد.', show_alert: true });
@@ -1044,7 +1133,6 @@ async function handleCallbackQuery(cb) {
         return;
     }
 
-    // 4. Add-Source Wizard Callbacks
     if (data === 'srcwiz_cancel') {
         adminSessions.delete(userId);
         await tg.call('editMessageText', {
@@ -1067,8 +1155,8 @@ async function handleCallbackQuery(cb) {
             message_id: messageId,
             parse_mode: 'HTML',
             text: [
-                `✅ منبع: <b>${session.sourceDraft.name}</b>`,
-                `🏷 دسته‌بندی انتخابی: <b>${cat}</b>`,
+                `✅ منبع: <b>${escapeHtml(session.sourceDraft.name)}</b>`,
+                `🏷 دسته‌بندی انتخابی: <b>${escapeHtml(cat)}</b>`,
                 ``,
                 `👇 <b>گام ۲: ضریب اعتبار پایه این منبع را انتخاب کنید:</b>`
             ].join('\n'),
@@ -1107,9 +1195,9 @@ async function handleCallbackQuery(cb) {
             parse_mode: 'HTML',
             text: [
                 `🎉 <b>منبع جدید با موفقیت فعال شد!</b>`,
-                `• نام: <b>${saved.name}</b>`,
+                `• نام: <b>${escapeHtml(saved.name)}</b>`,
                 `• نوع: <b>${saved.type}</b>`,
-                `• دسته‌بندی: <b>${saved.category}</b>`,
+                `• دسته‌بندی: <b>${escapeHtml(saved.category)}</b>`,
                 `• ضریب اعتبار پایه: <b>${saved.credibility}%</b>`
             ].join('\n')
         });
@@ -1117,7 +1205,7 @@ async function handleCallbackQuery(cb) {
         return;
     }
 
-    // 5. Multi-Admin Breaking / Ad Draft Editorial Actions (Claim-Lock + Broadcast Sync)
+    // Multi-Admin Breaking / Ad Draft Actions (Claim-Lock + Safe Publish)
     if (data.startsWith('dr_')) {
         const [action, rawId, extraParam] = data.split(':');
         const draftId = Number(rawId);
@@ -1126,13 +1214,12 @@ async function handleCallbackQuery(cb) {
         if (!draft || draft.status !== 'PENDING') {
             await tg.call('answerCallbackQuery', {
                 callback_query_id: cb.id,
-                text: 'این خبر قبلاً توسط یکی از ادمین‌ها تعیین تکلیف شده است.',
+                text: 'این خبر قبلاً منتشر یا حذف شده است.',
                 show_alert: true
             });
             return;
         }
 
-        // Acquire atomic lock before any state change
         const lockRes = tryAcquireDraftLock(draftId, userId, adminUser.display_name);
         if (!lockRes.ok) {
             await tg.call('answerCallbackQuery', {
@@ -1143,15 +1230,20 @@ async function handleCallbackQuery(cb) {
             return;
         }
 
+        // FIXED: Publish to channel FIRST, and ONLY mark PUBLISHED if channel post succeeds!
         if (action === 'dr_pub') {
-            const finalized = finalizeDraftStatus(draftId, 'PUBLISHED', adminUser.display_name);
-            if (!finalized) {
-                await tg.call('answerCallbackQuery', { callback_query_id: cb.id, text: 'قبلاً منتشر شده است.' });
-                return;
-            }
             await tg.call('answerCallbackQuery', { callback_query_id: cb.id, text: '🚀 در حال انتشار در کانال...' });
-            await publishItemToChannel(finalized);
-            await broadcastDraftUpdateToAllAdmins(draftId);
+            try {
+                await publishItemToChannel(draft);
+                finalizeDraftStatus(draftId, 'PUBLISHED', adminUser.display_name);
+                await broadcastDraftUpdateToAllAdmins(draftId);
+            } catch (err) {
+                releaseDraftLock(draftId, userId);
+                await tg.call('sendMessage', {
+                    chat_id: chatId,
+                    text: `❌ خطا در انتشار خبر در کانال ${CONFIG.channelId}:\n${err.message}\n\nلطفاً مطمئن شوید ربات در کانال ${CONFIG.channelId} ادمین است و دسترسی Post Messages دارد.`
+                });
+            }
             return;
         }
 
@@ -1200,12 +1292,12 @@ async function handleCallbackQuery(cb) {
 
         if (action === 'dr_edtitle') {
             adminSessions.set(userId, { mode: 'EDIT_DRAFT_TITLE', draftId });
-            await broadcastDraftUpdateToAllAdmins(draftId); // Shows lock indicator to other admins
+            await broadcastDraftUpdateToAllAdmins(draftId);
             await tg.call('answerCallbackQuery', { callback_query_id: cb.id });
             await tg.call('sendMessage', {
                 chat_id: chatId,
                 parse_mode: 'HTML',
-                text: `✏️ <b>تیتر جدید را تایپ و ارسال کنید:</b>\n\nتیتر فعلی:\n<code>${draft.title}</code>\n\n<i>(این خبر به مدت ۲ دقیقه برای ویرایش به نام شما قفل شد — لغو با /cancel)</i>`
+                text: `✏️ <b>تیتر جدید را تایپ و ارسال کنید:</b>\n\nتیتر فعلی:\n<code>${escapeHtml(draft.title)}</code>\n\n<i>(لغو با /cancel)</i>`
             });
             return;
         }
@@ -1226,7 +1318,6 @@ async function handleCallbackQuery(cb) {
     await tg.call('answerCallbackQuery', { callback_query_id: cb.id });
 }
 
-// ─── Handle Native Telegram Channel Reaction Count Updates (Bot API 7.0+) ───
 function handleMessageReactionCount(update) {
     try {
         const msgId = update.message_id;
@@ -1238,7 +1329,6 @@ function handleMessageReactionCount(update) {
     } catch {}
 }
 
-// ─── Long-Polling Loop & Scheduled Background Jobs ───
 let lastUpdateOffset = 0;
 let lastNightlyReportDate = '';
 
@@ -1284,21 +1374,9 @@ function startBackgroundSchedulers() {
         }
     }, CONFIG.fetchIntervalMs);
 
-    // 2. Paced Auto-Publisher for Verified Regular News (Every 7 minutes)
+    // 2. Paced Auto-Publisher for Verified Regular News
     setInterval(async () => {
-        try {
-            if (!getBooleanSetting('auto_publish_regular', true)) return;
-            const cluster = getNextUnpublishedAutoCluster();
-            if (!cluster) return;
-
-            // If it's breaking news and breaking_auto_publish is OFF, skip (since it's handled via Admin Draft)
-            if (cluster.breaking && !getBooleanSetting('breaking_auto_publish', false)) {
-                return;
-            }
-            await publishItemToChannel(cluster);
-        } catch (e) {
-            console.warn('[Scheduler:AutoPublish]', e.message);
-        }
+        await autoPublishNextRegularCluster();
     }, CONFIG.autoPublishIntervalMs);
 
     // 3. Live Market Tablo Pinned Message Updater (Every 10 minutes)
@@ -1342,7 +1420,6 @@ function startBackgroundSchedulers() {
     }, 60_000);
 }
 
-// ─── Bootstrap ───
 (async () => {
     if (!CONFIG.botToken || CONFIG.botToken === 'YOUR_TELEGRAM_BOT_TOKEN_HERE') {
         console.error('❌ [DutaBot] Please set your real BOT_TOKEN in TelegramBot/duta-bot/.env');
@@ -1352,13 +1429,16 @@ function startBackgroundSchedulers() {
     await ensureFontsLoaded();
     startBackgroundSchedulers();
 
-    // Initial ingestion after 5 seconds
-    setTimeout(() => {
-        runIngestionCycle({
-            onNewDraftCreated: dispatchDraftToAdmins,
-            onClusterUpgraded: upgradePublishedChannelCluster
-        }).catch(() => {});
-    }, 5000);
+    // Initial ingestion + immediate first regular article publish after 6 seconds
+    setTimeout(async () => {
+        try {
+            await runIngestionCycle({
+                onNewDraftCreated: dispatchDraftToAdmins,
+                onClusterUpgraded: upgradePublishedChannelCluster
+            });
+            await autoPublishNextRegularCluster();
+        } catch {}
+    }, 6000);
 
     await startPollingLoop();
 })();

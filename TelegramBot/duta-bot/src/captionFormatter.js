@@ -2,12 +2,11 @@ import { CONFIG, CATEGORIES_META } from './config.js';
 
 const STOP_HASHTAG_WORDS = new Set([
     'از', 'به', 'در', 'با', 'بر', 'برای', 'این', 'آن', 'یک', 'که', 'را', 'شد', 'شود',
-    'کرد', 'کرده', 'است', 'هستند', 'بود', 'شود', 'دارد', 'گفت', 'اعلام', 'جدید', 'امروز',
+    'کرد', 'کرده', 'است', 'هستند', 'بود', 'دارد', 'گفت', 'اعلام', 'جدید', 'امروز',
     'ایران', 'کشور', 'خبر', 'اخبار', 'گزارش', 'جزئیات', 'درباره', 'پس', 'پیش', 'توسط',
     'همراه', 'سایت', 'کانال', 'ادامه', 'بیشتر', 'مطلب', 'اولین', 'سال', 'ماه', 'روز'
 ]);
 
-// نگاشت کلمات کلیدی پرتکرار به هشتگ‌های ترکیبی استاندارد
 const COMPOUND_HASHTAGS = [
     ['ایران خودرو', '#ایران_خودرو'],
     ['سایپا', '#سایپا'],
@@ -47,9 +46,6 @@ function getScoreStatusText(score) {
     return 'نامعتبر 🔴';
 }
 
-/**
- * Extracts up to 5 smart hashtags based on category + article headline keywords.
- */
 export function buildSmartHashtags(title = '', category = 'سیاسی') {
     const catMeta = CATEGORIES_META[category] || CATEGORIES_META['سیاسی'];
     const tags = new Set();
@@ -111,12 +107,22 @@ function formatSummaryLine(summary, title) {
     return cleanSum;
 }
 
+function extractCoveredSourceNames(item) {
+    const names = [];
+    if (Array.isArray(item.coveredSourcesList)) {
+        for (const s of item.coveredSourcesList) {
+            const n = typeof s === 'string' ? s : s?.name;
+            if (n && !names.includes(n)) names.push(n);
+        }
+    }
+    if (item.sourceName && !names.includes(item.sourceName)) {
+        names.unshift(item.sourceName);
+    }
+    return names;
+}
+
 /**
- * Formats the exact Telegram caption requested for @Duta_News.
- *
- * Rules:
- * - Includes direct link (🌐 duta.ir/c/...) ONLY when shortUrl is present (i.e. article exists on duta.ir).
- * - External manual bot sources that do not exist on duta.ir omit the link block cleanly.
+ * Formats the exact Telegram caption requested for @Duta_News including covered agency names.
  */
 export function formatNewsCaption(item, { isCredibilityUpgraded = false } = {}) {
     const category = item.category || 'سیاسی';
@@ -124,7 +130,13 @@ export function formatNewsCaption(item, { isCredibilityUpgraded = false } = {}) 
     const title = String(item.title || '').trim();
     const summaryText = formatSummaryLine(item.summary, title);
     const score = Math.min(100, Math.max(0, Number(item.credibilityScore ?? 78)));
-    const sourceCount = Math.max(1, Number(item.sourceCount ?? 1));
+
+    const coveredNames = extractCoveredSourceNames(item);
+    const sourceCount = Math.max(1, Number(item.sourceCount ?? 1), coveredNames.length);
+    const sourcesNamesLabel = coveredNames.length > 0
+        ? ` (${coveredNames.slice(0, 5).join('، ')})`
+        : '';
+
     const statusLabel = getScoreStatusText(score);
 
     const headerPrefix = item.breaking
@@ -140,10 +152,9 @@ export function formatNewsCaption(item, { isCredibilityUpgraded = false } = {}) 
         `${summaryText}`,
         ``,
         `📊 ضریب اعتبار: ${toPersianDigits(score)}٪ (${statusLabel})${upgradeBadge}`,
-        `📡 پوشش: ${toPersianDigits(sourceCount)} منبع مستقل`
+        `📡 پوشش: ${toPersianDigits(sourceCount)} منبع مستقل${sourcesNamesLabel}`
     ];
 
-    // فقط اخباری که در سایت duta.ir صفحه دارند لینک مستقیم می‌گیرند
     if (item.shortUrl && String(item.shortUrl).trim()) {
         const displayLink = String(item.shortUrl)
             .trim()
