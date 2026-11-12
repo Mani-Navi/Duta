@@ -1,4 +1,5 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
+import { useUser } from '../context/UserContext';
 import {
     getArticleScore,
     getArticleSourceCount,
@@ -6,19 +7,53 @@ import {
     formatRelativeTime
 } from '../utils/articleHelpers';
 
-function NewsCard({ article, onOpen }) {
+function NewsCard({ article, onOpen, onHideCard }) {
+    const { isLoggedIn, openModal, sendFeedback, getReactionData, reactToCluster } = useUser();
+
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [animatingType, setAnimatingType] = useState(null);
+
+    const { likeCount, hotCount, doubtCount, userReaction } = getReactionData(article);
+
     const score = getArticleScore(article);
     const sourceCount = getArticleSourceCount(article);
     const badgeClass = getBadgeClass(score);
     const isBreaking = article.breaking;
-    const srcColor = article.source?.color || '#8E8E93';
+    const srcColor = article.source?.color || '#536471';
     const srcInitials = article.source?.initials || article.source?.name?.substring(0, 2) || '?';
     const articleHref = `/article/${encodeURIComponent(article.slug || article.id)}`;
+
+    const handleReactionClick = async (e, type) => {
+        e.stopPropagation();
+        if (!isLoggedIn) {
+            openModal('auth');
+            return;
+        }
+        setAnimatingType(type);
+        setTimeout(() => setAnimatingType(null), 650);
+        await reactToCluster(article, type);
+    };
+
+    const handleNegativeAction = async (e, actionType) => {
+        e.stopPropagation();
+        setMenuOpen(false);
+        if (!isLoggedIn) {
+            openModal('auth');
+            return;
+        }
+        if (onHideCard) {
+            onHideCard(article, actionType);
+        }
+        await sendFeedback(actionType, article.category, article.source?.name, article.cluster?.id);
+    };
 
     return (
         <article
             className={`card ${isBreaking ? 'breaking' : ''}`}
-            onClick={() => onOpen(article)}
+            onClick={() => {
+                if (menuOpen) setMenuOpen(false);
+                else onOpen(article);
+            }}
         >
             {isBreaking && (
                 <div className="breaking-strip">
@@ -27,32 +62,66 @@ function NewsCard({ article, onOpen }) {
                 </div>
             )}
 
+            {article.reasonLabel && (
+                <div className={`x-card-signal ${article.reasonType === 'local' ? 'local' : article.reasonType === 'source' ? 'accent' : ''}`}>
+                    <span>{article.reasonLabel}</span>
+                </div>
+            )}
+
             <div className="card-top">
-                <span className="src-group">
-                    <span
-                        className="src-badge"
-                        style={{ background: srcColor }}
-                        aria-hidden="true"
-                    >
+                <div className="src-group">
+                    <span className="src-badge" style={{ background: srcColor }} aria-hidden="true">
                         {srcInitials}
                     </span>
                     <span className="source-label">
                         {article.source?.name || ''}
                     </span>
-                </span>
+                </div>
 
                 <div className="card-top-right">
                     {sourceCount > 1 && (
                         <span className="multi-source-badge">
-                            <i className="ti ti-layers-intersect" aria-hidden="true" />
                             {sourceCount} منبع
                         </span>
                     )}
                     <span className={`badge ${badgeClass}`} aria-label={`امتیاز اعتبار ${score} درصد`}>
                         {score}%
                     </span>
+                    <button
+                        type="button"
+                        className="x-dots-btn"
+                        aria-label="گزینه‌ها"
+                        onClick={(e) => { e.stopPropagation(); setMenuOpen(prev => !prev); }}
+                    >
+                        <svg className="x-svg" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="1.4" />
+                            <circle cx="19" cy="12" r="1.4" />
+                            <circle cx="5" cy="12" r="1.4" />
+                        </svg>
+                    </button>
                 </div>
             </div>
+
+            {menuOpen && (
+                <div className="x-dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                    {article.category && (
+                        <button type="button" className="x-dropdown-item danger" onClick={(e) => handleNegativeAction(e, 'DISLIKE_TOPIC')}>
+                            <svg className="x-svg-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                            <span>عدم علاقه به «{article.category}»</span>
+                        </button>
+                    )}
+                    {article.source?.name && (
+                        <button type="button" className="x-dropdown-item danger" onClick={(e) => handleNegativeAction(e, 'MUTE_SOURCE')}>
+                            <svg className="x-svg-sm" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                            <span>عدم نمایش از «{article.source.name}»</span>
+                        </button>
+                    )}
+                    <button type="button" className="x-dropdown-item" onClick={(e) => handleNegativeAction(e, 'HIDE_CLUSTER')}>
+                        <svg className="x-svg-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        <span>پنهان کردن این خبر</span>
+                    </button>
+                </div>
+            )}
 
             <h2 className="card-title">
                 <a
@@ -64,9 +133,52 @@ function NewsCard({ article, onOpen }) {
                 </a>
             </h2>
 
-            <div className="card-bottom">
+            <div className="x-card-actions">
                 <span className="time">{formatRelativeTime(article.publishedAt)}</span>
-                <i className="ti ti-external-link ext" aria-hidden="true" />
+
+                <div className="x-reaction-bar">
+                    <button
+                        type="button"
+                        className={`x-react-btn ${userReaction === 'LIKE' ? 'active-like' : ''} ${animatingType === 'LIKE' ? 'anim-like' : ''}`}
+                        onClick={(e) => handleReactionClick(e, 'LIKE')}
+                        title="مفید"
+                        aria-label="مفید"
+                    >
+                        <svg className="x-svg-sm" viewBox="0 0 24 24">
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                        </svg>
+                        {likeCount > 0 && <span>{likeCount}</span>}
+                    </button>
+
+                    <button
+                        type="button"
+                        className={`x-react-btn ${userReaction === 'HOT' ? 'active-hot' : ''} ${animatingType === 'HOT' ? 'anim-hot' : ''}`}
+                        onClick={(e) => handleReactionClick(e, 'HOT')}
+                        title="مهم"
+                        aria-label="مهم"
+                    >
+                        <svg className="x-svg-sm" viewBox="0 0 24 24">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                            <polyline points="17 6 23 6 23 12"/>
+                        </svg>
+                        {hotCount > 0 && <span>{hotCount}</span>}
+                    </button>
+
+                    <button
+                        type="button"
+                        className={`x-react-btn ${userReaction === 'DOUBT' ? 'active-doubt' : ''} ${animatingType === 'DOUBT' ? 'anim-doubt' : ''}`}
+                        onClick={(e) => handleReactionClick(e, 'DOUBT')}
+                        title="تردید در اعتبار"
+                        aria-label="تردید"
+                    >
+                        <svg className="x-svg-sm" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        {doubtCount > 0 && <span>{doubtCount}</span>}
+                    </button>
+                </div>
             </div>
         </article>
     );

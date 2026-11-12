@@ -9,7 +9,9 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,13 +19,10 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 
-/**
- * Core domain service for querying articles, clusters, SEO metadata, and XML sitemaps.
- * Utilizes multi-region Caffeine caching to serve viral traffic with zero database bottlenecks.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -33,18 +32,33 @@ public class ArticleService {
 
     @Cacheable(value = "articles", key = "'all-' + #page + '-' + #size")
     public Page<Article> getAllArticles(int page, int size) {
-        return articleRepository.findRepresentativeArticles(PageRequest.of(page, size));
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Long> idPage = articleRepository.findRepresentativeArticleIds(pageable);
+        return hydrateArticlePage(idPage, pageable);
+    }
+
+    /**
+     * SCALE-04 & BUG-03 FIX: 500-article in-memory pool hydrated with zero N+1 queries.
+     */
+    @Cacheable(value = "articles", key = "'pool-recent-500'")
+    public List<Article> getRecentRepresentativePool() {
+        Page<Long> idPage = articleRepository.findRepresentativeArticleIds(PageRequest.of(0, 500));
+        if (idPage.isEmpty()) return List.of();
+        return articleRepository.findByIdInWithDetails(idPage.getContent());
     }
 
     @Cacheable(value = "articles", key = "'cat-' + #categoryName + '-' + #page + '-' + #size")
     public Page<Article> getArticlesByCategory(String categoryName, int page, int size) {
-        return articleRepository.findRepresentativeByCategory(
-                categoryName, PageRequest.of(page, size));
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Long> idPage = articleRepository.findRepresentativeIdsByCategory(categoryName, pageable);
+        return hydrateArticlePage(idPage, pageable);
     }
 
     @Cacheable(value = "articles", key = "'breaking-' + #page + '-' + #size")
     public Page<Article> getBreakingArticles(int page, int size) {
-        return articleRepository.findRepresentativeBreaking(PageRequest.of(page, size));
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Long> idPage = articleRepository.findRepresentativeIdsBreaking(pageable);
+        return hydrateArticlePage(idPage, pageable);
     }
 
     @Cacheable(value = "article_detail", key = "'id-' + #id")
@@ -73,8 +87,9 @@ public class ArticleService {
     }
 
     public Page<Article> searchArticles(String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
         if (keyword == null || keyword.isBlank()) {
-            return Page.empty(PageRequest.of(page, size));
+            return Page.empty(pageable);
         }
 
         String cleanKeyword = keyword.trim()
@@ -82,18 +97,25 @@ public class ArticleService {
                 .replace('ك', 'ک')
                 .replaceAll("([\\\\.*+?^${}()|\\[\\]])", "\\\\$1");
 
-        return articleRepository.searchByKeyword(cleanKeyword, PageRequest.of(page, size));
+        Page<Long> idPage = articleRepository.searchRepresentativeIdsByKeyword(cleanKeyword, pageable);
+        return hydrateArticlePage(idPage, pageable);
     }
 
-    /**
-     * Evicts all article-related caches when new RSS items are ingested or reclassified.
-     */
+    private Page<Article> hydrateArticlePage(Page<Long> idPage, Pageable pageable) {
+        if (idPage.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        List<Article> hydrated = articleRepository.findByIdInWithDetails(idPage.getContent());
+        return new PageImpl<>(hydrated, pageable, idPage.getTotalElements());
+    }
+
     @Caching(evict = {
             @CacheEvict(value = "articles", allEntries = true),
             @CacheEvict(value = "article_detail", allEntries = true),
             @CacheEvict(value = "clusters", allEntries = true),
             @CacheEvict(value = "seo", allEntries = true),
-            @CacheEvict(value = "sitemap", allEntries = true)
+            @CacheEvict(value = "sitemap", allEntries = true),
+            @CacheEvict(value = "hot_articles", allEntries = true)
     })
     public void evictArticlesCache() {
         // Automatically cleared by Spring Cache abstraction
@@ -158,21 +180,86 @@ public class ArticleService {
     }
 
     /**
-     * Generates and caches the hybrid Google News (48h) + Web Sitemap XML.
-     * Prevents repeated 1,000-row DB queries and 785KB string allocations on concurrent bot crawls.
+     * UCS-014: Official Duta RSS 2.0 Feed enriched with <duta:*> credibility & cluster metadata for @Duta_News Bot.
      */
+    @Cacheable(value = "sitemap", key = "'rss-xml'")
+    public String generateRssFeedXml() {
+        List<Article> pool = getRecentRepresentativePool();
+        List<Article> latest = pool.stream().limit(60).toList();
+        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+
+        StringBuilder rss = new StringBuilder(131_072);
+        rss.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        rss.append("<rss version=\"2.0\" xmlns:duta=\"https://duta.ir/ns\" xmlns:atom=\"http://www.w3.org/2005/Atom\">\n");
+        rss.append("  <channel>\n");
+        rss.append("    <title>Duta — دو نگاه، یک حقیقت</title>\n");
+        rss.append("    <link>https://duta.ir</link>\n");
+        rss.append("    <description>پلتفرم هوشمند تجمیع، خوشه‌بندی و سنجش اعتبار اخبار فارسی</description>\n");
+        rss.append("    <language>fa-IR</language>\n");
+        rss.append("    <atom:link href=\"https://duta.ir/api/articles/rss.xml\" rel=\"self\" type=\"application/rss+xml\"/>\n");
+        rss.append("    <lastBuildDate>").append(DateTimeFormatter.RFC_1123_DATE_TIME.format(now)).append("</lastBuildDate>\n");
+
+        for (Article a : latest) {
+            int score = a.getCluster() != null
+                    ? a.getCluster().getCredibilityScore()
+                    : (a.getSource() != null && a.getSource().getCredibility() != null ? a.getSource().getCredibility() : 50);
+            int sourceCount = a.getCluster() != null ? Math.max(1, a.getCluster().getSourceCount()) : 1;
+            Long clusterId = a.getCluster() != null ? a.getCluster().getId() : a.getId();
+            String srcName = a.getSource() != null && a.getSource().getName() != null ? a.getSource().getName() : "Duta";
+            String srcColor = a.getSource() != null && a.getSource().getColor() != null ? a.getSource().getColor() : "#007AFF";
+            String srcInitials = a.getSource() != null && a.getSource().getInitials() != null
+                    ? a.getSource().getInitials()
+                    : srcName.substring(0, Math.min(2, srcName.length()));
+            String category = a.getCategory() != null ? a.getCategory() : "سیاسی";
+            String shortUrl = "https://duta.ir/c/" + a.getId();
+            String rawSlug = (a.getSlug() != null && !a.getSlug().isBlank()) ? a.getSlug() : String.valueOf(a.getId());
+            String canonicalUrl = "https://duta.ir/article/" + URLEncoder.encode(rawSlug, StandardCharsets.UTF_8);
+            ZonedDateTime pubDate = a.getPublishedAt() != null ? a.getPublishedAt() : now;
+            String summary = (a.getDescription() != null && !a.getDescription().isBlank())
+                    ? a.getDescription()
+                    : a.getTitle();
+
+            rss.append("    <item>\n");
+            rss.append("      <title>").append(escapeXml(a.getTitle())).append("</title>\n");
+            rss.append("      <link>").append(shortUrl).append("</link>\n");
+            rss.append("      <guid isPermaLink=\"true\">").append(escapeXml(canonicalUrl)).append("</guid>\n");
+            rss.append("      <pubDate>").append(DateTimeFormatter.RFC_1123_DATE_TIME.format(pubDate)).append("</pubDate>\n");
+            rss.append("      <category>").append(escapeXml(category)).append("</category>\n");
+            rss.append("      <description>").append(escapeXml(summary)).append("</description>\n");
+            rss.append("      <duta:articleId>").append(a.getId()).append("</duta:articleId>\n");
+            rss.append("      <duta:clusterId>").append(clusterId).append("</duta:clusterId>\n");
+            rss.append("      <duta:slug>").append(escapeXml(rawSlug)).append("</duta:slug>\n");
+            rss.append("      <duta:shortUrl>").append(shortUrl).append("</duta:shortUrl>\n");
+            rss.append("      <duta:credibilityScore>").append(score).append("</duta:credibilityScore>\n");
+            rss.append("      <duta:sourceCount>").append(sourceCount).append("</duta:sourceCount>\n");
+            rss.append("      <duta:breaking>").append(a.isBreaking()).append("</duta:breaking>\n");
+            rss.append("      <duta:sourceName>").append(escapeXml(srcName)).append("</duta:sourceName>\n");
+            rss.append("      <duta:sourceColor>").append(escapeXml(srcColor)).append("</duta:sourceColor>\n");
+            rss.append("      <duta:sourceInitials>").append(escapeXml(srcInitials)).append("</duta:sourceInitials>\n");
+            if (a.getLocation() != null && !a.getLocation().isBlank()) {
+                rss.append("      <duta:location>").append(escapeXml(a.getLocation())).append("</duta:location>\n");
+            }
+            rss.append("    </item>\n");
+        }
+
+        rss.append("  </channel>\n");
+        rss.append("</rss>");
+        return rss.toString();
+    }
+
     @Cacheable(value = "sitemap", key = "'xml'")
     public String generateNewsSitemapXml() {
-        List<Article> recentArticles = articleRepository.findTop1000ByOrderByPublishedAtDesc();
+        List<Article> recentArticles = articleRepository.findRecentForSitemap(PageRequest.of(0, 1000));
         ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
         ZonedDateTime googleNewsCutoff = now.minusHours(48);
 
-        StringBuilder xml = new StringBuilder(262_144); // Pre-sized buffer (256KB) to avoid array resizing
+        StringBuilder xml = new StringBuilder(262_144);
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" ");
         xml.append("xmlns:news=\"http://www.google.com/schemas/sitemap-news/0.9\">\n");
 
         appendStaticUrl(xml, "https://duta.ir/", "always", "1.0");
+        appendStaticUrl(xml, "https://duta.ir/tablo", "always", "0.9");
         appendStaticUrl(xml, "https://duta.ir/features", "monthly", "0.8");
         appendStaticUrl(xml, "https://duta.ir/credibility", "monthly", "0.8");
         appendStaticUrl(xml, "https://duta.ir/about", "monthly", "0.7");

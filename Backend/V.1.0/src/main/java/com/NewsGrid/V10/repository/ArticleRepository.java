@@ -23,10 +23,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         boolean existsByUrl(String url);
         boolean existsBySlug(String slug);
 
-        // OPTIMIZED: Single-query JOIN FETCH eliminates N+1 selects for source & cluster
         @Query("""
         SELECT a FROM Article a
-        LEFT JOIN FETCH a.source
+        LEFT JOIN FETCH a.source s
+        LEFT JOIN FETCH s.category
         LEFT JOIN FETCH a.cluster
         WHERE a.slug = :slug
         """)
@@ -34,11 +34,37 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
         @Query("""
         SELECT a FROM Article a
-        LEFT JOIN FETCH a.source
+        LEFT JOIN FETCH a.source s
+        LEFT JOIN FETCH s.category
         LEFT JOIN FETCH a.cluster
         WHERE a.id = :id
         """)
         Optional<Article> findByIdWithDetails(@Param("id") Long id);
+
+        /**
+         * BUG-03 FIX: Hydrates a page/pool of Articles with their Source, Category, and Cluster in 1 single SQL JOIN query.
+         */
+        @Query("""
+        SELECT a FROM Article a
+        LEFT JOIN FETCH a.source s
+        LEFT JOIN FETCH s.category
+        LEFT JOIN FETCH a.cluster
+        WHERE a.id IN :ids
+        ORDER BY a.publishedAt DESC
+        """)
+        List<Article> findByIdInWithDetails(@Param("ids") List<Long> ids);
+
+        /**
+         * BUG-03 FIX: Fetches top N recent articles for XML Sitemap in 1 single query (eliminates 2000 N+1 selects).
+         */
+        @Query("""
+        SELECT a FROM Article a
+        LEFT JOIN FETCH a.source s
+        LEFT JOIN FETCH s.category
+        LEFT JOIN FETCH a.cluster
+        ORDER BY a.publishedAt DESC
+        """)
+        List<Article> findRecentForSitemap(Pageable pageable);
 
         @Modifying
         @Transactional
@@ -46,10 +72,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
 
         List<Article> findBySource(Source source);
 
-        // OPTIMIZED: Fetch all cluster articles and their sources in 1 query instead of N+1
         @Query("""
         SELECT a FROM Article a
         LEFT JOIN FETCH a.source s
+        LEFT JOIN FETCH s.category
         LEFT JOIN FETCH a.cluster
         WHERE a.cluster = :cluster
         ORDER BY s.credibility DESC, a.publishedAt DESC
@@ -59,16 +85,26 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         @Query("""
         SELECT a FROM Article a
         LEFT JOIN FETCH a.source s
+        LEFT JOIN FETCH s.category
         LEFT JOIN FETCH a.cluster
         WHERE a.cluster.id = :clusterId
         ORDER BY s.credibility DESC, a.publishedAt DESC
         """)
         List<Article> findByClusterIdWithSources(@Param("clusterId") Long clusterId);
 
-        Page<Article> findBySourceSourceTypeOrderByPublishedAtDesc(SourceType sourceType, Pageable pageable);
+        @Query(value = """
+        SELECT a FROM Article a
+        LEFT JOIN FETCH a.source s
+        LEFT JOIN FETCH s.category
+        LEFT JOIN FETCH a.cluster
+        WHERE s.sourceType = :sourceType
+        ORDER BY a.publishedAt DESC
+        """,
+                countQuery = "SELECT COUNT(a) FROM Article a WHERE a.source.sourceType = :sourceType")
+        Page<Article> findBySourceSourceTypeOrderByPublishedAtDesc(@Param("sourceType") SourceType sourceType, Pageable pageable);
 
         @Query(value = """
-        SELECT a.* FROM articles a
+        SELECT a.id FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id
         WHERE a.cluster_id IS NULL
         OR a.id = (
@@ -82,10 +118,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         """,
                 countQuery = "SELECT COUNT(DISTINCT COALESCE(cluster_id, id)) FROM articles",
                 nativeQuery = true)
-        Page<Article> findRepresentativeArticles(Pageable pageable);
+        Page<Long> findRepresentativeArticleIds(Pageable pageable);
 
         @Query(value = """
-        SELECT a.* FROM articles a
+        SELECT a.id FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id
         WHERE a.category = :category
         AND (
@@ -109,11 +145,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         ) t
         """,
                 nativeQuery = true)
-        Page<Article> findRepresentativeByCategory(
-                @Param("category") String category, Pageable pageable);
+        Page<Long> findRepresentativeIdsByCategory(@Param("category") String category, Pageable pageable);
 
         @Query(value = """
-        SELECT a.* FROM articles a
+        SELECT a.id FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id
         WHERE a.breaking = true
         AND (
@@ -130,10 +165,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         """,
                 countQuery = "SELECT COUNT(DISTINCT COALESCE(cluster_id, id)) FROM articles WHERE breaking = true",
                 nativeQuery = true)
-        Page<Article> findRepresentativeBreaking(Pageable pageable);
+        Page<Long> findRepresentativeIdsBreaking(Pageable pageable);
 
         @Query(value = """
-        SELECT a.* FROM articles a
+        SELECT a.id FROM articles a
         LEFT JOIN sources s ON a.source_id = s.id
         WHERE (
             a.title ~* ('(^|[^آ-یa-zA-Z0-9])' || :keyword || '($|[^آ-یa-zA-Z0-9])')
@@ -161,29 +196,5 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
         )
         """,
                 nativeQuery = true)
-        Page<Article> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
-
-        @Query(value = """
-        SELECT a.* FROM articles a
-        LEFT JOIN sources s ON a.source_id = s.id
-        WHERE (a.published_at < :lastPublishedAt OR (a.published_at = :lastPublishedAt AND a.id < :lastId))
-        AND (
-            a.cluster_id IS NULL
-            OR a.id = (
-                SELECT a2.id FROM articles a2
-                LEFT JOIN sources s2 ON a2.source_id = s2.id
-                WHERE a2.cluster_id = a.cluster_id
-                ORDER BY s2.credibility DESC, a2.published_at DESC
-                LIMIT 1
-            )
-        )
-        ORDER BY a.published_at DESC, a.id DESC
-        LIMIT :limit
-        """, nativeQuery = true)
-        List<Article> findNextArticlesCursor(
-                @Param("lastPublishedAt") ZonedDateTime lastPublishedAt,
-                @Param("lastId") Long lastId,
-                @Param("limit") int limit);
-
-        List<Article> findTop1000ByOrderByPublishedAtDesc();
+        Page<Long> searchRepresentativeIdsByKeyword(@Param("keyword") String keyword, Pageable pageable);
 }

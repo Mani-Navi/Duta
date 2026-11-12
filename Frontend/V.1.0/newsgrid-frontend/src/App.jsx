@@ -4,13 +4,18 @@ import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 import PriceTicker from './components/PriceTicker';
 import Home from './pages/Home';
+import Privacy from './pages/Privacy';
+import NotFound from './pages/NotFound';
 import ErrorBoundary from './components/ErrorBoundary';
 import DutaLogo from './components/DutaLogo';
+import { UserProvider, useUser } from './context/UserContext';
 import api from './api/axiosConfig';
 import { getArticleScore } from './utils/articleHelpers';
 import './App.css';
 
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail'));
+const Tablo = lazy(() => import('./pages/Tablo'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
 const Features = lazy(() => import('./pages/Features'));
 const Credibility = lazy(() => import('./pages/Credibility'));
 const About = lazy(() => import('./pages/About'));
@@ -40,87 +45,17 @@ function syncDocumentSeoTags({ title, description, canonicalUrl }) {
     canonicalEl.setAttribute('href', canonicalUrl || 'https://duta.ir/');
 }
 
-function NotFoundPage() {
-    const navigate = useNavigate();
-
-    return (
-        <div className="page-content" style={{ textAlign: 'center', padding: '80px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-                <DutaLogo breaking={true} />
-            </div>
-            <h1 style={{ fontSize: '64px', fontWeight: 800, color: 'var(--blue)', lineHeight: 1, marginBottom: '12px' }}>
-                404
-            </h1>
-            <h2 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '10px', color: 'var(--label)' }}>
-                صفحه یا خبر مورد نظر یافت نشد
-            </h2>
-            <p style={{ fontSize: '14.5px', color: 'var(--label-2)', maxWidth: '420px', margin: '0 auto 28px', lineHeight: 1.7 }}>
-                ممکن است آدرس صفحه را اشتباه وارد کرده باشید یا این خبر پس از گذشت ۳۰ روز از آرشیو خودکار Duta حذف شده باشد.
-            </p>
-            <button
-                className="retry-btn"
-                onClick={() => navigate('/')}
-                aria-label="بازگشت به صفحه اصلی اخبار"
-            >
-                <i className="ti ti-home" aria-hidden="true" />
-                مشاهده آخرین اخبار
-            </button>
-        </div>
-    );
-}
-
-function PrivacyPage() {
-    const sections = [
-        {
-            icon: "ti-shield-lock",
-            title: "عدم دریافت اطلاعات هویتی",
-            desc: "استفاده از پلتفرم خبری Duta کاملاً آزاد و رایگان است و برای مطالعه اخبار، جستجو یا بررسی اعتبار منابع نیازی به ثبت‌نام یا ارائه اطلاعات شخصی (مانند شماره تماس یا نام) نیست."
-        },
-        {
-            icon: "ti-chart-bar",
-            title: "داده‌های آماری و کوکی‌ها",
-            desc: "ما صرفاً از کوکی‌های استاندارد تحلیلی (Google Analytics) به صورت ناشناس برای سنجش سرعت بارگذاری صفحات و بهبود تجربه کاربری استفاده می‌کنیم و هیچ‌گونه ردیابی تبلیغاتی انجام نمی‌دهیم."
-        },
-        {
-            icon: "ti-lock",
-            title: "امنیت ارتباطات و عدم اشتراک‌گذاری",
-            desc: "تمامی ارتباطات شما با سرورهای Duta از طریق پروتکل امن HTTPS (TLS 1.3) رمزنگاری می‌شود و هیچ داده‌ای با اشخاص یا شرکت‌های ثالث به اشتراک گذاشته نمی‌شود."
-        }
-    ];
-
-    return (
-        <div className="page-content">
-            <div className="page-header">
-                <h1>سیاست حفظ حریم خصوصی</h1>
-                <p>در Duta، احترام به حریم خصوصی و امنیت داده‌های کاربران اولویت اصلی ماست.</p>
-            </div>
-
-            <div className="feature-grid">
-                {sections.map((s, i) => (
-                    <div className="feature-card" key={i}>
-                        <div className="feature-icon">
-                            <i className={`ti ${s.icon}`} aria-hidden="true" />
-                        </div>
-                        <h3>{s.title}</h3>
-                        <p>{s.desc}</p>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
 function TermsPage() {
     const terms = [
         {
             icon: "ti-rss",
             title: "ماهیت خودکار تجمیع اخبار",
-            desc: "پلتفرم Duta یک موتور هوشمند تجمیع خبر (News Aggregator) است که تیتر و خلاصه اخبار را به صورت خودکار از فیدهای عمومی RSS خبرگزاری‌های رسمی جمع‌آوری می‌کند. مسئولیت حقوقی و محتوایی هر خبر بر عهده رسانه منتشرکننده اصلی است."
+            desc: "پلتفرم Duta یک موتور هوشمند تجمیع خبر است که تیتر و خلاصه اخبار را به صورت خودکار از فیدهای عمومی RSS خبرگزاری‌های رسمی جمع‌آوری می‌کند. مسئولیت حقوقی هر خبر بر عهده رسانه منتشرکننده اصلی است."
         },
         {
             icon: "ti-cpu",
             title: "محاسبه الگوریتمی امتیاز اعتبار",
-            desc: "امتیاز اعتبار نمایش‌داده‌شده برای هر خبر یا خوشه خبری، حاصل پردازش آماری و ریاضی (الگوریتم شباهت جاکارد و فرمول وزنی بیزین بر اساس تعداد و سابقه منابع پوشش‌دهنده) بوده و به منزله قضاوت انسانی یا تایید و رد قطعی حقوقی نیست."
+            desc: "امتیاز اعتبار نمایش‌داده‌شده برای هر خبر یا خوشه خبری، حاصل پردازش آماری و ریاضی (الگوریتم شباهت جاکارد و فرمول وزنی بیزین) بوده و به منزله قضاوت انسانی یا تایید و رد قطعی حقوقی نیست."
         },
         {
             icon: "ti-external-link",
@@ -151,6 +86,50 @@ function TermsPage() {
     );
 }
 
+/**
+ * UCS-014: Resolves Telegram short link duta.ir/c/:id, records click telemetry, and redirects to canonical slug.
+ */
+function ShortLinkRedirectPage() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [notFound, setNotFound] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+        api.get(`/articles/short/${encodeURIComponent(id)}`)
+            .then(res => {
+                if (!isMounted) return;
+                const data = res.data;
+                const targetSlug = data?.slug || data?.id || id;
+                navigate(`/article/${targetSlug}`, {
+                    replace: true,
+                    state: {
+                        breaking: data?.breaking || false,
+                        articleData: data
+                    }
+                });
+            })
+            .catch(() => {
+                if (isMounted) setNotFound(true);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [id, navigate]);
+
+    if (notFound) {
+        return <NotFound />;
+    }
+
+    return (
+        <div className="nitt-loading-box">
+            <DutaLogo loading={true} />
+            <span className="nitt-loading-text">در حال باز کردن خبر از کانال تلگرام Duta...</span>
+        </div>
+    );
+}
+
 function ArticleDetailPage() {
     const { slug } = useParams();
     const navigate = useNavigate();
@@ -158,12 +137,32 @@ function ArticleDetailPage() {
 
     const isBreakingInit = location.state?.breaking || false;
 
-    const [article, setArticle] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [article, setArticle] = useState(location.state?.articleData || null);
+    const [loading, setLoading] = useState(!location.state?.articleData);
     const [notFound, setNotFound] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
+
+        if (location.state?.articleData && String(location.state.articleData.slug || location.state.articleData.id) === String(slug)) {
+            const preloaded = location.state.articleData;
+            setArticle(preloaded);
+            setLoading(false);
+            if (preloaded.title) {
+                const canonicalSlug = preloaded.slug || preloaded.id;
+                const score = getArticleScore(preloaded);
+                const seoDesc = preloaded.description
+                    ? `امتیاز اعتبار: ${score}٪ | ${preloaded.description}`
+                    : `امتیاز اعتبار: ${score}٪ | ${preloaded.title}`;
+                syncDocumentSeoTags({
+                    title: `${preloaded.title} | Duta`,
+                    description: seoDesc,
+                    canonicalUrl: `https://duta.ir/article/${canonicalSlug}`
+                });
+            }
+            return () => { isMounted = false; };
+        }
+
         setArticle(null);
         setLoading(true);
         setNotFound(false);
@@ -226,7 +225,7 @@ function ArticleDetailPage() {
     }
 
     if (notFound || !article) {
-        return <NotFoundPage />;
+        return <NotFound />;
     }
 
     return (
@@ -245,11 +244,14 @@ function ArticleDetailPage() {
 function AppLayout() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { user, isLoggedIn, openModal } = useUser();
+
     const [dark, setDark] = useState(() =>
         window.matchMedia("(prefers-color-scheme: dark)").matches
     );
     const [searchKeyword, setSearchKeyword] = useState('');
     const [restoreScroll, setRestoreScroll] = useState(null);
+    const [feedRefreshCounter, setFeedRefreshCounter] = useState(0);
 
     useEffect(() => {
         if (window.gtag) {
@@ -263,6 +265,18 @@ function AppLayout() {
                 title: DEFAULT_TITLE,
                 description: DEFAULT_DESC,
                 canonicalUrl: 'https://duta.ir/'
+            });
+        } else if (location.pathname === '/tablo') {
+            syncDocumentSeoTags({
+                title: 'تابلو زنده بازار ارز، طلا، سکه و رمزارز | Duta',
+                description: 'نرخ لحظه‌ای دلار، یورو، طلای ۱۸ عیار، سکه امامی و تتر به همراه نمودار تغییرات در تابلو بازار Duta.',
+                canonicalUrl: 'https://duta.ir/tablo'
+            });
+        } else if (location.pathname === '/auth') {
+            syncDocumentSeoTags({
+                title: 'حساب کاربری و شخصی‌سازی فید | Duta',
+                description: 'ورود به حساب کاربری Duta و شخصی‌سازی خبرگزاری‌ها، حوزه‌های مورد علاقه و اخبار شهر شما.',
+                canonicalUrl: 'https://duta.ir/auth'
             });
         } else if (location.pathname === '/features') {
             syncDocumentSeoTags({
@@ -294,7 +308,7 @@ function AppLayout() {
                 description: 'قوانین بهره‌برداری، نحوه کارکرد الگوریتم اعتبارسنجی و سلب مسئولیت منابع خبری در Duta.',
                 canonicalUrl: 'https://duta.ir/terms'
             });
-        } else if (!location.pathname.startsWith('/article/')) {
+        } else if (!location.pathname.startsWith('/article/') && !location.pathname.startsWith('/c/')) {
             syncDocumentSeoTags({
                 title: 'صفحه یافت نشد (404) | Duta',
                 description: DEFAULT_DESC,
@@ -304,12 +318,14 @@ function AppLayout() {
     }, [location]);
 
     const isHome = location.pathname === '/';
-    const isDetail = location.pathname.startsWith('/article/');
+    const isDetail = location.pathname.startsWith('/article/') || location.pathname.startsWith('/c/');
     const view = isDetail ? 'detail'
-        : location.pathname === '/features' ? 'features'
-            : location.pathname === '/credibility' ? 'credibility'
-                : location.pathname === '/about' ? 'about'
-                    : isHome ? 'home' : 'other';
+        : location.pathname === '/tablo' ? 'tablo'
+            : location.pathname === '/auth' ? 'auth'
+                : location.pathname === '/features' ? 'features'
+                    : location.pathname === '/credibility' ? 'credibility'
+                        : location.pathname === '/about' ? 'about'
+                            : isHome ? 'home' : 'other';
 
     const handleSearch = useCallback((keyword) => {
         setSearchKeyword(prev => {
@@ -364,24 +380,49 @@ function AppLayout() {
     return (
         <ErrorBoundary>
             <div>
-                <header className="mobile-only mobile-header-centered">
-                    <a
-                        href="/"
-                        className="logo"
-                        dir="ltr"
-                        onClick={(e) => { e.preventDefault(); handleNavigate('home'); }}
-                        aria-label="Duta - دو نگاه، یک حقیقت"
-                    >
-                        <DutaLogo />
-                        <span className="logo-text">Duta</span>
-                        <span className="logo-divider" aria-hidden="true" />
-                        <span className="logo-sub" dir="rtl">دو نگاه، یک حقیقت</span>
-                    </a>
-                </header>
+                {/* ─── Unified Native-Style Mobile Glass Header ─── */}
+                <header className="mobile-only mobile-top-glass">
+                    <div className="mobile-top-row">
+                        <a
+                            href="/"
+                            className="logo"
+                            dir="ltr"
+                            onClick={(e) => { e.preventDefault(); handleNavigate('home'); }}
+                            aria-label="Duta - دو نگاه، یک حقیقت"
+                        >
+                            <DutaLogo />
+                            <span className="logo-text">Duta</span>
+                            <span className="logo-divider" aria-hidden="true" />
+                            <span className="logo-sub" dir="rtl">دو نگاه، یک حقیقت</span>
+                        </a>
 
-                <div className="mobile-only" style={{ padding: '6px 0', background: 'var(--navbar-bg)' }}>
-                    <PriceTicker />
-                </div>
+                        <div className="mobile-top-actions">
+                            {isLoggedIn && user?.locationCity && (
+                                <button
+                                    type="button"
+                                    className="mobile-city-chip"
+                                    onClick={() => openModal('prefs')}
+                                    aria-label={`شهر انتخابی: ${user.locationCity}`}
+                                >
+                                    <i className="ti ti-map-pin" aria-hidden="true" />
+                                    <span>{user.locationCity}</span>
+                                </button>
+                            )}
+
+                            <button
+                                type="button"
+                                className={`mobile-account-chip ${isLoggedIn ? 'is-member' : ''}`}
+                                onClick={() => openModal(isLoggedIn ? 'prefs' : 'auth')}
+                            >
+                                {isLoggedIn ? (user?.displayName?.slice(0, 10) || 'حساب من') : 'ورود'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mobile-ticker-strip">
+                        <PriceTicker />
+                    </div>
+                </header>
 
                 <div className="desktop-only">
                     <Navbar
@@ -394,7 +435,11 @@ function AppLayout() {
 
                 <main id="main-content" aria-label="محتوای اصلی اخبار">
                     <div style={{ display: view === 'home' ? 'block' : 'none' }}>
-                        <Home onOpenArticle={openArticle} searchKeyword={searchKeyword} />
+                        <Home
+                            onOpenArticle={openArticle}
+                            searchKeyword={searchKeyword}
+                            refreshTrigger={feedRefreshCounter}
+                        />
                     </div>
 
                     <Suspense fallback={
@@ -405,24 +450,28 @@ function AppLayout() {
                     }>
                         <Routes>
                             <Route path="/" element={null} />
+                            <Route path="/c/:id" element={<ShortLinkRedirectPage />} />
                             <Route path="/article/:slug" element={<ArticleDetailPage />} />
+                            <Route path="/tablo" element={<Tablo />} />
+                            <Route path="/auth" element={<AuthPage onPreferencesSaved={() => setFeedRefreshCounter(c => c + 1)} />} />
                             <Route path="/features" element={<Features />} />
                             <Route path="/credibility" element={<Credibility />} />
                             <Route path="/about" element={<About />} />
-                            <Route path="/privacy" element={<PrivacyPage />} />
+                            <Route path="/privacy" element={<Privacy />} />
                             <Route path="/terms" element={<TermsPage />} />
-                            <Route path="*" element={<NotFoundPage />} />
+                            <Route path="*" element={<NotFound />} />
                         </Routes>
                     </Suspense>
                 </main>
 
-                <footer className="footer-note" style={{ padding: '28px 20px 90px', textAlign: 'center' }} role="contentinfo">
-                    <nav aria-label="لینک‌های فوتر" style={{ display: 'flex', justifyContent: 'center', gap: '18px', flexWrap: 'wrap', marginBottom: '12px', fontWeight: 600 }}>
-                        <a href="/about" onClick={(e) => { e.preventDefault(); handleNavigate('about'); }}>درباره ما</a>
+                <footer className="footer-note" style={{ padding: '28px 20px 104px', textAlign: 'center' }} role="contentinfo">
+                    <nav aria-label="لینک‌های فوتر" style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '12px', fontWeight: 600 }}>
+                        <a href="/tablo" onClick={(e) => { e.preventDefault(); handleNavigate('tablo'); }}>تابلو بازار</a>
+                        <a href="/features" onClick={(e) => { e.preventDefault(); handleNavigate('features'); }}>ویژگی‌ها</a>
                         <a href="/credibility" onClick={(e) => { e.preventDefault(); handleNavigate('credibility'); }}>روش سنجش اعتبار</a>
+                        <a href="/about" onClick={(e) => { e.preventDefault(); handleNavigate('about'); }}>درباره ما</a>
                         <a href="/privacy" onClick={(e) => { e.preventDefault(); handleNavigate('privacy'); }}>حریم خصوصی</a>
                         <a href="/terms" onClick={(e) => { e.preventDefault(); handleNavigate('terms'); }}>قوانین و سلب مسئولیت</a>
-                        <a href="mailto:info@duta.ir">info@duta.ir</a>
                     </nav>
                     <div style={{ opacity: 0.75 }}>
                         تمامی حقوق برای Duta محفوظ است © {new Date().getFullYear()} — ایران، تهران
@@ -442,4 +491,10 @@ function AppLayout() {
     );
 }
 
-export default AppLayout;
+export default function App() {
+    return (
+        <UserProvider>
+            <AppLayout />
+        </UserProvider>
+    );
+}

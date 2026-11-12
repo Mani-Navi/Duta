@@ -5,13 +5,12 @@ import NewsCardSkeleton from './NewsCardSkeleton';
 import api from '../api/axiosConfig';
 
 function getColumnCountForWidth(w) {
-    if (w <= 440) return 1;
-    if (w <= 768) return 2;
-    if (w <= 1024) return 3;
-    return 4;
+    if (w <= 560) return 1;
+    if (w <= 920) return 2;
+    return 3;
 }
 
-function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
+function NewsGrid({ feedMode = 'newspaper', activeCategory, onOpenArticle, searchKeyword, refreshTrigger, onRefreshHot }) {
     const [articles, setArticles] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -34,7 +33,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         isBusyRef.current = loading || isFetchingMore;
     }, [loading, isFetchingMore]);
 
-    // ۱. ریسپانسیو ستون‌ها با Throttling مبتنی بر requestAnimationFrame
     useEffect(() => {
         let rafId = null;
         const handleResize = () => {
@@ -55,19 +53,21 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         if (searchKeyword) {
             return `/articles/search?keyword=${encodeURIComponent(searchKeyword)}&page=${pageNum}&size=20`;
         }
+        if (feedMode === 'myfeed') {
+            return `/articles/personalized?page=${pageNum}&size=20`;
+        }
         if (activeCategory === 'breaking') {
-            return `/articles/breaking?page=${pageNum}&size=20`;
+            return `/articles/newspaper?category=breaking&page=${pageNum}&size=20`;
         }
         if (activeCategory === 'telegram') {
             return `/articles/telegram?page=${pageNum}&size=20`;
         }
         if (activeCategory && activeCategory !== 'all') {
-            return `/articles/category?name=${encodeURIComponent(activeCategory)}&page=${pageNum}&size=20`;
+            return `/articles/newspaper?category=${encodeURIComponent(activeCategory)}&page=${pageNum}&size=20`;
         }
-        return `/articles?page=${pageNum}&size=20`;
-    }, [activeCategory, searchKeyword]);
+        return `/articles/newspaper?page=${pageNum}&size=20`;
+    }, [feedMode, activeCategory, searchKeyword]);
 
-    // ۲. متد دریافت اخبار با قابلیت لغو درخواست قبلی
     const fetchArticles = useCallback(async (pageNum, isInitial = false) => {
         if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
@@ -109,7 +109,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         setPage(0);
         setHasMore(true);
         fetchArticles(0, true);
-    }, [fetchArticles]);
+    }, [fetchArticles, refreshTrigger]);
 
     useEffect(() => {
         if (page > 0) {
@@ -117,7 +117,6 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         }
     }, [page, fetchArticles]);
 
-    // ۳. بررسی خودکار اخبار جدید هر ۵ دقیقه (بدون بازسازی تایمر در هنگام اسکرول)
     useEffect(() => {
         if (searchKeyword) return;
 
@@ -133,16 +132,14 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                     latestItems[0].id !== latestArticleIdRef.current
                 ) {
                     setHasNewArticles(true);
+                    if (onRefreshHot) onRefreshHot();
                 }
-            } catch {
-                // خطای بررسی پس‌زمینه نادیده گرفته می‌شود
-            }
+            } catch {}
         }, 5 * 60 * 1000);
 
         return () => clearInterval(interval);
-    }, [searchKeyword, buildEndpointUrl]);
+    }, [searchKeyword, buildEndpointUrl, onRefreshHot]);
 
-    // ۴. اسکرول بی‌نهایت با Sentinel
     const sentinelRef = useCallback(node => {
         if (loading || isFetchingMore) return;
         if (observer.current) observer.current.disconnect();
@@ -156,7 +153,15 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         if (node) observer.current.observe(node);
     }, [loading, isFetchingMore, hasMore]);
 
-    // ۵. توزیع متوازن در ستون‌ها
+    const handleHideCard = useCallback((removedArticle, actionType) => {
+        setArticles(prev => prev.filter(a => {
+            if (actionType === 'MUTE_SOURCE' && removedArticle.source?.name) {
+                return a.source?.name !== removedArticle.source.name;
+            }
+            return a.id !== removedArticle.id;
+        }));
+    }, []);
+
     const columns = useMemo(() => {
         const cols = Array.from({ length: columnCount }, () => []);
         articles.forEach((article, index) => {
@@ -170,6 +175,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
         setPage(0);
         setHasMore(true);
         fetchArticles(0, true);
+        if (onRefreshHot) onRefreshHot();
     };
 
     if (error && articles.length === 0) {
@@ -187,7 +193,7 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                 <div className="status-text">
                     {searchKeyword
                         ? `نتیجه‌ای برای «${searchKeyword}» یافت نشد`
-                        : 'خبری در این دسته وجود ندارد'}
+                        : 'خبری در این بخش وجود ندارد'}
                 </div>
             </div>
         );
@@ -220,7 +226,11 @@ function NewsGrid({ activeCategory, onOpenArticle, searchKeyword }) {
                                 <div key={article.id}>
                                     {article.source?.sourceType === 'TELEGRAM' ?
                                         <TelegramNewsCard article={article} onOpen={onOpenArticle} /> :
-                                        <NewsCard article={article} onOpen={onOpenArticle} />
+                                        <NewsCard
+                                            article={article}
+                                            onOpen={onOpenArticle}
+                                            onHideCard={handleHideCard}
+                                        />
                                     }
                                 </div>
                             ))}

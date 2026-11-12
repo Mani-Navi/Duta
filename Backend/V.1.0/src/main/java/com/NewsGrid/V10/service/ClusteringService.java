@@ -8,7 +8,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -19,7 +19,8 @@ import java.util.stream.Collectors;
 
 /**
  * Groups related news articles into clusters using Jaccard Similarity (>= 25% overlap)
- * within a 6-hour sliding window. Uses memoized token sets to minimize CPU & GC pressure.
+ * within a 6-hour sliding window.
+ * SCALE-02 FIX: Acquires lock outside TransactionTemplate so DB commits complete BEFORE releasing lock to next thread.
  */
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class ClusteringService {
     private final ArticleClusterRepository clusterRepository;
     private final ArticleRepository articleRepository;
     private final ScoringService scoringService;
+    private final TransactionTemplate transactionTemplate;
 
     private final Object clusterLock = new Object();
 
@@ -45,38 +47,38 @@ public class ClusteringService {
             "the", "a", "an", "in", "of", "to", "and", "is", "was"
     );
 
-    // OPTIMIZED: Memoize tokenized headline sets to avoid redundant Regex splitting across cycles
     private final Cache<String, Set<String>> tokenCache = Caffeine.newBuilder()
             .maximumSize(2000)
             .expireAfterWrite(6, TimeUnit.HOURS)
             .build();
 
-    @Transactional
     public void clusterArticle(Article article) {
+        Set<String> newTokens = tokenize(article.getTitle());
+
         synchronized (clusterLock) {
-            ZonedDateTime since = ZonedDateTime.now(ZoneOffset.UTC).minusHours(CLUSTER_WINDOW_HOURS);
-            List<ArticleCluster> recentClusters = clusterRepository.findByCreatedAtAfter(since);
+            transactionTemplate.executeWithoutResult(status -> {
+                ZonedDateTime since = ZonedDateTime.now(ZoneOffset.UTC).minusHours(CLUSTER_WINDOW_HOURS);
+                List<ArticleCluster> recentClusters = clusterRepository.findByCreatedAtAfter(since);
 
-            Set<String> newTokens = tokenize(article.getTitle());
+                ArticleCluster bestCluster = null;
+                double bestSimilarity = 0;
 
-            ArticleCluster bestCluster = null;
-            double bestSimilarity = 0;
+                for (ArticleCluster cluster : recentClusters) {
+                    Set<String> clusterTokens = tokenize(cluster.getRepresentativeTitle());
+                    double similarity = jaccardSimilarity(newTokens, clusterTokens);
 
-            for (ArticleCluster cluster : recentClusters) {
-                Set<String> clusterTokens = tokenize(cluster.getRepresentativeTitle());
-                double similarity = jaccardSimilarity(newTokens, clusterTokens);
-
-                if (similarity > bestSimilarity && similarity >= SIMILARITY_THRESHOLD) {
-                    bestSimilarity = similarity;
-                    bestCluster = cluster;
+                    if (similarity > bestSimilarity && similarity >= SIMILARITY_THRESHOLD) {
+                        bestSimilarity = similarity;
+                        bestCluster = cluster;
+                    }
                 }
-            }
 
-            if (bestCluster != null) {
-                addToCluster(article, bestCluster);
-            } else {
-                createNewCluster(article);
-            }
+                if (bestCluster != null) {
+                    addToCluster(article, bestCluster);
+                } else {
+                    createNewCluster(article);
+                }
+            });
         }
     }
 
@@ -99,7 +101,6 @@ public class ClusteringService {
                 .max(Comparator.comparingInt(a -> a.getSource().getCredibility()))
                 .ifPresent(bestArticle -> cluster.setRepresentativeTitle(bestArticle.getTitle()));
 
-        // OPTIMIZED: Pass already-fetched clusterArticles to avoid a second SELECT query
         cluster.setCredibilityScore(scoringService.calculateClusterScore(cluster, clusterArticles));
         clusterRepository.save(cluster);
     }

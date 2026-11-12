@@ -1,3 +1,56 @@
+// ─── سوئیچ ری‌اکشن‌های نمایشی اولیه سایت (برای حذف کامل در آینده، این مقدار را false کنید) ───
+export const ENABLE_SEED_REACTIONS = true;
+
+export function getSeededReactionBoost(article) {
+    if (!ENABLE_SEED_REACTIONS || !article) {
+        return { like: 0, hot: 0, doubt: 0 };
+    }
+
+    const seedId = Number(article?.cluster?.id || article?.id || 0);
+    if (!seedId) {
+        return { like: 0, hot: 0, doubt: 0 };
+    }
+
+    // هش قطعی (Deterministic Hash) بر اساس شناسه خبر تا اعداد در کارت و داخل خبر همیشه یکسان باشند
+    let h = Math.imul(seedId ^ 0x9E3779B9, 0x85EBCA6B) >>> 0;
+    h = Math.imul(h ^ (h >>> 13), 0xC2B2AE35) >>> 0;
+    h = (h ^ (h >>> 16)) >>> 0;
+
+    const score = getArticleScore(article);
+    const sourceCount = getArticleSourceCount(article);
+
+    let like = 68 + (h % 175);                  // پایه بین ۶۸ تا ۲۴۲
+    let hot = 34 + ((h >>> 5) % 115);           // پایه بین ۳۴ تا ۱۴۸
+    let doubt = score >= 80
+        ? (4 + ((h >>> 10) % 19))               // برای اخبار معتبر: ۴ تا ۲۲ تردید
+        : (26 + ((h >>> 10) % 64));             // برای اخبار کم‌اعتبارتر: ۲۶ تا ۸۹ تردید
+
+    // جهش ویژه برای اخبار فوری
+    if (article.breaking) {
+        like += 115 + (h % 85);
+        hot += 95 + ((h >>> 7) % 75);
+    }
+
+    // افزایش متناسب با تعداد منابع پوشش‌دهنده کلستر
+    if (sourceCount > 1) {
+        like += Math.min(280, (sourceCount - 1) * 46);
+        hot += Math.min(210, (sourceCount - 1) * 34);
+    }
+
+    // رشد سریع در ۳۰ دقیقه اول انتشار (شروع از ۴۰٪ ظرفیت در دقیقه اول)
+    if (article.publishedAt) {
+        const ageMins = Math.max(1, (Date.now() - new Date(article.publishedAt).getTime()) / 60000);
+        if (ageMins < 30) {
+            const ramp = 0.40 + (ageMins / 30) * 0.60;
+            like = Math.max(18, Math.round(like * ramp));
+            hot = Math.max(9, Math.round(hot * ramp));
+            doubt = Math.max(2, Math.round(doubt * ramp));
+        }
+    }
+
+    return { like, hot, doubt };
+}
+
 export function getArticleScore(article) {
     return article?.cluster?.credibilityScore ?? article?.source?.credibility ?? 0;
 }
@@ -40,4 +93,18 @@ export function formatRelativeTime(dateStr) {
     if (hours < 24) return `${hours} ساعت پیش`;
     const days = Math.floor(hours / 24);
     return `${days} روز پیش`;
+}
+
+export function cleanArticleDescription(desc, title = '') {
+    if (!desc) return '';
+    const cleaned = desc
+        .replace(/\s*(\.{2,}|…|\[\s*(…|\.{2,})\s*\])?\s*The post\b[\s\S]*$/i, '...')
+        .replace(/\s*(\.{2,}|…)?\s*(نوشته|مطلب|این نوشته)\s+[\s\S]*?\s+اولین بار در[\s\S]*$/i, '...')
+        .replace(/\s*(\.{2,}|…)?\s*(ادامه مطلب|بیشتر بخوانید)\s*(\.{2,}|…|:)?\s*$/i, '')
+        .replace(/\s*\[\s*(…|\.{2,})\s*\]\s*$/g, '...')
+        .replace(/\.{4,}$/g, '...')
+        .trim();
+
+    if (!cleaned || cleaned === '...' || cleaned === title?.trim()) return '';
+    return cleaned;
 }

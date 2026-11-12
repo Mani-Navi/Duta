@@ -39,7 +39,7 @@
 			<artifactId>caffeine</artifactId>
 		</dependency>
 
-		<!-- Spring Boot Actuator for Production Monitoring -->
+		<!-- Spring Boot Actuator -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
@@ -78,7 +78,7 @@
 			<version>2.3.1</version>
 		</dependency>
 
-		<!-- Web Scraping (RSS Summary & Telegram/TGJU) -->
+		<!-- Web Scraping -->
 		<dependency>
 			<groupId>org.jsoup</groupId>
 			<artifactId>jsoup</artifactId>

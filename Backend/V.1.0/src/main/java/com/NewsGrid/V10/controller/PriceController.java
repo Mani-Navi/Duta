@@ -17,4 +17,9 @@ public class PriceController {
     public Map<String, Object> getPrices() {
         return priceService.getPrices();
     }
+
+    @GetMapping("/tablo")
+    public Map<String, Object> getTabloMarketData() {
+        return priceService.getTabloData();
+    }
 }

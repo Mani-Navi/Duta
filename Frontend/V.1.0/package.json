@@ -1,26 +1,30 @@
 {
-  "name": "nitt-frontend",
+  "name": "duta-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@fontsource/vazirmatn": "^5.2.8",
-    "@tabler/icons-webfont": "^3.45.0",
-    "@tanstack/react-query": "^5.62.15",
     "axios": "^1.7.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
     "terser": "^5.37.0",
     "vite": "^6.0.7"
   }
