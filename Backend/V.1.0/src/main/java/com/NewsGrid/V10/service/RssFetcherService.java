@@ -12,6 +12,7 @@ import com.NewsGrid.V10.repository.ArticleRepository;
 import com.NewsGrid.V10.repository.SourceRepository;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.rometools.rome.feed.synd.SyndCategory;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
@@ -33,11 +34,12 @@ import java.security.cert.X509Certificate;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Set;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
 @Service
@@ -61,6 +63,11 @@ public class RssFetcherService {
             .maximumSize(5000)
             .expireAfterWrite(12, TimeUnit.HOURS)
             .build();
+
+    // Matches explicit editorial breaking prefixes at the start of a title: e.g. "فوری / ...", "فوری: ...", "[فوری]", "خبر فوری | ..."
+    private static final Pattern BREAKING_TITLE_PREFIX_PATTERN = Pattern.compile(
+            "^[\\s\\[«(🚨🔴⚡️]*(خبر\\s*فوری|اخبار\\s*فوری|فوری)\\s*([:/|؛\\-—\\]»)]|$)"
+    );
 
     public RssFetcherService(
             SourceRepository sourceRepository,
@@ -86,11 +93,6 @@ public class RssFetcherService {
         this.rssTaskExecutor = rssTaskExecutor;
         this.proxyConfig = proxyConfig;
     }
-
-    private static final Set<String> BREAKING_KEYWORDS = Set.of(
-            "زلزله", "سیل", "آتش‌سوزی", "آتش سوزی", "انفجار", "حمله", "جنگ", "بمب", "موشک",
-            "کشته", "شهید", "سقوط", "تصادف", "اورژانس", "بحران", "فوری", "خبر فوری", "ترور"
-    );
 
     private static SSLSocketFactory rssSslSocketFactory;
     private static final HostnameVerifier RSS_HOSTNAME_VERIFIER = (hostname, session) -> true;
@@ -222,13 +224,13 @@ public class RssFetcherService {
                             pubAt = now;
                         }
 
-                        saveAndClusterArticle(source, title, cleanDesc, link, pubAt);
+                        boolean breaking = isSourceDeclaredBreaking(title, entry, null);
+                        saveAndClusterArticle(source, title, cleanDesc, link, pubAt, breaking);
                         savedCount++;
                     } catch (Throwable ignored) {
                     }
                 }
             } else {
-                // پشتیبانی خودکار از صفحات دسته‌بندی HTML (مانند متادرس و سایت‌های بدون XML)
                 Document doc = Jsoup.parse(rawPayload, source.getRssUrl());
                 Elements links = doc.select("article h2 a, article h3 a, .entry-title a, .post-title a, h2.title a, h3.title a");
                 if (links.isEmpty()) {
@@ -257,7 +259,8 @@ public class RssFetcherService {
                             }
                         }
 
-                        saveAndClusterArticle(source, title, summary, link, ZonedDateTime.now(ZoneOffset.UTC));
+                        boolean breaking = isSourceDeclaredBreaking(title, null, articleParent);
+                        saveAndClusterArticle(source, title, summary, link, ZonedDateTime.now(ZoneOffset.UTC), breaking);
                         savedCount++;
                         count++;
                     } catch (Throwable ignored) {
@@ -346,14 +349,14 @@ public class RssFetcherService {
         return false;
     }
 
-    private void saveAndClusterArticle(Source source, String title, String cleanDesc, String link, ZonedDateTime pubAt) {
+    private void saveAndClusterArticle(Source source, String title, String cleanDesc, String link, ZonedDateTime pubAt, boolean breaking) {
         Article article = new Article();
         article.setTitle(title);
         article.setDescription(cleanDesc);
         article.setUrl(link);
         article.setPublishedAt(pubAt);
         article.setSource(source);
-        article.setBreaking(isBreaking(title));
+        article.setBreaking(breaking);
         article.setCategory(categoryClassifier.classify(title, source));
         article.setLocation(locationClassifier.detectLocation(title, cleanDesc));
         article.setSlug(slugService.generateSlug(title, articleRepository));
@@ -378,7 +381,6 @@ public class RssFetcherService {
     private String trimSummary(String clean) {
         if (clean == null || clean.isBlank()) return null;
 
-        // ۱. ابتدا حذف کامل تمام پسوندهای خودکار وردپرس (Yoast / RankMath) قبل از برش ۳۵۰ کاراکتری
         String sanitized = clean
                 .replaceAll("(?is)\\s*(\\.{2,}|…|\\[\\s*(…|\\.{2,})\\s*\\])?\\s*The post\\b.*$", "")
                 .replaceAll("(?s)\\s*(\\.{2,}|…)?\\s*(نوشته|مطلب|این نوشته)\\s+.*?\\s+اولین بار در.*$", "")
@@ -388,7 +390,6 @@ public class RssFetcherService {
 
         if (sanitized.isBlank()) return null;
 
-        // ۲. برش استاندارد ۳۵۰ کاراکتری پس از پاکسازی
         if (sanitized.length() > 350) {
             int lastSpace = sanitized.substring(0, 350).lastIndexOf(' ');
             return (lastSpace > 100) ? sanitized.substring(0, lastSpace) + "..." : sanitized.substring(0, 347) + "...";
@@ -396,22 +397,52 @@ public class RssFetcherService {
         return sanitized;
     }
 
-    private boolean isBreaking(String title) {
-        if (title == null || title.isBlank()) return false;
-        String normalized = " " + title.toLowerCase()
-                .replace('ي', 'ی')
-                .replace('ك', 'ک')
-                .replace('\u200C', ' ')
-                .replaceAll("[^\\p{L}\\p{N}]+", " ")
-                .trim() + " ";
+    /**
+     * Strict Source-Declared Breaking News Detection:
+     * Marks an article as breaking ONLY if the publishing agency explicitly tagged it in RSS <category>,
+     * HTML badge, or started the title with an editorial breaking prefix (e.g. "فوری / ...", "خبر فوری:").
+     */
+    private boolean isSourceDeclaredBreaking(String title, SyndEntry entry, Element htmlParent) {
+        // 1. Check RSS <category> tags set by the publisher
+        if (entry != null && entry.getCategories() != null) {
+            for (SyndCategory cat : entry.getCategories()) {
+                if (cat != null && cat.getName() != null) {
+                    String c = cat.getName().trim().toLowerCase(Locale.ROOT)
+                            .replace('ي', 'ی')
+                            .replace('ك', 'ک')
+                            .replace('\u200C', ' ');
+                    if (c.equals("فوری") || c.equals("خبر فوری") || c.equals("اخبار فوری")
+                            || c.equals("خبرفوری") || c.contains("breaking") || c.contains("urgent")) {
+                        return true;
+                    }
+                }
+            }
+        }
 
-        // بررسی دقیق با مرز فاصله تا «جنگی» یا «جنگل» با «جنگ» اشتباه گرفته نشود
-        for (String kw : BREAKING_KEYWORDS) {
-            String normKw = " " + kw.replace('\u200C', ' ') + " ";
-            if (normalized.contains(normKw)) {
+        // 2. Check HTML breaking badge if scraped from web page
+        if (htmlParent != null) {
+            Element badge = htmlParent.selectFirst(".breaking, .urgent, .badge-breaking, .is-breaking");
+            if (badge != null) {
                 return true;
             }
         }
+
+        // 3. Check explicit editorial breaking label in the title
+        if (title != null && !title.isBlank()) {
+            String normTitle = title.trim()
+                    .replace('ي', 'ی')
+                    .replace('ك', 'ک')
+                    .replace('\u200C', ' ');
+
+            if (BREAKING_TITLE_PREFIX_PATTERN.matcher(normTitle).find()) {
+                return true;
+            }
+            if (normTitle.contains("خبر فوری") || normTitle.contains("خبرفوری")
+                    || normTitle.contains("[فوری]") || normTitle.contains("(فوری)")) {
+                return true;
+            }
+        }
+
         return false;
     }
 }

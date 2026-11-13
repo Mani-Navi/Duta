@@ -37,9 +37,6 @@ public class ArticleService {
         return hydrateArticlePage(idPage, pageable);
     }
 
-    /**
-     * SCALE-04 & BUG-03 FIX: 500-article in-memory pool hydrated with zero N+1 queries.
-     */
     @Cacheable(value = "articles", key = "'pool-recent-500'")
     public List<Article> getRecentRepresentativePool() {
         Page<Long> idPage = articleRepository.findRepresentativeArticleIds(PageRequest.of(0, 500));
@@ -118,7 +115,6 @@ public class ArticleService {
             @CacheEvict(value = "hot_articles", allEntries = true)
     })
     public void evictArticlesCache() {
-        // Automatically cleared by Spring Cache abstraction
     }
 
     @Cacheable(value = "seo", key = "#slugOrId")
@@ -180,7 +176,7 @@ public class ArticleService {
     }
 
     /**
-     * UCS-014: Official Duta RSS 2.0 Feed enriched with <duta:*> credibility & cluster metadata for @Duta_News Bot.
+     * UCS-014: Official Duta RSS 2.0 Feed enriched with <duta:*> credibility, cluster & coveredSources metadata.
      */
     @Cacheable(value = "sitemap", key = "'rss-xml'")
     public String generateRssFeedXml() {
@@ -203,13 +199,28 @@ public class ArticleService {
             int score = a.getCluster() != null
                     ? a.getCluster().getCredibilityScore()
                     : (a.getSource() != null && a.getSource().getCredibility() != null ? a.getSource().getCredibility() : 50);
-            int sourceCount = a.getCluster() != null ? Math.max(1, a.getCluster().getSourceCount()) : 1;
             Long clusterId = a.getCluster() != null ? a.getCluster().getId() : a.getId();
             String srcName = a.getSource() != null && a.getSource().getName() != null ? a.getSource().getName() : "Duta";
             String srcColor = a.getSource() != null && a.getSource().getColor() != null ? a.getSource().getColor() : "#007AFF";
             String srcInitials = a.getSource() != null && a.getSource().getInitials() != null
                     ? a.getSource().getInitials()
                     : srcName.substring(0, Math.min(2, srcName.length()));
+
+            List<String> coveredNames;
+            if (a.getCluster() != null && a.getCluster().getId() != null) {
+                coveredNames = articleRepository.findByClusterIdWithSources(a.getCluster().getId()).stream()
+                        .map(Article::getSource)
+                        .filter(Objects::nonNull)
+                        .map(Source::getName)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+            } else {
+                coveredNames = List.of(srcName);
+            }
+            int sourceCount = Math.max(a.getCluster() != null ? a.getCluster().getSourceCount() : 1, coveredNames.size());
+            String coveredSourcesText = String.join("، ", coveredNames);
+
             String category = a.getCategory() != null ? a.getCategory() : "سیاسی";
             String shortUrl = "https://duta.ir/c/" + a.getId();
             String rawSlug = (a.getSlug() != null && !a.getSlug().isBlank()) ? a.getSlug() : String.valueOf(a.getId());
@@ -232,6 +243,7 @@ public class ArticleService {
             rss.append("      <duta:shortUrl>").append(shortUrl).append("</duta:shortUrl>\n");
             rss.append("      <duta:credibilityScore>").append(score).append("</duta:credibilityScore>\n");
             rss.append("      <duta:sourceCount>").append(sourceCount).append("</duta:sourceCount>\n");
+            rss.append("      <duta:coveredSources>").append(escapeXml(coveredSourcesText)).append("</duta:coveredSources>\n");
             rss.append("      <duta:breaking>").append(a.isBreaking()).append("</duta:breaking>\n");
             rss.append("      <duta:sourceName>").append(escapeXml(srcName)).append("</duta:sourceName>\n");
             rss.append("      <duta:sourceColor>").append(escapeXml(srcColor)).append("</duta:sourceColor>\n");
