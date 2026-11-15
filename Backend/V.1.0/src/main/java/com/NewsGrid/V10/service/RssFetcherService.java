@@ -64,7 +64,6 @@ public class RssFetcherService {
             .expireAfterWrite(12, TimeUnit.HOURS)
             .build();
 
-    // Matches explicit editorial breaking prefixes at the start of a title: e.g. "فوری / ...", "فوری: ...", "[فوری]", "خبر فوری | ..."
     private static final Pattern BREAKING_TITLE_PREFIX_PATTERN = Pattern.compile(
             "^[\\s\\[«(🚨🔴⚡️]*(خبر\\s*فوری|اخبار\\s*فوری|فوری)\\s*([:/|؛\\-—\\]»)]|$)"
     );
@@ -225,7 +224,9 @@ public class RssFetcherService {
                         }
 
                         boolean breaking = isSourceDeclaredBreaking(title, entry, null);
-                        saveAndClusterArticle(source, title, cleanDesc, link, pubAt, breaking);
+                        String resolvedCategory = categoryClassifier.classifyFromRssCategories(entry.getCategories(), source);
+
+                        saveAndClusterArticle(source, title, cleanDesc, link, pubAt, breaking, resolvedCategory);
                         savedCount++;
                     } catch (Throwable ignored) {
                     }
@@ -251,16 +252,23 @@ public class RssFetcherService {
                         }
 
                         String summary = null;
+                        String htmlCatTag = null;
                         Element articleParent = aTag.closest("article, .post, .item");
                         if (articleParent != null) {
                             Element p = articleParent.selectFirst("p, .entry-summary, .excerpt");
                             if (p != null && !p.text().isBlank()) {
                                 summary = trimSummary(p.text().trim());
                             }
+                            Element catEl = articleParent.selectFirst(".category, .cat-links, .post-category, a[rel='category tag']");
+                            if (catEl != null && !catEl.text().isBlank()) {
+                                htmlCatTag = catEl.text().trim();
+                            }
                         }
 
                         boolean breaking = isSourceDeclaredBreaking(title, null, articleParent);
-                        saveAndClusterArticle(source, title, summary, link, ZonedDateTime.now(ZoneOffset.UTC), breaking);
+                        String resolvedCategory = categoryClassifier.classifyFromHtmlCategory(htmlCatTag, source);
+
+                        saveAndClusterArticle(source, title, summary, link, ZonedDateTime.now(ZoneOffset.UTC), breaking, resolvedCategory);
                         savedCount++;
                         count++;
                     } catch (Throwable ignored) {
@@ -349,7 +357,7 @@ public class RssFetcherService {
         return false;
     }
 
-    private void saveAndClusterArticle(Source source, String title, String cleanDesc, String link, ZonedDateTime pubAt, boolean breaking) {
+    private void saveAndClusterArticle(Source source, String title, String cleanDesc, String link, ZonedDateTime pubAt, boolean breaking, String resolvedCategory) {
         Article article = new Article();
         article.setTitle(title);
         article.setDescription(cleanDesc);
@@ -357,7 +365,7 @@ public class RssFetcherService {
         article.setPublishedAt(pubAt);
         article.setSource(source);
         article.setBreaking(breaking);
-        article.setCategory(categoryClassifier.classify(title, source));
+        article.setCategory(resolvedCategory);
         article.setLocation(locationClassifier.detectLocation(title, cleanDesc));
         article.setSlug(slugService.generateSlug(title, articleRepository));
 
@@ -397,13 +405,7 @@ public class RssFetcherService {
         return sanitized;
     }
 
-    /**
-     * Strict Source-Declared Breaking News Detection:
-     * Marks an article as breaking ONLY if the publishing agency explicitly tagged it in RSS <category>,
-     * HTML badge, or started the title with an editorial breaking prefix (e.g. "فوری / ...", "خبر فوری:").
-     */
     private boolean isSourceDeclaredBreaking(String title, SyndEntry entry, Element htmlParent) {
-        // 1. Check RSS <category> tags set by the publisher
         if (entry != null && entry.getCategories() != null) {
             for (SyndCategory cat : entry.getCategories()) {
                 if (cat != null && cat.getName() != null) {
@@ -419,7 +421,6 @@ public class RssFetcherService {
             }
         }
 
-        // 2. Check HTML breaking badge if scraped from web page
         if (htmlParent != null) {
             Element badge = htmlParent.selectFirst(".breaking, .urgent, .badge-breaking, .is-breaking");
             if (badge != null) {
@@ -427,7 +428,6 @@ public class RssFetcherService {
             }
         }
 
-        // 3. Check explicit editorial breaking label in the title
         if (title != null && !title.isBlank()) {
             String normTitle = title.trim()
                     .replace('ي', 'ی')

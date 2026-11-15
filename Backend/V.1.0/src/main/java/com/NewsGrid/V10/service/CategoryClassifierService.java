@@ -8,26 +8,20 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Source-Declared Category Classifier (Zero Title-Keyword Guessing).
- * Determines article category strictly from the publisher's RSS <category> tag
- * or falls back to the source's official assigned category.
+ * Publisher-Category Mapper (Zero Text/Title Inspection).
+ * Maps the category tag explicitly chosen by the publishing website to one of Duta's 12 categories.
  */
 @Service
 public class CategoryClassifierService {
 
-    public String classify(String title) {
-        return "سیاسی";
-    }
-
-    public String classify(String title, Source source) {
-        return getSourceDefaultCategory(source);
-    }
-
+    /**
+     * Maps RSS <category> tags declared by the source website to Duta's 12 categories.
+     */
     public String classifyFromRssCategories(List<SyndCategory> rssCategories, Source source) {
         if (rssCategories != null && !rssCategories.isEmpty()) {
             for (SyndCategory cat : rssCategories) {
                 if (cat != null && cat.getName() != null) {
-                    String mapped = mapPublisherCategoryTag(cat.getName());
+                    String mapped = mapPublisherCategory(cat.getName());
                     if (mapped != null) {
                         return mapped;
                     }
@@ -37,61 +31,128 @@ public class CategoryClassifierService {
         return getSourceDefaultCategory(source);
     }
 
+    /**
+     * Maps an HTML category breadcrumb/tag declared by the source website to Duta's 12 categories.
+     */
+    public String classifyFromHtmlCategory(String htmlCategoryTag, Source source) {
+        if (htmlCategoryTag != null && !htmlCategoryTag.isBlank()) {
+            String mapped = mapPublisherCategory(htmlCategoryTag);
+            if (mapped != null) {
+                return mapped;
+            }
+        }
+        return getSourceDefaultCategory(source);
+    }
+
+    public String classify(String ignoredTitle, Source source) {
+        return getSourceDefaultCategory(source);
+    }
+
+    public String classify(String ignoredTitle) {
+        return "اجتماعی";
+    }
+
     private String getSourceDefaultCategory(Source source) {
         if (source != null && source.getCategory() != null && source.getCategory().getNameFa() != null) {
             return source.getCategory().getNameFa();
         }
-        return "سیاسی";
+        return "اجتماعی";
     }
 
-    public String mapPublisherCategoryTag(String rawTag) {
-        if (rawTag == null || rawTag.isBlank()) return null;
+    /**
+     * Maps the publisher's own category name to one of Duta's 12 official categories.
+     */
+    public String mapPublisherCategory(String publisherCat) {
+        if (publisherCat == null || publisherCat.isBlank()) return null;
 
-        String t = rawTag.trim().toLowerCase(Locale.ROOT)
+        String t = publisherCat.trim().toLowerCase(Locale.ROOT)
                 .replace('ي', 'ی')
                 .replace('ك', 'ک')
                 .replace('\u200C', ' ')
                 .replaceAll("\\s+", " ");
 
-        if (t.equals("اخبار") || t.equals("خبر") || t.equals("همه اخبار") || t.equals("فوری")
-                || t.equals("خبر فوری") || t.equals("برگزیده") || t.equals("ویژه")) {
+        // Ignore non-topical status labels
+        if (t.equals("اخبار") || t.equals("خبر") || t.equals("همه اخبار")
+                || t.equals("فوری") || t.equals("خبر فوری") || t.equals("اخبار فوری")
+                || t.equals("برگزیده") || t.equals("ویژه")) {
             return null;
         }
 
-        if (t.contains("رمزارز") || t.contains("ارز دیجیتال") || t.contains("بلاکچین") || t.contains("کریپتو") || t.contains("crypto")) {
+        // ۱. رمزارز
+        if (t.contains("رمزارز") || t.contains("ارز دیجیتال") || t.contains("بلاکچین")
+                || t.contains("کریپتو") || t.contains("بیت کوین") || t.contains("crypto")) {
             return "رمزارز";
         }
+
+        // ۲. خودرو
         if (t.contains("خودرو") || t.contains("ماشین") || t.contains("موتورسیکلت") || t.contains("auto")) {
             return "خودرو";
         }
-        if (t.contains("آموزش") || t.contains("دانشگاه") || t.contains("مدرسه") || t.contains("کنکور") || t.contains("فرهنگیان") || t.contains("دانشجو")) {
+
+        // ۳. آموزشی
+        if (t.contains("آموزش") || t.contains("دانشگاه") || t.contains("مدرسه") || t.contains("مدارس")
+                || t.contains("کنکور") || t.contains("فرهنگیان") || t.contains("دانشجو")
+                || t.contains("دانش آموز") || t.contains("پژوهش")) {
             return "آموزشی";
         }
-        if (t.contains("تکنولوژی") || t.contains("فناوری") || t.contains("دیجیتال") || t.contains("آی تی") || t.contains("هوش مصنوعی") || t.contains("موبایل") || t.contains("tech")) {
+
+        // ۴. تکنولوژی
+        if (t.contains("تکنولوژی") || t.contains("فناوری") || t.contains("دیجیتال")
+                || t.contains("آی تی") || t.contains("هوش مصنوعی") || t.contains("موبایل")
+                || t.contains("سایبری") || t.contains("رایانه") || t.contains("tech")) {
             return "تکنولوژی";
         }
-        if (t.contains("ورزش") || t.contains("فوتبال") || t.contains("توپ و تور") || t.contains("المپیک") || t.contains("sport")) {
+
+        // ۵. ورزشی
+        if (t.contains("ورزش") || t.contains("فوتبال") || t.contains("توپ و تور")
+                || t.contains("المپیک") || t.contains("کشتی و رزمی") || t.contains("sport")) {
             return "ورزشی";
         }
-        if (t.contains("اقتصاد") || t.contains("بازار") || t.contains("بورس") || t.contains("بانک") || t.contains("صنعت") || t.contains("تجارت") || t.contains("نفت") || t.contains("انرژی") || t.contains("مسکن")) {
+
+        // ۶. اقتصادی
+        if (t.contains("اقتصاد") || t.contains("بازار") || t.contains("بورس") || t.contains("بانک")
+                || t.contains("صنعت") || t.contains("تجارت") || t.contains("نفت") || t.contains("انرژی")
+                || t.contains("مسکن") || t.contains("مالی") || t.contains("کسب و کار")) {
             return "اقتصادی";
         }
-        if (t.contains("بین الملل") || t.contains("جهان") || t.contains("خاورمیانه") || t.contains("سیاست خارجی") || t.contains("world")) {
+
+        // ۷. جهانی
+        if (t.contains("بین الملل") || t.contains("جهان") || t.contains("خاورمیانه")
+                || t.contains("سیاست خارجی") || t.contains("اروپا و آمریکا") || t.contains("world")) {
             return "جهانی";
         }
-        if (t.contains("سلامت") || t.contains("پزشکی") || t.contains("بهداشت") || t.contains("درمان") || t.contains("تغذیه") || t.contains("کلینیک")) {
+
+        // ۸. سلامت
+        if (t.contains("سلامت") || t.contains("پزشکی") || t.contains("بهداشت")
+                || t.contains("درمان") || t.contains("تغذیه") || t.contains("کلینیک")) {
             return "سلامت";
         }
-        if (t.contains("سرگرمی") || t.contains("سینما") || t.contains("تلویزیون") || t.contains("گیم") || t.contains("بازی") || t.contains("سبک زندگی")) {
+
+        // ۹. سرگرمی
+        if (t.contains("سرگرمی") || t.contains("سینما") || t.contains("تلویزیون")
+                || t.contains("گیم") || t.contains("بازی") || t.contains("چهره ها")) {
             return "سرگرمی";
         }
-        if (t.contains("فرهنگ") || t.contains("هنر") || t.contains("کتاب") || t.contains("موسیقی") || t.contains("تئاتر") || t.contains("گردشگری") || t.contains("میراث") || t.contains("ادبیات")) {
+
+        // ۱۰. فرهنگ و هنر
+        if (t.contains("فرهنگ") || t.contains("هنر") || t.contains("کتاب") || t.contains("موسیقی")
+                || t.contains("تئاتر") || t.contains("گردشگری") || t.contains("میراث")
+                || t.contains("ادبیات") || t.contains("رسانه")) {
             return "فرهنگ و هنر";
         }
-        if (t.contains("اجتماع") || t.contains("جامعه") || t.contains("حوادث") || t.contains("شهری") || t.contains("محیط زیست") || t.contains("خانواده") || t.contains("انتظامی") || t.contains("قضایی") || t.contains("استان")) {
+
+        // ۱۱. اجتماعی (شامل کتگوری «عمومی»، «جامعه»، «حوادث»، «استان‌ها» و...)
+        if (t.contains("عمومی") || t.contains("اجتماع") || t.contains("جامعه")
+                || t.contains("حوادث") || t.contains("شهری") || t.contains("محیط زیست")
+                || t.contains("خانواده") || t.contains("انتظامی") || t.contains("قضایی")
+                || t.contains("حقوقی") || t.contains("استان") || t.contains("گوناگون")
+                || t.contains("زندگی") || t.contains("چندرسانه")) {
             return "اجتماعی";
         }
-        if (t.contains("سیاس") || t.contains("مجلس") || t.contains("دولت") || t.contains("دفاع") || t.contains("امنیت")) {
+
+        // ۱۲. سیاسی
+        if (t.contains("سیاس") || t.contains("مجلس") || t.contains("دولت")
+                || t.contains("دفاع") || t.contains("امنیت") || t.contains("ایران")) {
             return "سیاسی";
         }
 
