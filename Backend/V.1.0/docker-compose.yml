@@ -1,0 +1,144 @@
+services:
+  nitt-db:
+    image: postgres:16-alpine
+    container_name: nitt-db
+    restart: always
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=768MB
+      -c work_mem=8MB
+      -c maintenance_work_mem=64MB
+      -c random_page_cost=1.1
+      -c max_connections=50
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nitt_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-nitt_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nitt-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: newsgrid-backend
+    restart: always
+    ports:
+      - "127.0.0.1:8080:8080"
+    dns:
+      - 178.22.122.100
+      - 185.51.200.2
+      - 1.1.1.1
+      - 8.8.8.8
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://nitt-db:5432/${POSTGRES_DB:-nitt_db}
+      - POSTGRES_USERNAME=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_SECRET=${ADMIN_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - JAVA_OPTS=-Xmx512m -Xms256m -XX:+UseG1GC -XX:+UseStringDeduplication
+      - SPRING_PROFILES_ACTIVE=prod
+      - PROXY_ENABLED=false
+    depends_on:
+      nitt-db:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  duta-prerender:
+    build:
+      context: ./prerender
+      dockerfile: Dockerfile
+    container_name: duta-prerender
+    restart: always
+    ports:
+      - "127.0.0.1:4000:4000"
+    depends_on:
+      - nitt-backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nitt-frontend:
+    build:
+      context: /root/NewsGrid/Frontend/V.1.0/newsgrid-frontend
+      dockerfile: Dockerfile
+    container_name: newsgrid-frontend
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/nginx/ssl/duta.ir:/etc/nginx/ssl:ro
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    depends_on:
+      - nitt-backend
+      - duta-prerender
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  duta-bot:
+    build:
+      context: /root/NewsGrid/TelegramBot/duta-bot
+      dockerfile: Dockerfile
+    container_name: duta-bot
+    restart: always
+    extra_hosts:
+      - "duta-tg-bridge.manimardazad.workers.dev:104.21.48.1"
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+      - 178.22.122.100
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - SUPER_ADMIN_ID=${SUPER_ADMIN_ID:-@ManiNavi}
+      - CHANNEL_ID=${CHANNEL_ID:-@Duta_News}
+      - CHANNEL_HANDLE=${CHANNEL_HANDLE:-Duta_News}
+      - TELEGRAM_API_ROOT=${TELEGRAM_API_ROOT:-https://duta-tg-bridge.manimardazad.workers.dev}
+      - BRIDGE_SECRET=${BRIDGE_SECRET:-}
+      - DUTA_BACKEND_URL=http://newsgrid-backend:8080
+      - DUTA_SITE_URL=https://duta.ir
+      - FETCH_INTERVAL_SEC=180
+      - AUTO_PUBLISH_INTERVAL_SEC=120
+      - TABLO_UPDATE_INTERVAL_SEC=600
+    depends_on:
+      - nitt-backend
+    volumes:
+      - duta_bot_data:/app/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+  duta_bot_data:

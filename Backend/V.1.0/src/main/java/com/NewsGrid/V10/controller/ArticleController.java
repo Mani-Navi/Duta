@@ -231,7 +231,7 @@ public class ArticleController {
                 do {
                     articlePage = articleRepository.findAll(PageRequest.of(page, 100));
                     articlePage.getContent().forEach(article -> {
-                        article.setCategory(categoryClassifier.classify(article.getTitle(), article.getSource()));
+                        article.setCategory(categoryClassifier.classifyFromHtmlCategory(null, article.getUrl()));
                         article.setLocation(locationClassifier.detectLocation(article.getTitle(), article.getDescription()));
                     });
                     articleRepository.saveAll(articlePage.getContent());

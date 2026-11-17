@@ -224,7 +224,7 @@ public class RssFetcherService {
                         }
 
                         boolean breaking = isSourceDeclaredBreaking(title, entry, null);
-                        String resolvedCategory = categoryClassifier.classifyFromRssCategories(entry.getCategories(), source);
+                        String resolvedCategory = categoryClassifier.extractCategoryFromRssEntry(entry, link);
 
                         saveAndClusterArticle(source, title, cleanDesc, link, pubAt, breaking, resolvedCategory);
                         savedCount++;
@@ -266,7 +266,7 @@ public class RssFetcherService {
                         }
 
                         boolean breaking = isSourceDeclaredBreaking(title, null, articleParent);
-                        String resolvedCategory = categoryClassifier.classifyFromHtmlCategory(htmlCatTag, source);
+                        String resolvedCategory = categoryClassifier.classifyFromHtmlCategory(htmlCatTag, link);
 
                         saveAndClusterArticle(source, title, summary, link, ZonedDateTime.now(ZoneOffset.UTC), breaking, resolvedCategory);
                         savedCount++;
