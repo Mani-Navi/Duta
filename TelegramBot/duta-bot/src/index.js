@@ -161,15 +161,37 @@ class TelegramClient {
         caption: caption || '',
         reply_markup: replyMarkup || undefined,
         disable_notification: Boolean(disableNotification)
-      }, 15000);
+      }, 40000);
     } catch (err) {
-      console.warn('[sendPhoto URL Fallback]:', err.message, 'url:', cardUrl);
-      return await this.call('sendMessage', {
+      console.warn('[sendPhoto URL Retry with Multipart]:', err.message, 'url:', cardUrl);
+      const boundary = '----DutaBotBoundary' + Date.now().toString(16);
+      const chunks = [];
+      const fields = {
         chat_id: String(chatId),
-        text: caption,
-        reply_markup: replyMarkup || undefined,
-        disable_notification: Boolean(disableNotification)
-      }, 15000);
+        caption: (caption || '').toWellFormed(),
+        disable_notification: disableNotification ? 'true' : 'false'
+      };
+      if (replyMarkup) fields.reply_markup = JSON.stringify(replyMarkup);
+      for (const [k, v] of Object.entries(fields)) {
+        chunks.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${String(v)}\r\n`, 'utf-8'));
+      }
+      chunks.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="photo"; filename="card.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`, 'utf-8'));
+      chunks.push(imgBuffer);
+      chunks.push(Buffer.from(`\r\n--${boundary}--\r\n`, 'utf-8'));
+      const bodyBuffer = Buffer.concat(chunks);
+
+      const res = await fetch(`${this.baseUrl}/sendPhoto`, {
+        method: 'POST',
+        headers: this._headers({
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+          'Content-Length': String(bodyBuffer.length)
+        }),
+        body: bodyBuffer,
+        signal: AbortSignal.timeout(45000)
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.description || 'sendPhoto failed');
+      return data.result;
     }
   }
 
@@ -780,18 +802,40 @@ async function syncOrPinTabloMessage(forceNewPin = false) {
   return { action: 'pinned_new', messageId: sent.message_id };
 }
 
+let isAutoPublishingLock = false;
+const recentlyPublishedTitles = new Set();
+
 async function autoPublishNextRegularCluster() {
+  if (isAutoPublishingLock) return false;
   if (!getBooleanSetting('auto_publish_regular', true)) return false;
+
   const cluster = getNextUnpublishedAutoCluster();
   if (!cluster) return false;
 
+  const normTitleKey = String(cluster.representative_title || '').trim();
+  if (recentlyPublishedTitles.has(normTitleKey)) {
+    markClusterPublished(cluster.id, -1, cluster.credibility_score, cluster.source_count);
+    return false;
+  }
+
+  isAutoPublishingLock = true;
   try {
+    // Reserve cluster immediately BEFORE network call so no concurrent timer can pick it twice
+    markClusterPublished(cluster.id, -1, cluster.credibility_score, cluster.source_count);
+    recentlyPublishedTitles.add(normTitleKey);
+    if (recentlyPublishedTitles.size > 200) {
+      const oldest = recentlyPublishedTitles.values().next().value;
+      recentlyPublishedTitles.delete(oldest);
+    }
+
     await publishItemToChannel(cluster);
     console.log(`✅ [AutoPublish] Published cluster #${cluster.id} to ${CONFIG.channelId}: ${cluster.representative_title}`);
     return true;
   } catch (err) {
     console.error('[AutoPublish] Error publishing to channel:', err.message);
     return false;
+  } finally {
+    isAutoPublishingLock = false;
   }
 }
 
